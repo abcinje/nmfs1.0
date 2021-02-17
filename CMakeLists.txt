@@ -11,6 +11,8 @@ add_executable(
 
 	main.cpp
 	fuse_ops.cpp
+
+	logger/logger.cpp
 )
 
 target_link_libraries(nmfs0 ${FUSE3_LIBRARIES})
