@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.0)
+project(nmfs0)
+
+set(CMAKE_CXX_STANDARD 20)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FUSE3 REQUIRED fuse3)
+
+add_executable(
+	nmfs0
+
+	main.cpp
+	fuse_ops.cpp
+)
+
+target_link_libraries(nmfs0 ${FUSE3_LIBRARIES})
+target_include_directories(nmfs0 PUBLIC ${FUSE3_INCLUDE_DIRS})
+target_compile_options(nmfs0 PUBLIC ${FUSE3_CFLAGS_OTHER})
