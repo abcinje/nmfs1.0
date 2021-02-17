@@ -1,4 +1,5 @@
 #include "fuse_ops.hpp"
+#include "meta/inode.hpp"
 #include "logger/logger.hpp"
 #include "rados_io/rados_io.hpp"
 
@@ -17,6 +18,14 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	rados_io::conn_info ci = {"client.admin", "ceph", 0};
 	meta_pool = new rados_io(ci, META_POOL);
 	data_pool = new rados_io(ci, DATA_POOL);
+
+	/* root */
+	if (!meta_pool->exist("i$/")) {
+		fuse_context *fuse_ctx = fuse_get_context();
+		inode i(fuse_ctx->uid, fuse_ctx->gid, S_IFDIR | 0755);
+		auto value = i.serialize();
+		meta_pool->write("i$/", value.get(), sizeof(inode), 0);
+	}
 
 	return nullptr;
 }

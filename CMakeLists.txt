@@ -16,6 +16,9 @@ add_executable(
 	# logger
 	logger/logger.cpp
 
+	# meta
+	meta/inode.cpp
+
 	# rados_io
 	rados_io/rados_io.cpp
 )
