@@ -33,6 +33,3 @@
 
 # CMake
 build/
-
-# NmFS
-mount.sh
