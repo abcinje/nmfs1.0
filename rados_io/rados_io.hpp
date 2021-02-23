@@ -13,6 +13,7 @@ private:
 	librados::Rados cluster;
 	librados::IoCtx ioctx;
 
+public:
 	class no_such_object : public runtime_error {
 	public:
 		no_such_object(const char *msg);
@@ -20,7 +21,6 @@ private:
 		const char *what(void);
 	};
 
-public:
 	struct conn_info {
 		string user;
 		string cluster;
