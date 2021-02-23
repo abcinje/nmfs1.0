@@ -44,6 +44,7 @@ public:
 	void fill_stat(struct stat *s);
 	unique_ptr<char> serialize(void);
 	void deserialize(unique_ptr<char>);
+	void sync();
 
 	// getter
 	mode_t get_mode();
