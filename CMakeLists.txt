@@ -21,7 +21,9 @@ add_executable(
 
 	# rados_io
 	rados_io/rados_io.cpp
-)
+
+	# client
+	client/client.cpp client/client.hpp)
 
 target_link_libraries(nmfs0 ${FUSE3_LIBRARIES} rados)
 target_include_directories(nmfs0 PUBLIC ${FUSE3_INCLUDE_DIRS})
