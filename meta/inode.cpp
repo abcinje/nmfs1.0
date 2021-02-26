@@ -1,12 +1,10 @@
 #include "inode.hpp"
 
-#include <cstring>
-#include <stdexcept>
-
 using std::runtime_error;
 
-inode::no_entry::no_entry(const char *msg) : runtime_error(msg){
+extern rados_io *meta_pool;
 
+inode::no_entry::no_entry(const char *msg) : runtime_error(msg){
 }
 inode::no_entry::no_entry(const string &msg) : runtime_error(msg.c_str()){
 
@@ -36,6 +34,71 @@ inode::inode(uid_t owner, gid_t group, mode_t mode) : i_mode(mode), i_uid(owner)
 	i_atime = i_mtime = i_ctime = ts;
 }
 
+inode::inode(const std::string &path)
+{
+	fuse_context *fuse_ctx = fuse_get_context();
+	inode *parent_inode, *target_inode;
+	dentry *parent_dentry;
+
+	/* exception handle if path == "/" */
+	parent_inode = new inode(0);
+	parent_dentry = new dentry(0);
+
+	int start_name, end_name = -1;
+	int path_len = path.length();
+	while(true){
+		// get new target name
+		start_name = end_name + 2;
+		if(start_name > path_len)
+			break;
+		for(int i = start_name; i < path_len; i++){
+			if(path.at(i) == '/'){
+				end_name = i - 1;
+				break;
+			}
+		}
+		std::string target_name = path.substr(start_name, end_name - start_name + 1);
+		global_logger.log("Check target: " + target_name);
+
+		// translate target name to target's inode number
+		ino_t target_ino = parent_dentry->get_child_ino(target_name);
+		if (target_ino == -1)
+			throw no_entry("No such file or Directory: inode number " + std::to_string(target_ino));
+
+		/* TODO : permission check More Detail */
+		inode *target_inode = new inode(target_ino);
+		if(target_inode->get_uid() != fuse_ctx->uid)
+			throw permission_denied("Permission Denied: " + target_name);
+
+		// target become next parent
+		free(parent_inode);
+		free(parent_dentry);
+		parent_inode = target_inode;
+		parent_dentry = new dentry(target_ino);
+	}
+
+	this->copy(target_inode);
+	/* TODO : change to shared_ptr */
+	free(target_inode);
+
+}
+
+inode::inode(ino_t ino)
+{
+	char *raw_data = (char *)malloc(sizeof(inode));
+	try {
+		meta_pool->read("i&" + std::to_string(ino), raw_data, sizeof(inode), 0);
+		this->deserialize(raw_data);
+	} catch(rados_io::no_such_object &e){
+		throw no_entry("No such file or Directory: inode number " + std::to_string(ino));
+	}
+}
+
+void inode::copy(inode *src)
+{
+	memcpy(this, src, sizeof(inode));
+}
+
 void inode::fill_stat(struct stat *s)
 {
 	s->st_mode	= i_mode;
@@ -60,9 +123,15 @@ unique_ptr<char> inode::serialize(void)
 	return std::move(value);
 }
 
-void inode::deserialize(unique_ptr<char> value)
+void inode::deserialize(const char *value)
 {
-	memcpy(this, value.get(), sizeof(inode));
+	memcpy(this, value, sizeof(inode));
+}
+
+void inode::sync()
+{
+	unique_ptr<char> raw = this->serialize();
+	meta_pool->write("i$" + std::to_string(this->i_ino), raw.get(), sizeof(inode), 0);
 }
 
 // getter

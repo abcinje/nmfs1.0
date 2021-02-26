@@ -5,6 +5,10 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <string>
+#include <fuse.h>
+#include "../rados_io/rados_io.hpp"
+#include "../logger/logger.hpp"
+#include "dentry.hpp"
 
 using std::unique_ptr;
 using std::runtime_error;
@@ -40,10 +44,13 @@ public:
 
 	inode(uid_t owner, gid_t group, mode_t mode);
 	inode(const std::string &path);
+	/* Only used in other constructor */
+	inode(ino_t ino);
 
+	void copy(inode *src);
 	void fill_stat(struct stat *s);
 	unique_ptr<char> serialize(void);
-	void deserialize(unique_ptr<char>);
+	void deserialize(const char *value);
 	void sync();
 
 	// getter
