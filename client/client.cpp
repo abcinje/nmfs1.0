@@ -39,17 +39,13 @@ client::client(int id) : clinet_id(id) {
 
 }
 
-/*
- * client(int id)
- * : constructor for really first created client
- */
 client::~client() {
 	std::string client_list;
 	int client_list_len;
 
 	client_list.reserve(MAX_CLIENT_NUM);
 
-	//client_list_len = meta_pool->read("client.list", client_list.data(), APPROXIMATE_LEN, 0);
+	client_list_len = meta_pool->read("client.list", client_list.data(), MAX_CLIENT_NUM, 0);
 	client_list.replace(this->clinet_id, 1, "x");
-	//meta_pool->write("client.list", client_list.data(), client_list_len, 0);
+	meta_pool->write("client.list", client_list.data(), client_list_len, 0);
 }
