@@ -30,12 +30,12 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	data_pool = new rados_io(ci, DATA_POOL);
 
 	/* root */
-	if (!meta_pool->exist("i$/")) {
+	if (!meta_pool->exist("i$0")) {
 		fuse_context *fuse_ctx = fuse_get_context();
 		inode i(fuse_ctx->uid, fuse_ctx->gid, S_IFDIR | 0755);
 		auto value = i.serialize();
-		meta_pool->write("i$/", value.get(), sizeof(inode), 0);
-		meta_pool->write("d$/", "" , 0, 0);
+		meta_pool->write("i$0", value.get(), sizeof(inode), 0);
+		meta_pool->write("d$0", "" , 0, 0);
 	}
 
 	return (void *)this_client;
@@ -89,6 +89,7 @@ int access(const char* path, int mask) {
 
 	return 0;
 }
+
 int opendir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called opendir()");
 	try {
@@ -104,12 +105,25 @@ int opendir(const char* path, struct fuse_file_info* file_info){
 		return -EACCES;
 	}
 }
+
 int releasedir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called releasedir()");
 	return 0;
 }
 
-int readdir(const char* path, void* buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* file_info, enum fuse_readdir_flags readdir_flags);
+int readdir(const char* path, void* buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* file_info, enum fuse_readdir_flags readdir_flags){
+	global_logger.log("Called readdir()");
+
+	filler(buffer, ".", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
+	filler(buffer, "..", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
+
+	inode *i = new inode(path);
+	dentry *d = new dentry(i->get_ino());
+
+	d->fill_filler(buffer, filler);
+
+	return 0;
+}
 int mkdir(const char* path, mode_t mode);
 int rmdir(const char* path);
 int rename(const char* old_path, const char* new_path, unsigned int flags);
@@ -143,7 +157,10 @@ int create(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 	fuse_context *fuse_ctx = fuse_get_context();
 	try {
 		inode *i = new inode(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
+		i->sync();
 
+		// add to dentry
+		//file_info->fh = ???;
 	} catch(std::runtime_error &e) {
 		return -EIO;
 	}
@@ -216,7 +233,7 @@ fuse_operations fuse_ops::get_fuse_ops(void)
 	//fops.opendir = opendir;
 	fops.releasedir = releasedir;
 
-	//fops.readdir = readdir;
+	fops.readdir = readdir;
 	//fops.mkdir = mkdir;
 	//fops.rmdir = rmdir;
 	//fops.rename = rename;
