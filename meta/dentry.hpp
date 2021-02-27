@@ -2,6 +2,7 @@
 #define NMFS0_DENTRY_HPP
 
 #include <map>
+#include<utility>
 #include "../fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
 
@@ -18,7 +19,8 @@ private:
 public:
 	dentry(ino_t ino);
 
-	void add_new_child(const std::string &path, ino_t ino);
+	void add_new_child(const std::string &filename, ino_t ino);
+	void delete_child(const std::string &filename);
 
 	unique_ptr<char> serialize();
 	void deserialize(char *raw);

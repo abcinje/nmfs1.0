@@ -13,8 +13,14 @@ dentry::dentry(ino_t ino) : ino(ino)
 	}
 }
 
-void dentry::add_new_child(const std::string &path, ino_t ino){
+void dentry::add_new_child(const std::string &filename, ino_t ino){
+	this->child_list.insert(std::make_pair(filename, ino));
+	this->child_num++;
+}
 
+void dentry::delete_child(const std::string &filename) {
+	this->child_list.erase(filename);
+	this->child_num--;
 }
 
 unique_ptr<char> dentry::serialize()
