@@ -32,6 +32,8 @@ inode::inode(uid_t owner, gid_t group, mode_t mode) : i_mode(mode), i_uid(owner)
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
+
+	/* TODO : allocate inode number */
 }
 
 inode::inode(const std::string &path)

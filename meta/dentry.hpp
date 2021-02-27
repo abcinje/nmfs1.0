@@ -18,6 +18,8 @@ private:
 public:
 	dentry(ino_t ino);
 
+	void add_new_child(const std::string &path, ino_t ino);
+
 	unique_ptr<char> serialize();
 	void deserialize(char *raw);
 	void sync();

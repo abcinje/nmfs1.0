@@ -3,7 +3,7 @@
 #include "logger/logger.hpp"
 #include "rados_io/rados_io.hpp"
 #include "client/client.hpp"
-
+#include "util.hpp"
 #include <cstring>
 
 #define META_POOL "nmfs.meta"
@@ -19,8 +19,8 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 
 	/* client id allocation */
 	if (!meta_pool->exist("client.list")) {
-		meta_pool->write("client.list", "o", 1, 0);
-		this_client = new client(0);
+		meta_pool->write("client.list", "?o", 2, 0);
+		this_client = new client(1);
 	} else {
 		this_client = new client();
 	}
@@ -156,11 +156,22 @@ int create(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 
 	fuse_context *fuse_ctx = fuse_get_context();
 	try {
+		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
+		uint64_t parent_ino = parent_i->get_ino();
+
+		dentry *parent_d = new dentry(parent_ino);
+
 		inode *i = new inode(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
 		i->sync();
 
-		// add to dentry
+		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
+		parent_d->sync();
+
 		//file_info->fh = ???;
+
+		free(parent_i);
+		free(parent_d);
+		free(i);
 	} catch(std::runtime_error &e) {
 		return -EIO;
 	}
@@ -184,6 +195,7 @@ int chmod(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 		i->set_mode(mode | type);
 
 		i->sync();
+		free(i);
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -199,6 +211,7 @@ int chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_info* file_in
 		i->set_gid(gid);
 
 		i->sync();
+		free(i);
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -213,6 +226,7 @@ int utimens(const char *path, const struct timespec tv[2], struct fuse_file_info
 		i->set_mtime(tv[1]);
 
 		i->sync();
+		free(i);
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
