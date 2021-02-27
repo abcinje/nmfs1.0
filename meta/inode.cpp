@@ -91,7 +91,7 @@ inode::inode(ino_t ino)
 {
 	char *raw_data = (char *)malloc(sizeof(inode));
 	try {
-		meta_pool->read("i&" + std::to_string(ino), raw_data, sizeof(inode), 0);
+		meta_pool->read("i$" + std::to_string(ino), raw_data, sizeof(inode), 0);
 		this->deserialize(raw_data);
 	} catch(rados_io::no_such_object &e){
 		throw no_entry("No such file or Directory: inode number " + std::to_string(ino));

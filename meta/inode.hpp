@@ -45,7 +45,8 @@ public:
 
 	inode(uid_t owner, gid_t group, mode_t mode);
 	inode(const std::string &path);
-	/* Only used in other constructor */
+
+	/* TODO : add permission check */
 	inode(ino_t ino);
 
 	void copy(inode *src);
