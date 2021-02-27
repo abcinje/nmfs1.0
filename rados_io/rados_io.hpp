@@ -8,10 +8,17 @@
 using std::runtime_error;
 using std::string;
 
+#define OBJ_SIZE	(4194304)
+#define OBJ_BITS	(22)
+#define OBJ_MASK	((~0) << OBJ_BITS)
+
 class rados_io {
 private:
 	librados::Rados cluster;
 	librados::IoCtx ioctx;
+
+	size_t read_obj(const string &key, char *value, size_t len, off_t offset);
+	size_t write_obj(const string &key, const char *value, size_t len, off_t offset);
 
 public:
 	class no_such_object : public runtime_error {
