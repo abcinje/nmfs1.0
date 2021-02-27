@@ -5,11 +5,12 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <string>
-#include <fuse.h>
+#include "../fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
 #include "../logger/logger.hpp"
 #include "dentry.hpp"
 
+#define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
 using std::unique_ptr;
 using std::runtime_error;
 using std::string;
@@ -76,4 +77,5 @@ public:
 
 };
 
+ino_t alloc_new_ino();
 #endif /* _INODE_HPP_ */

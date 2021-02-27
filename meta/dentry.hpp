@@ -2,7 +2,7 @@
 #define NMFS0_DENTRY_HPP
 
 #include <map>
-#include <fuse.h>
+#include "../fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
 
 #define MAX_DENTRY_OBJ_SIZE (4 * 1024 * 1024)

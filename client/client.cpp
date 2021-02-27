@@ -50,3 +50,5 @@ client::~client() {
 	client_list.replace(this->clinet_id, 1, "x");
 	meta_pool->write("client.list", client_list.data(), client_list_len, 0);
 }
+
+int client::get_client_id() {return this->clinet_id;}

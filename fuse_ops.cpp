@@ -154,6 +154,9 @@ int release(const char* path, struct fuse_file_info* file_info) {
 int create(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 	global_logger.log("Called create()");
 
+	if(S_ISDIR(mode))
+		return -EISDIR;
+
 	fuse_context *fuse_ctx = fuse_get_context();
 	try {
 		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
@@ -172,8 +175,10 @@ int create(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 		free(parent_i);
 		free(parent_d);
 		free(i);
-	} catch(std::runtime_error &e) {
-		return -EIO;
+	} catch(inode::no_entry &e) {
+		return -ENOENT;
+	} catch(inode::permission_denied &e) {
+		return -EACCES;
 	}
 
 	return 0;
@@ -242,7 +247,7 @@ fuse_operations fuse_ops::get_fuse_ops(void)
 	fops.init	= init;
 	fops.destroy	= destroy;
 	fops.getattr = getattr;
-	fops.access = access;
+	//fops.access = access;
 
 	//fops.opendir = opendir;
 	fops.releasedir = releasedir;

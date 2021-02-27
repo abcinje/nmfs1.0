@@ -11,6 +11,8 @@ public:
 	client();
 	client(int id);
 	~client();
+
+	int get_client_id();
 };
 
 

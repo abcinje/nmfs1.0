@@ -1,7 +1,7 @@
 #ifndef _FUSE_OPS_HPP_
 #define _FUSE_OPS_HPP_
 
-#define FUSE_USE_VERSION 35
+#define FUSE_USE_VERSION 30
 
 #include <fuse.h>
 
