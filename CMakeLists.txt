@@ -23,7 +23,7 @@ add_executable(
 	rados_io/rados_io.cpp
 
 	# client
-	client/client.cpp client/client.hpp meta/dentry.cpp meta/dentry.hpp meta/file_handler.cpp meta/file_handler.hpp)
+	client/client.cpp client/client.hpp meta/dentry.cpp meta/dentry.hpp meta/file_handler.cpp meta/file_handler.hpp util.cpp util.hpp)
 
 target_link_libraries(nmfs0 ${FUSE3_LIBRARIES} rados)
 target_include_directories(nmfs0 PUBLIC ${FUSE3_INCLUDE_DIRS})
