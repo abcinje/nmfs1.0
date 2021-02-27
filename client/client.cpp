@@ -51,4 +51,4 @@ client::~client() {
 	meta_pool->write("client.list", client_list.data(), client_list_len, 0);
 }
 
-int client::get_client_id() {return this->clinet_id;}
+uint64_t client::get_client_id() {return this->clinet_id;}

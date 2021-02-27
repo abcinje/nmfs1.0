@@ -5,14 +5,14 @@
 
 class client {
 private:
-	int clinet_id;
+	uint64_t clinet_id;
 
 public:
 	client();
 	client(int id);
 	~client();
 
-	int get_client_id();
+	uint64_t get_client_id();
 };
 
 
