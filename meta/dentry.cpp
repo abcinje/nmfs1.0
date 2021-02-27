@@ -13,6 +13,10 @@ dentry::dentry(ino_t ino) : ino(ino)
 	}
 }
 
+void dentry::add_new_child(const std::string &path, ino_t ino){
+
+}
+
 unique_ptr<char> dentry::serialize()
 {
 	unique_ptr<char> raw(new char(sizeof(uint64_t) + ((this->child_num) * RAW_LINE_SIZE)));

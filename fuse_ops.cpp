@@ -1,5 +1,6 @@
 #include "fuse_ops.hpp"
 #include "meta/inode.hpp"
+#include "meta/dentry.hpp"
 #include "logger/logger.hpp"
 #include "rados_io/rados_io.hpp"
 #include "client/client.hpp"
@@ -52,7 +53,7 @@ void fuse_ops::destroy(void *private_data)
 	delete (client *)(fuse_ctx->private_data);
 }
 
-int getattr(const char* path, struct stat* stat, struct fuse_file_info* file_info) {
+int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info* file_info) {
 	global_logger.log("Called getattr()");
 
 	try {
@@ -68,7 +69,7 @@ int getattr(const char* path, struct stat* stat, struct fuse_file_info* file_inf
 	return 0;
 }
 
-int access(const char* path, int mask) {
+int fuse_ops::access(const char* path, int mask) {
 	global_logger.log("Called access()");
 
 	fuse_context *fuse_ctx = fuse_get_context();
@@ -90,7 +91,7 @@ int access(const char* path, int mask) {
 	return 0;
 }
 
-int opendir(const char* path, struct fuse_file_info* file_info){
+int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called opendir()");
 	try {
 		inode *i = new inode(path);
@@ -106,12 +107,12 @@ int opendir(const char* path, struct fuse_file_info* file_info){
 	}
 }
 
-int releasedir(const char* path, struct fuse_file_info* file_info){
+int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called releasedir()");
 	return 0;
 }
 
-int readdir(const char* path, void* buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* file_info, enum fuse_readdir_flags readdir_flags){
+int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* file_info, enum fuse_readdir_flags readdir_flags){
 	global_logger.log("Called readdir()");
 
 	filler(buffer, ".", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
@@ -124,11 +125,11 @@ int readdir(const char* path, void* buffer, fuse_fill_dir_t filler, off_t offset
 
 	return 0;
 }
-int mkdir(const char* path, mode_t mode);
-int rmdir(const char* path);
-int rename(const char* old_path, const char* new_path, unsigned int flags);
+int fuse_ops::mkdir(const char* path, mode_t mode);
+int fuse_ops::rmdir(const char* path);
+int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int flags);
 
-int open(const char* path, struct fuse_file_info* file_info){
+int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called open()");
 
 	try {
@@ -145,13 +146,13 @@ int open(const char* path, struct fuse_file_info* file_info){
 	}
 }
 
-int release(const char* path, struct fuse_file_info* file_info) {
+int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	global_logger.log("Called release()");
 
 	return 0;
 }
 
-int create(const char* path, mode_t mode, struct fuse_file_info* file_info) {
+int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 	global_logger.log("Called create()");
 
 	if(S_ISDIR(mode))
@@ -184,15 +185,15 @@ int create(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 	return 0;
 }
 
-int unlink(const char* path){
+int fuse_ops::unlink(const char* path){
 	global_logger.log("Called unlink()");
 	return 0;
 }
 
-int read(const char* path, char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info);
-int write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info);
+int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info);
+int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info);
 
-int chmod(const char* path, mode_t mode, struct fuse_file_info* file_info) {
+int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 	try {
 		inode *i = new inode(path);
 
@@ -208,7 +209,7 @@ int chmod(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 	}
 }
 
-int chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_info* file_info){
+int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_info* file_info){
 	try {
 		inode *i = new inode(path);
 
@@ -223,7 +224,7 @@ int chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_info* file_in
 		return -EACCES;
 	}
 }
-int utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi) {
+int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi) {
 	try {
 		inode *i = new inode(path);
 
