@@ -4,14 +4,19 @@
 #include "logger/logger.hpp"
 #include "rados_io/rados_io.hpp"
 #include "client/client.hpp"
+#include "meta/file_handler.hpp"
 #include "util.hpp"
 #include <cstring>
+#include <map>
+#include <utility>
 
 #define META_POOL "nmfs.meta"
 #define DATA_POOL "nmfs.data"
 
 rados_io *meta_pool;
 rados_io *data_pool;
+
+std::map<ino_t, unique_ptr<file_handler>> fh_list;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 {
@@ -99,7 +104,11 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 		if(!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
 
-		//file_info->fh = ???;
+		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+
+		fh->set_fhno((void *)file_info->fh);
+		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -109,6 +118,16 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 
 int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called releasedir()");
+
+	inode *i = new inode(path);
+
+	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+	it = fh_list.find(i->get_ino());
+
+	if(it == fh_list.end())
+		return -EIO;
+
+	fh_list.erase(it);
 	return 0;
 }
 
@@ -125,7 +144,36 @@ int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, of
 
 	return 0;
 }
-int fuse_ops::mkdir(const char* path, mode_t mode);
+int fuse_ops::mkdir(const char* path, mode_t mode){
+	global_logger.log("Called mkdir()");
+
+	if(!S_ISDIR(mode))
+		return -ENOTDIR;
+
+	fuse_context *fuse_ctx = fuse_get_context();
+	try {
+		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
+		uint64_t parent_ino = parent_i->get_ino();
+
+		dentry *parent_d = new dentry(parent_ino);
+
+		inode *i = new inode(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
+		i->sync();
+
+		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
+		parent_d->sync();
+
+		free(parent_i);
+		free(parent_d);
+		free(i);
+	} catch(inode::no_entry &e) {
+		return -ENOENT;
+	} catch(inode::permission_denied &e) {
+		return -EACCES;
+	}
+
+}
+
 int fuse_ops::rmdir(const char* path);
 int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int flags);
 
@@ -138,7 +186,11 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 		if(S_ISDIR(i->get_mode()))
 			return -EISDIR;
 
-		//file_info->fh = ???;
+		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+
+		fh->set_fhno((void *)file_info->fh);
+		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -148,6 +200,16 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 
 int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	global_logger.log("Called release()");
+
+	inode *i = new inode(path);
+
+	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+	it = fh_list.find(i->get_ino());
+
+	if(it == fh_list.end())
+		return -EIO;
+
+	fh_list.erase(it);
 
 	return 0;
 }
@@ -171,7 +233,11 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
 		parent_d->sync();
 
-		//file_info->fh = ???;
+		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+
+		fh->set_fhno((void *)file_info->fh);
+		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 
 		free(parent_i);
 		free(parent_d);
@@ -187,6 +253,28 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 
 int fuse_ops::unlink(const char* path){
 	global_logger.log("Called unlink()");
+	try {
+		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
+		uint64_t parent_ino = parent_i->get_ino();
+
+		dentry *parent_d = new dentry(parent_ino);
+
+		ino_t target_ino = parent_d->get_child_ino(*(get_filename_from_path(path).get())); // perform target's permission check
+		inode *i = new inode(target_ino);
+
+		meta_pool->remove("i$" + std::to_string(i->get_ino()));
+
+		parent_d->delete_child(*(get_filename_from_path(path).get()));
+		parent_d->sync();
+
+		free(parent_i);
+		free(parent_d);
+		free(i);
+	} catch(inode::no_entry &e) {
+		return -ENOENT;
+	} catch(inode::permission_denied &e) {
+		return -EACCES;
+	}
 	return 0;
 }
 
@@ -250,18 +338,18 @@ fuse_operations fuse_ops::get_fuse_ops(void)
 	fops.getattr = getattr;
 	//fops.access = access;
 
-	//fops.opendir = opendir;
+	fops.opendir = opendir;
 	fops.releasedir = releasedir;
 
 	fops.readdir = readdir;
-	//fops.mkdir = mkdir;
+	fops.mkdir = mkdir;
 	//fops.rmdir = rmdir;
 	//fops.rename = rename;
 
-	//fops.open = open;
+	fops.open = open;
 	fops.release = release;
 
-	//fops.create = create;
+	fops.create = create;
 	fops.unlink = unlink;
 
 	//fops.read = read;
