@@ -2,6 +2,47 @@
 
 #include "../logger/logger.hpp"
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offset)
+{
+	uint64_t size;
+	time_t mtime;
+	int ret;
+
+	librados::bufferlist bl = librados::bufferlist::static_from_mem(value, len);
+
+	ret = ioctx.read(key, bl, len, offset);
+	if (ret >= 0) {
+		global_logger.log("Read an object. (key: \"" + key + "\")");
+	} else if (ret == -ENOENT) {
+		throw no_such_object("rados_io::read() failed (key: \"" + key + "\")");
+	} else {
+		throw runtime_error("rados_io::read() failed");
+	}
+
+	memcpy(value, bl.c_str(), len);
+
+	return ret;
+}
+
+size_t rados_io::write_obj(const string &key, const char *value, size_t len, off_t offset)
+{
+	int ret;
+
+	std::cout << std::string(value) << std::endl;
+	librados::bufferlist bl = librados::bufferlist::static_from_mem(const_cast<char *>(value), len);
+	ret = ioctx.write(key, bl, len, offset);
+
+	if (ret >= 0) {
+		global_logger.log("Wrote an object. (key: \"" + key + "\")");
+	} else {
+		throw runtime_error("rados_io::write() failed");
+	}
+
+	return len;
+}
+
 rados_io::no_such_object::no_such_object(const char *msg) : runtime_error(msg)
 {
 }
@@ -59,41 +100,48 @@ rados_io::~rados_io(void)
 
 size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 {
-	uint64_t size;
-	time_t mtime;
-	int ret;
+	off_t cursor = offset;
+	off_t stop = offset + len;
+	size_t ret = 0;
 
-	librados::bufferlist bl = librados::bufferlist::static_from_mem(value, len);
+	while (cursor < stop) {
+		uint64_t obj_num = cursor >> OBJ_BITS;
 
-	ret = ioctx.read(key, bl, len, offset);
-	if (ret >= 0) {
-		global_logger.log("Read an object. (key: \"" + key + "\")");
-	} else if (ret == -ENOENT) {
-		throw no_such_object("rados_io::read() failed (key: \"" + key + "\")");
-	} else {
-		throw runtime_error("rados_io::read() failed");
+		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
+		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
+
+		ret += this->read_obj(key + "$" + std::to_string(obj_num),
+				value + ret,
+				cursor & (~OBJ_MASK),
+				sub_len);
+
+		cursor = next_bound;
 	}
 
-	memcpy(value, bl.c_str(), len);
-	
 	return ret;
 }
 
 size_t rados_io::write(const string &key, const char *value, size_t len, off_t offset)
 {
-	int ret;
+	off_t cursor = offset;
+	off_t stop = offset + len;
+	size_t ret = 0;
 
-	std::cout << std::string(value) << std::endl;
-	librados::bufferlist bl = librados::bufferlist::static_from_mem(const_cast<char *>(value), len);
-	ret = ioctx.write(key, bl, len, offset);
+	while (cursor < stop) {
+		uint64_t obj_num = cursor >> OBJ_BITS;
 
-	if (ret >= 0) {
-		global_logger.log("Wrote an object. (key: \"" + key + "\")");
-	} else {
-		throw runtime_error("rados_io::write() failed");
+		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
+		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
+
+		ret += this->write_obj(key + "$" + std::to_string(obj_num),
+				value + ret,
+				cursor & (~OBJ_MASK),
+				sub_len);
+
+		cursor = next_bound;
 	}
 
-	return len;
+	return ret;
 }
 
 bool rados_io::exist(const string &key)
