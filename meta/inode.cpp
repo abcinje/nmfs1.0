@@ -35,7 +35,14 @@ inode::inode(uid_t owner, gid_t group, mode_t mode) : i_mode(mode), i_uid(owner)
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
 	i_ino = alloc_new_ino();
-	/* TODO : allocate inode number */
+}
+inode::inode(uid_t owner, gid_t group, mode_t mode, ino_t symlink_target_ino) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0),  symlink_target_ino(symlink_target_ino)
+{
+	struct timespec ts;
+	if (!timespec_get(&ts, TIME_UTC))
+		runtime_error("timespec_get() failed");
+	i_atime = i_mtime = i_ctime = ts;
+	i_ino = alloc_new_ino();
 }
 
 inode::inode(const std::string &path)
@@ -49,6 +56,7 @@ inode::inode(const std::string &path)
 
 	int start_name, end_name = -1;
 	int path_len = path.length();
+
 	while(true){
 		// get new target name
 		start_name = end_name + 2;
@@ -68,21 +76,34 @@ inode::inode(const std::string &path)
 		if (target_ino == -1)
 			throw no_entry("No such file or Directory: inode number " + std::to_string(target_ino));
 
-		/* TODO : permission check More Detail */
 		inode *target_inode = new inode(target_ino);
+
+		/* resolve symlink to original file/directory */
+		if(S_ISLNK(target_inode->get_mode())) {
+			ino_t origin_ino = target_inode->get_ino();
+			free(target_inode);
+			try {
+				target_inode = new inode(origin_ino);
+			} catch(no_entry &e){
+				throw no_entry("No such file or Directory: inode number " + std::to_string(origin_ino));
+			}
+		}
 		if(!permission_check(target_inode, X_OK))
 			throw permission_denied("Permission Denied: " + target_name);
 
 		// target become next parent
 		free(parent_inode);
 		free(parent_dentry);
+
 		parent_inode = target_inode;
-		parent_dentry = new dentry(target_ino);
+		if(S_ISDIR(parent_inode->get_mode()))
+			parent_dentry = new dentry(parent_inode->get_ino());
 	}
 
 	this->copy(target_inode);
-	/* TODO : change to shared_ptr */
-	free(target_inode);
+	free(parent_inode);
+	free(parent_dentry);
+
 
 }
 

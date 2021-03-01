@@ -29,6 +29,7 @@ private:
 	struct timespec	i_mtime;
 	struct timespec	i_ctime;
 
+	ino_t symlink_target_ino;
 public:
 	class no_entry : public runtime_error {
 	public:
@@ -45,6 +46,8 @@ public:
 	};
 
 	inode(uid_t owner, gid_t group, mode_t mode);
+	/* for symlink */
+	inode(uid_t owner, gid_t group, mode_t mode, ino_t symlink_target_ino);
 	inode(const std::string &path);
 
 	/* TODO : add permission check */
