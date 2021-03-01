@@ -40,7 +40,6 @@ inode::inode(uid_t owner, gid_t group, mode_t mode) : i_mode(mode), i_uid(owner)
 
 inode::inode(const std::string &path)
 {
-	fuse_context *fuse_ctx = fuse_get_context();
 	inode *parent_inode, *target_inode;
 	dentry *parent_dentry;
 
@@ -71,7 +70,7 @@ inode::inode(const std::string &path)
 
 		/* TODO : permission check More Detail */
 		inode *target_inode = new inode(target_ino);
-		if(target_inode->get_uid() != fuse_ctx->uid)
+		if(!permission_check(target_inode, X_OK))
 			throw permission_denied("Permission Denied: " + target_name);
 
 		// target become next parent
@@ -168,4 +167,36 @@ ino_t alloc_new_ino(){
 	new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
 
 	return new_ino;
+}
+
+/* TODO : is there any cases that check two or more permission at onec ? */
+bool permission_check(inode *i, int mask){
+	bool check_read = (mask & R_OK) ? true : false;
+	bool check_write = (mask & W_OK) ? true : false;
+	bool check_exec = (mask & X_OK) ? true : false;
+	bool ret = true;
+
+	mode_t target_mode;
+	fuse_context *fuse_ctx = fuse_get_context();
+
+	if(fuse_ctx->uid == i->get_uid()){
+		target_mode = (i->get_mode() & S_IRWXU) >> 6;
+	} else if (fuse_ctx->gid == i->get_gid()){
+		target_mode = (i->get_mode() & S_IRWXG) >> 3;
+	} else {
+		target_mode = i->get_mode() & S_IRWXO;
+	}
+
+	if(check_read){
+		ret = ret & (target_mode & R_OK);
+	}
+	if(check_write){
+		ret = ret & (target_mode & W_OK);
+	}
+	if(check_exec){
+		ret = ret & (target_mode & X_OK);
+	}
+
+	return ret;
+
 }

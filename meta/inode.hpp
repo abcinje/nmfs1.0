@@ -11,6 +11,7 @@
 #include "dentry.hpp"
 
 #define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
+
 using std::unique_ptr;
 using std::runtime_error;
 using std::string;
@@ -79,4 +80,5 @@ public:
 };
 
 ino_t alloc_new_ino();
+bool permission_check(inode *i, int mask);
 #endif /* _INODE_HPP_ */
