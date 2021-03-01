@@ -83,3 +83,5 @@ void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler)
 	for (auto it = this->child_list.begin(); it != this->child_list.end(); it++)
 		filler(buffer, it->first.c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 }
+
+uint64_t dentry::get_child_num() {return this->child_num;}

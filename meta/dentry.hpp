@@ -28,6 +28,8 @@ public:
 
 	ino_t get_child_ino(std::string child_name);
 	void fill_filler(void *buffer, fuse_fill_dir_t filler);
+
+	uint64_t get_child_num();
 };
 
 
