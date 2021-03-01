@@ -1,5 +1,4 @@
 #include "rados_io.hpp"
-
 #include "../logger/logger.hpp"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -16,9 +15,9 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 	if (ret >= 0) {
 		global_logger.log("Read an object. (key: \"" + key + "\")");
 	} else if (ret == -ENOENT) {
-		throw no_such_object("rados_io::read() failed (key: \"" + key + "\")");
+		throw no_such_object("rados_io::read_obj() failed (key: \"" + key + "\")");
 	} else {
-		throw runtime_error("rados_io::read() failed");
+		throw runtime_error("rados_io::read_obj() failed");
 	}
 
 	memcpy(value, bl.c_str(), len);
@@ -37,7 +36,7 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	if (ret >= 0) {
 		global_logger.log("Wrote an object. (key: \"" + key + "\")");
 	} else {
-		throw runtime_error("rados_io::write() failed");
+		throw runtime_error("rados_io::write_obj() failed");
 	}
 
 	return len;
@@ -52,6 +51,19 @@ rados_io::no_such_object::no_such_object(const string &msg) : runtime_error(msg.
 }
 
 const char *rados_io::no_such_object::what(void)
+{
+	return runtime_error::what();
+}
+
+rados_io::cannot_acquire_lock::cannot_acquire_lock(const char *msg) : runtime_error(msg)
+{
+}
+
+rados_io::cannot_acquire_lock::cannot_acquire_lock(const string &msg) :runtime_error(msg.c_str())
+{
+}
+
+const char *rados_io::cannot_acquire_lock::what(void)
 {
 	return runtime_error::what();
 }
@@ -100,48 +112,66 @@ rados_io::~rados_io(void)
 
 size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 {
+	int ret = 0;
+
 	off_t cursor = offset;
 	off_t stop = offset + len;
-	size_t ret = 0;
+	size_t sum = 0;
 
 	while (cursor < stop) {
 		uint64_t obj_num = cursor >> OBJ_BITS;
+		string obj_key = key + "$" + std::to_string(obj_num);
 
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		ret += this->read_obj(key + "$" + std::to_string(obj_num),
-				value + ret,
-				cursor & (~OBJ_MASK),
-				sub_len);
+		ret = ioctx.lock_shared(obj_key, obj_key, obj_key, obj_key, obj_key, nullptr, 0);
+		if (ret == -EBUSY) {
+			throw cannot_acquire_lock("rados_io::read() failed (the lock is already held by another (client, cookie) pair)");
+		} else if (ret == -EEXIST) {
+			throw cannot_acquire_lock("rados_io::read() failed (the lock is already held by the same (client, cookie) pair");
+		} else if (ret) {
+			throw cannot_acquire_lock("rados_io::read() failed");
+		}
+		sum += this->read_obj(obj_key,value + sum,cursor & (~OBJ_MASK), sub_len);
+		ioctx.unlock(obj_key, obj_key, obj_key);
 
 		cursor = next_bound;
 	}
 
-	return ret;
+	return sum;
 }
 
 size_t rados_io::write(const string &key, const char *value, size_t len, off_t offset)
 {
+	int ret = 0;
+
 	off_t cursor = offset;
 	off_t stop = offset + len;
-	size_t ret = 0;
+	size_t sum = 0;
 
 	while (cursor < stop) {
 		uint64_t obj_num = cursor >> OBJ_BITS;
+		string obj_key = key + "$" + std::to_string(obj_num);
 
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		ret += this->write_obj(key + "$" + std::to_string(obj_num),
-				value + ret,
-				cursor & (~OBJ_MASK),
-				sub_len);
+		ret = ioctx.lock_exclusive(obj_key, obj_key, obj_key, obj_key, nullptr, 0);
+		if (ret == -EBUSY) {
+			throw cannot_acquire_lock("rados_io::write() failed (the lock is already held by another (client, cookie) pair)");
+		} else if (ret == -EEXIST) {
+			throw cannot_acquire_lock("rados_io::write() failed (the lock is already held by the same (client, cookie) pair");
+		} else if (ret) {
+			throw cannot_acquire_lock("rados_io::write() failed");
+		}
+		sum += this->write_obj(obj_key,value + sum,cursor & (~OBJ_MASK), sub_len);
+		ioctx.unlock(obj_key, obj_key, obj_key);
 
 		cursor = next_bound;
 	}
 
-	return ret;
+	return sum;
 }
 
 bool rados_io::exist(const string &key)

@@ -28,6 +28,13 @@ public:
 		const char *what(void);
 	};
 
+	class cannot_acquire_lock : public runtime_error {
+	public:
+		cannot_acquire_lock(const char *msg);
+		cannot_acquire_lock(const string &msg);
+		const char *what(void);
+	};
+
 	struct conn_info {
 		string user;
 		string cluster;

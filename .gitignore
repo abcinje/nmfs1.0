@@ -33,3 +33,7 @@
 
 # CMake
 build/
+cmake-build-*/
+
+# CLion
+.idea/
