@@ -98,6 +98,43 @@ int fuse_ops::access(const char* path, int mask) {
 	return 0;
 }
 
+int fuse_ops::symlink(const char *src, const char *dst){
+	global_logger.log("Called symlink()");
+	try {
+		inode *src_i = new inode(src);
+
+		unique_ptr<std::string> dst_parent_name = get_parent_dir_path(dst);
+		inode *dst_parent_i = new inode(dst_parent_name->data());
+		dentry *dst_parent_d = new dentry(dst_parent_i->get_ino());
+
+		unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
+
+		if(dst_parent_d->get_child_ino(symlink_name->data())) {
+			free(dst_parent_d);
+			free(dst_parent_i);
+			free(src_i);
+			return -EEXIST;
+		}
+
+		inode *symlink_i = new inode(src_i->get_uid(), src_i->get_gid(), S_IFLNK | 0777, src_i->get_ino());
+		dst_parent_d->add_new_child(symlink_name->data(), symlink_i->get_ino());
+
+		dst_parent_d->sync();
+		symlink_i->sync();
+
+		free(dst_parent_d);
+		free(dst_parent_i);
+		free(src_i);
+		free(symlink_i);
+	} catch(inode::no_entry &e) {
+		return -ENOENT;
+	} catch(inode::permission_denied &e) {
+		return -EACCES;
+	}
+
+	return 0;
+}
+
 int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called opendir()");
 	try {
@@ -222,6 +259,9 @@ int fuse_ops::rmdir(const char* path) {
 int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int flags) {
 	global_logger.log("Called rename()");
 
+	if(std::string(new_path).find(old_path) != string::npos)
+		return -EINVAL;
+
 	try {
 		unique_ptr<std::string> src_parent_path = get_parent_dir_path(old_path);
 		unique_ptr<std::string> dst_parent_path = get_parent_dir_path(new_path);
@@ -230,10 +270,29 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 		unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
 		if(*src_parent_path == *dst_parent_path){
+			if(*old_path == *new_path)
+				return -EEXIST;
+
 			inode *parent_i = new inode(src_parent_path->data());
 
 			dentry *d = new dentry(parent_i->get_ino());
+
 			ino_t target_ino = d->get_child_ino(old_name->data());
+			ino_t check_dst_ino = d->get_child_ino(new_name->data());
+
+			/* TODO : handle NOREPLACE AND EXCAHANGE
+			if (flags == RENAME_NOREPLACE){
+
+			} else if (flags == RENAME_EXCHANGE) {
+				if(check_dst_ino != -1){
+
+				} else if (check_dst_ino == -1){
+
+				}
+			} else {
+				return -EINVAL;
+			}
+			*/
 
 			d->delete_child(old_name->data());
 			d->add_new_child(new_name->data(), target_ino);
@@ -264,6 +323,15 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 
 			} else if (flags == RENAME_EXCHANGE) {
 				if(check_dst_ino != -1){
+					inode *src_i = new inode(target_ino);
+					inode *exchange_target_i = new inode(check_dst_ino);
+
+					if(S_ISREG(src_i->get_mode()) && S_ISDIR(exchange_target_i->get_mode()))
+						return -EISDIR;
+
+					if(S_ISDIR(exchange_target_i->get_mode()) && (exchange_target_i->get_size() != 0))
+						return -EEXIST;
+
 					src_d->delete_child(old_name->data());
 					src_d->add_new_child(old_name->data(), check_dst_ino);
 
@@ -409,8 +477,49 @@ int fuse_ops::unlink(const char* path){
 	return 0;
 }
 
-int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info);
-int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info);
+int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info) {
+	global_logger.log("Called read()");
+	int read_len = 0;
+	try {
+		inode *i = new inode(path);
+
+		read_len = data_pool->read(std::to_string(i->get_ino()), buffer, size, offset);
+	} catch(inode::no_entry &e) {
+		return -ENOENT;
+	} catch(inode::permission_denied &e) {
+		return -EACCES;
+	}
+
+	return read_len;
+}
+
+int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info){
+	global_logger.log("Called write()");
+	int written_len = 0;
+
+	try {
+		inode *i = new inode(path);
+
+		written_len = data_pool->write(std::to_string(i->get_ino()), buffer, size, offset);
+
+		off_t updated_size;
+		if(offset >= i->get_size())
+			updated_size = i->get_size() + size;
+		else if (offset < i->get_size()) {
+			if(offset + size >= i->get_size())
+				updated_size = offset + size;
+		}
+
+		i->set_size(updated_size);
+		i->sync();
+	} catch(inode::no_entry &e) {
+		return -ENOENT;
+	} catch(inode::permission_denied &e) {
+		return -EACCES;
+	}
+
+	return written_len;
+}
 
 int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 	try {
@@ -474,6 +583,7 @@ fuse_operations fuse_ops::get_fuse_ops(void)
 	fops.destroy	= destroy;
 	fops.getattr = getattr;
 	fops.access = access;
+	fops.symlink = symlink;
 
 	fops.opendir = opendir;
 	fops.releasedir = releasedir;
@@ -489,8 +599,8 @@ fuse_operations fuse_ops::get_fuse_ops(void)
 	fops.create = create;
 	fops.unlink = unlink;
 
-	//fops.read = read;
-	//fops.write = write;
+	fops.read = read;
+	fops.write = write;
 
 	fops.chmod = chmod;
 	fops.chown = chown;
