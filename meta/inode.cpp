@@ -190,7 +190,6 @@ ino_t alloc_new_ino(){
 	return new_ino;
 }
 
-/* TODO : is there any cases that check two or more permission at onec ? */
 bool permission_check(inode *i, int mask){
 	bool check_read = (mask & R_OK) ? true : false;
 	bool check_write = (mask & W_OK) ? true : false;
