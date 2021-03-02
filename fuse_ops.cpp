@@ -60,6 +60,7 @@ void fuse_ops::destroy(void *private_data)
 
 int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info* file_info) {
 	global_logger.log("Called getattr()");
+	global_logger.log("path : " + std::string(path));
 
 	try {
 		inode *i = new inode(path);
@@ -77,6 +78,7 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 
 int fuse_ops::access(const char* path, int mask) {
 	global_logger.log("Called access()");
+	global_logger.log("path : " + std::string(path));
 
 	fuse_context *fuse_ctx = fuse_get_context();
 
@@ -100,6 +102,8 @@ int fuse_ops::access(const char* path, int mask) {
 
 int fuse_ops::symlink(const char *src, const char *dst){
 	global_logger.log("Called symlink()");
+	global_logger.log("src : " + std::string(src) + " dst : " + std::string(dst));
+
 	try {
 		inode *src_i = new inode(src);
 
@@ -137,6 +141,8 @@ int fuse_ops::symlink(const char *src, const char *dst){
 
 int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called opendir()");
+	global_logger.log("path : " + std::string(path));
+
 	try {
 		inode *i = new inode(path);
 
@@ -163,6 +169,7 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 
 int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called releasedir()");
+	global_logger.log("path : " + std::string(path));
 
 	inode *i = new inode(path);
 
@@ -178,6 +185,7 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 
 int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* file_info, enum fuse_readdir_flags readdir_flags){
 	global_logger.log("Called readdir()");
+	global_logger.log("path : " + std::string(path));
 
 	filler(buffer, ".", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 	filler(buffer, "..", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
@@ -193,6 +201,7 @@ int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, of
 }
 int fuse_ops::mkdir(const char* path, mode_t mode){
 	global_logger.log("Called mkdir()");
+	global_logger.log("path : " + std::string(path));
 
 	if(!S_ISDIR(mode))
 		return -ENOTDIR;
@@ -224,6 +233,8 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 
 int fuse_ops::rmdir(const char* path) {
 	global_logger.log("Called rmdir()");
+	global_logger.log("path : " + std::string(path));
+
 	try {
 		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
 		uint64_t parent_ino = parent_i->get_ino();
@@ -258,6 +269,7 @@ int fuse_ops::rmdir(const char* path) {
 }
 int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int flags) {
 	global_logger.log("Called rename()");
+	global_logger.log("src : " + std::string(old_path) + " dst : " + std::string(new_path));
 
 	if(std::string(new_path).find(old_path) != string::npos)
 		return -EINVAL;
@@ -369,6 +381,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 
 int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 	global_logger.log("Called open()");
+	global_logger.log("path : " + std::string(path));
 
 	try {
 		inode *i = new inode(path);
@@ -396,6 +409,7 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 
 int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	global_logger.log("Called release()");
+	global_logger.log("path : " + std::string(path));
 
 	inode *i = new inode(path);
 
@@ -415,6 +429,7 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 
 int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_info) {
 	global_logger.log("Called create()");
+	global_logger.log("path : " + std::string(path));
 
 	if(S_ISDIR(mode))
 		return -EISDIR;
@@ -452,6 +467,8 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 
 int fuse_ops::unlink(const char* path){
 	global_logger.log("Called unlink()");
+	global_logger.log("path : " + std::string(path));
+
 	try {
 		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
 		uint64_t parent_ino = parent_i->get_ino();
@@ -479,6 +496,8 @@ int fuse_ops::unlink(const char* path){
 
 int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info) {
 	global_logger.log("Called read()");
+	global_logger.log("path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " + std::to_string(offset));
+
 	int read_len = 0;
 	try {
 		inode *i = new inode(path);
@@ -495,6 +514,8 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 
 int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info){
 	global_logger.log("Called write()");
+	global_logger.log("path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " + std::to_string(offset));
+
 	int written_len = 0;
 
 	try {
@@ -522,6 +543,9 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 }
 
 int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_info) {
+	global_logger.log("Called chmod()");
+	global_logger.log("path : " + std::string(path));
+
 	try {
 		inode *i = new inode(path);
 
@@ -540,6 +564,9 @@ int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_i
 }
 
 int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_info* file_info){
+	global_logger.log("Called chown()");
+	global_logger.log("path : " + std::string(path));
+
 	try {
 		inode *i = new inode(path);
 
@@ -557,6 +584,9 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 	return 0;
 }
 int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi) {
+	global_logger.log("Called utimens()");
+	global_logger.log("path : " + std::string(path));
+
 	try {
 		inode *i = new inode(path);
 
