@@ -267,6 +267,7 @@ int fuse_ops::rmdir(const char* path) {
 	}
 	return 0;
 }
+
 int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int flags) {
 	global_logger.log("Called rename()");
 	global_logger.log("src : " + std::string(old_path) + " dst : " + std::string(new_path));
@@ -292,19 +293,45 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			ino_t target_ino = d->get_child_ino(old_name->data());
 			ino_t check_dst_ino = d->get_child_ino(new_name->data());
 
-			/* TODO : handle NOREPLACE AND EXCAHANGE
+
 			if (flags == RENAME_NOREPLACE){
+				if(check_dst_ino != -1)
+					return -EEXIST;
+
+				d->delete_child(old_name->data());
+				d->add_new_child(new_name->data(), target_ino);
+
+				d->sync();
 
 			} else if (flags == RENAME_EXCHANGE) {
 				if(check_dst_ino != -1){
+					inode *src_i = new inode(target_ino);
+					inode *exchange_target_i = new inode(check_dst_ino);
 
+					if(S_ISREG(src_i->get_mode()) && S_ISDIR(exchange_target_i->get_mode()))
+						return -EISDIR;
+
+					/* TODO : directory inode should track their block size */
+					if(S_ISDIR(exchange_target_i->get_mode()) && (exchange_target_i->get_size() != 0))
+						return -EEXIST;
+
+					d->delete_child(old_name->data());
+					d->add_new_child(old_name->data(), check_dst_ino);
+
+					d->delete_child(new_name->data());
+					d->add_new_child(new_name->data(), target_ino);
+
+					d->sync();
 				} else if (check_dst_ino == -1){
+					d->delete_child(old_name->data());
+					d->add_new_child(new_name->data(), target_ino);
 
+					d->sync();
 				}
 			} else {
 				return -EINVAL;
 			}
-			*/
+
 
 			d->delete_child(old_name->data());
 			d->add_new_child(new_name->data(), target_ino);
@@ -341,6 +368,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 					if(S_ISREG(src_i->get_mode()) && S_ISDIR(exchange_target_i->get_mode()))
 						return -EISDIR;
 
+					/* TODO : directory inode should track their block size */
 					if(S_ISDIR(exchange_target_i->get_mode()) && (exchange_target_i->get_size() != 0))
 						return -EEXIST;
 
