@@ -5,6 +5,7 @@
 #include<utility>
 #include "../fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
+#include "../logger/logger.hpp"
 
 #define MAX_DENTRY_OBJ_SIZE (4 * 1024 * 1024)
 #define RAW_LINE_SIZE (256 + 8)
@@ -12,7 +13,7 @@ using std::unique_ptr;
 
 class dentry {
 private:
-	ino_t ino;
+	ino_t this_ino;
 	uint64_t child_num;
 	std::map<std::string, ino_t> child_list;
 

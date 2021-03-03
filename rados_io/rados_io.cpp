@@ -5,6 +5,8 @@
 
 size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offset)
 {
+	global_logger.log("Called rados_io::read_obj()");
+	global_logger.log("key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	uint64_t size;
 	time_t mtime;
 	int ret;
@@ -27,6 +29,8 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 
 size_t rados_io::write_obj(const string &key, const char *value, size_t len, off_t offset)
 {
+	global_logger.log("Called rados_io::write_obj()");
+	global_logger.log("key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret;
 
 	std::cout << std::string(value) << std::endl;
@@ -112,6 +116,8 @@ rados_io::~rados_io(void)
 
 size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 {
+	global_logger.log("Called rados_io::read()");
+	global_logger.log("key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret = 0;
 
 	off_t cursor = offset;
@@ -144,6 +150,8 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 
 size_t rados_io::write(const string &key, const char *value, size_t len, off_t offset)
 {
+	global_logger.log("Called rados_io::write()");
+	global_logger.log("key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret = 0;
 
 	off_t cursor = offset;
@@ -176,6 +184,8 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 
 bool rados_io::exist(const string &key)
 {
+	global_logger.log("Called rados_io::exist()");
+	global_logger.log("key : " + key);
 	int ret;
 	uint64_t size;
 	time_t mtime;
@@ -194,6 +204,8 @@ bool rados_io::exist(const string &key)
 
 void rados_io::remove(const string &key)
 {
+	global_logger.log("Called rados_io::remove()");
+	global_logger.log("key : " + key);
 	int ret;
 
 	ret = ioctx.remove(key);
