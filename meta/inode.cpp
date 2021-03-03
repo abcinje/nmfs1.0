@@ -159,6 +159,9 @@ void inode::deserialize(const char *value)
 {
 	global_logger.log("Called inode.deserialize()");
 	memcpy(this, value, sizeof(inode));
+
+	global_logger.log("serialized ino : " + std::to_string(this->i_ino));
+	global_logger.log("serialized size : " + std::to_string(this->i_size));
 }
 
 void inode::sync()

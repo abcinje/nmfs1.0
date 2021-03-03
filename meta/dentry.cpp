@@ -58,6 +58,8 @@ void dentry::deserialize(char *raw)
 	memcpy(&(this->child_num), pointer, sizeof(uint64_t));
 	pointer = pointer + sizeof(uint64_t);
 
+	global_logger.log("dentry child num : " + std::to_string(this->child_num));
+
 	for(int i = 0; i < this->child_num; i++){
 		std::string name;
 		memcpy(name.data(), pointer, 256);
@@ -66,6 +68,8 @@ void dentry::deserialize(char *raw)
 
 		this->child_list.insert(std::pair<std::string, ino_t>(name, ino));
 		pointer += RAW_LINE_SIZE;
+
+		global_logger.log("child name : " + name + " child ino : " + std::to_string(ino));
 	}
 
 }
