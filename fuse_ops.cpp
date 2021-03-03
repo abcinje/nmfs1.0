@@ -23,6 +23,10 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	global_logger.log("Called init()");
 	client *this_client;
 
+	rados_io::conn_info ci = {"client.admin", "ceph", 0};
+	meta_pool = new rados_io(ci, META_POOL);
+	data_pool = new rados_io(ci, DATA_POOL);
+
 	/* client id allocation */
 	if (!meta_pool->exist("client.list")) {
 		meta_pool->write("client.list", "?o", 2, 0);
@@ -30,10 +34,6 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	} else {
 		this_client = new client();
 	}
-
-	rados_io::conn_info ci = {"client.admin", "ceph", 0};
-	meta_pool = new rados_io(ci, META_POOL);
-	data_pool = new rados_io(ci, DATA_POOL);
 
 	/* root */
 	if (!meta_pool->exist("i$0")) {
