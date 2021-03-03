@@ -200,7 +200,7 @@ ino_t alloc_new_ino() {
 		new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
 		global_logger.log("new inode number : " + std::to_string(new_ino));
 	} else { /* for very first client */
-		new_ino = (1) << 40;
+		new_ino = (uint64_t)(1) << 40;
 		new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
 		global_logger.log("new inode number : " + std::to_string(new_ino));
 	}
