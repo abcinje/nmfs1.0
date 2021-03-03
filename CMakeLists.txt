@@ -12,18 +12,22 @@ add_executable(
 
 	main.cpp
 	fuse_ops.cpp
+	util.cpp
 
 	# logger
 	logger/logger.cpp
 
 	# meta
 	meta/inode.cpp
+	meta/dentry.cpp
+	meta/file_handler.cpp
 
 	# rados_io
 	rados_io/rados_io.cpp
 
 	# client
-	client/client.cpp meta/dentry.cpp meta/dentry.hpp meta/file_handler.cpp meta/file_handler.hpp util.cpp util.hpp)
+	client/client.cpp
+)
 
 target_link_libraries(nmfs0 ${FUSE3_LIBRARIES} rados)
 target_include_directories(nmfs0 PUBLIC ${FUSE3_INCLUDE_DIRS})
