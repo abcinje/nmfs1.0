@@ -39,6 +39,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	if (!meta_pool->exist("i$0")) {
 		fuse_context *fuse_ctx = fuse_get_context();
 		inode i(fuse_ctx->uid, fuse_ctx->gid, S_IFDIR | 0755);
+		i.set_ino(0);
 		auto value = i.serialize();
 		meta_pool->write("i$0", value.get(), sizeof(inode), 0);
 		meta_pool->write("d$0", "" , 0, 0);
@@ -51,11 +52,12 @@ void fuse_ops::destroy(void *private_data)
 {
 	global_logger.log("Called destroy()");
 
+	fuse_context *fuse_ctx = fuse_get_context();
+	delete (client *)(fuse_ctx->private_data);
+
 	delete meta_pool;
 	delete data_pool;
 
-	fuse_context *fuse_ctx = fuse_get_context();
-	delete (client *)(fuse_ctx->private_data);
 }
 
 int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info* file_info) {
