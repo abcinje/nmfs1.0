@@ -42,7 +42,8 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 		i.set_ino(0);
 		auto value = i.serialize();
 		meta_pool->write("i$0", value.get(), sizeof(inode), 0);
-		meta_pool->write("d$0", "" , 0, 0);
+		uint64_t child_num = 0;
+		meta_pool->write("d$0", (char*)&child_num , sizeof(uint64_t), 0);
 	}
 
 	return (void *)this_client;
