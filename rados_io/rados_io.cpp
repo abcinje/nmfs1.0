@@ -139,7 +139,7 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 		} else if (ret) {
 			throw cannot_acquire_lock("rados_io::read() failed");
 		}
-		sum += this->read_obj(obj_key,value + sum,cursor & (~OBJ_MASK), sub_len);
+		sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 		ioctx.unlock(obj_key, obj_key, obj_key);
 
 		cursor = next_bound;
@@ -173,7 +173,7 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 		} else if (ret) {
 			throw cannot_acquire_lock("rados_io::write() failed");
 		}
-		sum += this->write_obj(obj_key,value + sum,cursor & (~OBJ_MASK), sub_len);
+		sum += this->write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 		ioctx.unlock(obj_key, obj_key, obj_key);
 
 		cursor = next_bound;
