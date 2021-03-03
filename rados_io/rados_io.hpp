@@ -14,6 +14,16 @@ using std::string;
 
 class rados_io {
 private:
+	class obj_lock {
+	private:
+		librados::IoCtx *ctx;
+		string key;
+
+	public:
+		obj_lock(librados::IoCtx *ioctx, const string &obj_key, bool shared);
+		~obj_lock(void);
+	};
+
 	librados::Rados cluster;
 	librados::IoCtx ioctx;
 
