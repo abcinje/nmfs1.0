@@ -22,7 +22,7 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 		throw runtime_error("rados_io::read_obj() failed");
 	}
 
-	memcpy(value, bl.c_str(), len);
+	memcpy(value, bl.c_str(), ret);
 
 	return ret;
 }
