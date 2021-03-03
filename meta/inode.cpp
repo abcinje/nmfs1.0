@@ -64,7 +64,7 @@ inode::inode(const std::string &path)
 	while(true){
 		// get new target name
 		start_name = end_name + 2;
-		if(start_name > path_len)
+		if(start_name >= path_len)
 			break;
 		for(int i = start_name; i < path_len; i++){
 			if(path.at(i) == '/'){
@@ -104,7 +104,7 @@ inode::inode(const std::string &path)
 			parent_dentry = new dentry(parent_inode->get_ino());
 	}
 
-	this->copy(target_inode);
+	this->copy(parent_inode);
 	free(parent_inode);
 	free(parent_dentry);
 
