@@ -189,15 +189,22 @@ void inode::set_size(off_t size){this->i_size = size;}
 void inode::set_atime(struct timespec atime){this->i_atime = atime;}
 void inode::set_mtime(struct timespec mtime){this->i_mtime = mtime;}
 
-ino_t alloc_new_ino(){
+ino_t alloc_new_ino() {
 	global_logger.log("Called alloc_new_ino()");
 	fuse_context *fuse_ctx = fuse_get_context();
-	client *c = (client *)(fuse_ctx->private_data);
-
+	client *c = (client *) (fuse_ctx->private_data);
+	ino_t new_ino;
 	/* new_ino use client_id for first 24 bit and use ino_offset for next 40 bit, total 64bit(8bytes) */
-	ino_t new_ino = (c->get_client_id()) << 40;
-	new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
-	global_logger.log("new inode number : " + std::to_string(new_ino));
+	if (c != NULL) {
+		new_ino = (c->get_client_id()) << 40;
+		new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
+		global_logger.log("new inode number : " + std::to_string(new_ino));
+	} else { /* for very first client */
+		new_ino = (1) << 40;
+		new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
+		global_logger.log("new inode number : " + std::to_string(new_ino));
+	}
+
 	return new_ino;
 }
 
