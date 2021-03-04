@@ -66,12 +66,17 @@ inode::inode(const std::string &path)
 		start_name = end_name + 2;
 		if(start_name >= path_len)
 			break;
-		for(int i = start_name; i < path_len; i++){
+
+		int i;
+		for(i = start_name; i < path_len; i++){
 			if(path.at(i) == '/'){
 				end_name = i - 1;
 				break;
 			}
 		}
+		if(i == path_len)
+			end_name = i - 1;
+
 		std::string target_name = path.substr(start_name, end_name - start_name + 1);
 		global_logger.log(inode_ops, "Check target: " + target_name);
 
@@ -92,12 +97,13 @@ inode::inode(const std::string &path)
 				throw no_entry("No such file or Directory: inode number " + std::to_string(origin_ino));
 			}
 		}
+
 		if(!permission_check(target_inode, X_OK))
 			throw permission_denied("Permission Denied: " + target_name);
 
 		// target become next parent
-		free(parent_inode);
-		free(parent_dentry);
+		delete parent_inode;
+		delete parent_dentry;
 
 		parent_inode = target_inode;
 		if(S_ISDIR(parent_inode->get_mode()))
@@ -105,10 +111,9 @@ inode::inode(const std::string &path)
 	}
 
 	this->copy(parent_inode);
-	free(parent_inode);
-	free(parent_dentry);
-
-
+	delete parent_inode;
+	if(S_ISDIR(parent_inode->get_mode()))
+		delete parent_dentry;
 }
 
 inode::inode(ino_t ino)

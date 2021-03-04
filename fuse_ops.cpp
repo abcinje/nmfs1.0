@@ -69,7 +69,7 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 		inode *i = new inode(path);
 		i->fill_stat(stat);
 
-		free(i);
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -89,7 +89,7 @@ int fuse_ops::access(const char* path, int mask) {
 		inode *i = new inode(path);
 		bool ret = permission_check(i, mask);
 
-		free(i);
+		delete i;
 
 		if(!ret)
 			return -EACCES;
@@ -117,9 +117,9 @@ int fuse_ops::symlink(const char *src, const char *dst){
 		unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 
 		if(dst_parent_d->get_child_ino(symlink_name->data())) {
-			free(dst_parent_d);
-			free(dst_parent_i);
-			free(src_i);
+			delete dst_parent_d;
+			delete dst_parent_i;
+			delete src_i;
 			return -EEXIST;
 		}
 
@@ -129,10 +129,10 @@ int fuse_ops::symlink(const char *src, const char *dst){
 		dst_parent_d->sync();
 		symlink_i->sync();
 
-		free(dst_parent_d);
-		free(dst_parent_i);
-		free(src_i);
-		free(symlink_i);
+		delete dst_parent_d;
+		delete dst_parent_i;
+		delete src_i;
+		delete symlink_i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -150,7 +150,7 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 		inode *i = new inode(path);
 
 		if(!S_ISDIR(i->get_mode())) {
-			free(i);
+			delete i;
 			return -ENOTDIR;
 		}
 
@@ -160,7 +160,7 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 
-		free(i);
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -183,6 +183,8 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 		return -EIO;
 
 	fh_list.erase(it);
+
+	delete i;
 	return 0;
 }
 
@@ -198,8 +200,8 @@ int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, of
 
 	d->fill_filler(buffer, filler);
 
-	free(i);
-	free(d);
+	delete i;
+	delete d;
 	return 0;
 }
 int fuse_ops::mkdir(const char* path, mode_t mode){
@@ -225,10 +227,10 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 		dentry *new_d = new dentry(i->get_ino(), true);
 		new_d->sync();
 
-		free(parent_i);
-		free(parent_d);
-		free(i);
-		free(new_d);
+		delete parent_i;
+		delete parent_d;
+		delete i;
+		delete new_d;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -264,9 +266,9 @@ int fuse_ops::rmdir(const char* path) {
 		parent_d->delete_child(*(get_filename_from_path(path).get()));
 		parent_d->sync();
 
-		free(parent_i);
-		free(parent_d);
-		free(i);
+		delete parent_i;
+		delete parent_d;
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -344,8 +346,8 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			d->add_new_child(new_name->data(), target_ino);
 			d->sync();
 
-			free(parent_i);
-			free(d);
+			delete parent_i;
+			delete d;
 
 		} else {
 			inode *src_parent_i = new inode(src_parent_path->data());
@@ -398,10 +400,10 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 				return -EINVAL;
 			}
 
-			free(src_parent_i);
-			free(dst_parent_i);
-			free(src_d);
-			free(dst_d);
+			delete src_parent_i;
+			delete dst_parent_i;
+			delete src_d;
+			delete dst_d;
 		}
 
 
@@ -422,7 +424,7 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 		inode *i = new inode(path);
 
 		if(S_ISDIR(i->get_mode())) {
-			free(i);
+			delete i;
 			return -EISDIR;
 		}
 
@@ -432,7 +434,7 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 
-		free(i);
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -452,13 +454,13 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	it = fh_list.find(i->get_ino());
 
 	if(it == fh_list.end()) {
-		free(i);
+		delete i;
 		return -EIO;
 	}
 
 	fh_list.erase(it);
 
-	free(i);
+	delete i;
 	return 0;
 }
 
@@ -488,9 +490,9 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 
-		free(parent_i);
-		free(parent_d);
-		free(i);
+		delete parent_i;
+		delete parent_d;
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -518,9 +520,9 @@ int fuse_ops::unlink(const char* path){
 		parent_d->delete_child(*(get_filename_from_path(path).get()));
 		parent_d->sync();
 
-		free(parent_i);
-		free(parent_d);
-		free(i);
+		delete parent_i;
+		delete parent_d;
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -538,6 +540,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 		inode *i = new inode(path);
 
 		read_len = data_pool->read(std::to_string(i->get_ino()), buffer, size, offset);
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -568,6 +571,8 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 
 		i->set_size(updated_size);
 		i->sync();
+
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -588,7 +593,7 @@ int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_i
 		i->set_mode(mode | type);
 
 		i->sync();
-		free(i);
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -609,7 +614,7 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 		i->set_gid(gid);
 
 		i->sync();
-		free(i);
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -629,7 +634,7 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 		i->set_mtime(tv[1]);
 
 		i->sync();
-		free(i);
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
