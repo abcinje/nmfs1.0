@@ -30,7 +30,7 @@ const char *inode::permission_denied::what(void)
 
 inode::inode(uid_t owner, gid_t group, mode_t mode) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0)
 {
-	global_logger.log("Called inode(new file)");
+	global_logger.log(inode_ops, "Called inode(new file)");
 	struct timespec ts;
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
@@ -40,7 +40,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode) : i_mode(mode), i_uid(owner)
 
 inode::inode(uid_t owner, gid_t group, mode_t mode, ino_t symlink_target_ino) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0),  symlink_target_ino(symlink_target_ino)
 {
-	global_logger.log("Called inode(symlink)");
+	global_logger.log(inode_ops,"Called inode(symlink)");
 	struct timespec ts;
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
@@ -50,7 +50,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, ino_t symlink_target_ino) : 
 
 inode::inode(const std::string &path)
 {
-	global_logger.log("Called inode(" + path + ")");
+	global_logger.log(inode_ops, "Called inode(" + path + ")");
 	inode *parent_inode, *target_inode;
 	dentry *parent_dentry;
 
@@ -73,7 +73,7 @@ inode::inode(const std::string &path)
 			}
 		}
 		std::string target_name = path.substr(start_name, end_name - start_name + 1);
-		global_logger.log("Check target: " + target_name);
+		global_logger.log(inode_ops, "Check target: " + target_name);
 
 		// translate target name to target's inode number
 		ino_t target_ino = parent_dentry->get_child_ino(target_name);
@@ -113,7 +113,7 @@ inode::inode(const std::string &path)
 
 inode::inode(ino_t ino)
 {
-	global_logger.log("Called inode(" + std::to_string(ino) + ")");
+	global_logger.log(inode_ops, "Called inode(" + std::to_string(ino) + ")");
 	char *raw_data = (char *)malloc(sizeof(inode));
 	try {
 		meta_pool->read("i$" + std::to_string(ino), raw_data, sizeof(inode), 0);
@@ -125,13 +125,13 @@ inode::inode(ino_t ino)
 
 void inode::copy(inode *src)
 {
-	global_logger.log("Called inode.copy()");
+	global_logger.log(inode_ops, "Called inode.copy()");
 	memcpy(this, src, sizeof(inode));
 }
 
 void inode::fill_stat(struct stat *s)
 {
-	global_logger.log("Called inode.fill_stat()");
+	global_logger.log(inode_ops, "Called inode.fill_stat()");
 	s->st_mode	= i_mode;
 	s->st_uid	= i_uid;
 	s->st_gid	= i_gid;
@@ -149,7 +149,7 @@ void inode::fill_stat(struct stat *s)
 
 unique_ptr<char> inode::serialize(void)
 {
-	global_logger.log("Called inode.serialize()");
+	global_logger.log(inode_ops, "Called inode.serialize()");
 	unique_ptr<char> value(new char[sizeof(inode)]);
 	memcpy(value.get(), this, sizeof(inode));
 	return std::move(value);
@@ -157,16 +157,16 @@ unique_ptr<char> inode::serialize(void)
 
 void inode::deserialize(const char *value)
 {
-	global_logger.log("Called inode.deserialize()");
+	global_logger.log(inode_ops, "Called inode.deserialize()");
 	memcpy(this, value, sizeof(inode));
 
-	global_logger.log("serialized ino : " + std::to_string(this->i_ino));
-	global_logger.log("serialized size : " + std::to_string(this->i_size));
+	global_logger.log(inode_ops, "serialized ino : " + std::to_string(this->i_ino));
+	global_logger.log(inode_ops, "serialized size : " + std::to_string(this->i_size));
 }
 
 void inode::sync()
 {
-	global_logger.log("Called inode.sync()");
+	global_logger.log(inode_ops, "Called inode.sync()");
 	unique_ptr<char> raw = this->serialize();
 	meta_pool->write("i$" + std::to_string(this->i_ino), raw.get(), sizeof(inode), 0);
 }
@@ -193,7 +193,7 @@ void inode::set_atime(struct timespec atime){this->i_atime = atime;}
 void inode::set_mtime(struct timespec mtime){this->i_mtime = mtime;}
 
 ino_t alloc_new_ino() {
-	global_logger.log("Called alloc_new_ino()");
+	global_logger.log(inode_ops, "Called alloc_new_ino()");
 	fuse_context *fuse_ctx = fuse_get_context();
 	client *c = (client *) (fuse_ctx->private_data);
 	ino_t new_ino;
@@ -201,18 +201,18 @@ ino_t alloc_new_ino() {
 	if (c != NULL) {
 		new_ino = (c->get_client_id()) << 40;
 		new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
-		global_logger.log("new inode number : " + std::to_string(new_ino));
+		global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
 	} else { /* for very first client */
 		new_ino = (uint64_t)(1) << 40;
 		new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
-		global_logger.log("new inode number : " + std::to_string(new_ino));
+		global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
 	}
 
 	return new_ino;
 }
 
 bool permission_check(inode *i, int mask){
-	global_logger.log("Called permission_check");
+	global_logger.log(inode_ops, "Called permission_check");
 	bool check_read = (mask & R_OK) ? true : false;
 	bool check_write = (mask & W_OK) ? true : false;
 	bool check_exec = (mask & X_OK) ? true : false;

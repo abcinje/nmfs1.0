@@ -5,8 +5,8 @@
 
 size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offset)
 {
-	global_logger.log("Called rados_io::read_obj()");
-	global_logger.log("key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
+	global_logger.log(rados_io_ops,"Called rados_io::read_obj()");
+	global_logger.log(rados_io_ops,"key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	uint64_t size;
 	time_t mtime;
 	int ret;
@@ -15,7 +15,7 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 
 	ret = ioctx.read(key, bl, len, offset);
 	if (ret >= 0) {
-		global_logger.log("Read an object. (key: \"" + key + "\")");
+		global_logger.log(rados_io_ops,"Read an object. (key: \"" + key + "\")");
 	} else if (ret == -ENOENT) {
 		throw no_such_object("rados_io::read_obj() failed (key: \"" + key + "\")");
 	} else {
@@ -29,8 +29,8 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 
 size_t rados_io::write_obj(const string &key, const char *value, size_t len, off_t offset)
 {
-	global_logger.log("Called rados_io::write_obj()");
-	global_logger.log("key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
+	global_logger.log(rados_io_ops,"Called rados_io::write_obj()");
+	global_logger.log(rados_io_ops,"key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret;
 
 	std::cout << std::string(value) << std::endl;
@@ -38,7 +38,7 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	ret = ioctx.write(key, bl, len, offset);
 
 	if (ret >= 0) {
-		global_logger.log("Wrote an object. (key: \"" + key + "\")");
+		global_logger.log(rados_io_ops, "Wrote an object. (key: \"" + key + "\")");
 	} else {
 		throw runtime_error("rados_io::write_obj() failed");
 	}
@@ -80,44 +80,44 @@ rados_io::rados_io(const conn_info &ci, string pool)
 		throw runtime_error("rados_io::rados_io() failed "
 				"(couldn't initialize the cluster handle)");
 	}
-	global_logger.log("Initialized the cluster handle. (user: \"" + ci.user + "\", cluster: \"" + ci.cluster + "\")");
+	global_logger.log(rados_io_ops, "Initialized the cluster handle. (user: \"" + ci.user + "\", cluster: \"" + ci.cluster + "\")");
 
 	if ((ret = cluster.conf_read_file("/etc/ceph/ceph.conf")) < 0) {
 		cluster.shutdown();
 		throw runtime_error("rados_io::rados_io() failed "
 				"(couldn't read the Ceph configuration file)");
 	}
-	global_logger.log("Read a Ceph configuration file.");
+	global_logger.log(rados_io_ops, "Read a Ceph configuration file.");
 
 	if ((ret = cluster.connect()) < 0) {
 		cluster.shutdown();
 		throw runtime_error("rados_io::rados_io() failed "
 				"(couldn't connect to cluster)");
 	}
-	global_logger.log("Connected to the cluster.");
+	global_logger.log(rados_io_ops, "Connected to the cluster.");
 
 	if ((ret = cluster.ioctx_create(pool.c_str(), ioctx)) < 0) {
 		cluster.shutdown();
 		throw runtime_error("rados_io::rados_io() failed "
 				"(couldn't set up ioctx)");
 	}
-	global_logger.log("Created an I/O context. "
+	global_logger.log(rados_io_ops, "Created an I/O context. "
 			"(pool: \"" + pool + "\")");
 }
 
 rados_io::~rados_io(void)
 {
 	ioctx.close();
-	global_logger.log("Closed the connection.");
+	global_logger.log(rados_io_ops, "Closed the connection.");
 
 	cluster.shutdown();
-	global_logger.log("Shut down the handle.");
+	global_logger.log(rados_io_ops, "Shut down the handle.");
 }
 
 size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 {
-	global_logger.log("Called rados_io::read()");
-	global_logger.log("key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
+	global_logger.log(rados_io_ops, "Called rados_io::read()");
+	global_logger.log(rados_io_ops, "key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret = 0;
 
 	off_t cursor = offset;
@@ -150,8 +150,8 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 
 size_t rados_io::write(const string &key, const char *value, size_t len, off_t offset)
 {
-	global_logger.log("Called rados_io::write()");
-	global_logger.log("key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
+	global_logger.log(rados_io_ops, "Called rados_io::write()");
+	global_logger.log(rados_io_ops, "key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret = 0;
 
 	off_t cursor = offset;
@@ -184,18 +184,18 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 
 bool rados_io::exist(const string &key)
 {
-	global_logger.log("Called rados_io::exist()");
-	global_logger.log("key : " + key);
+	global_logger.log(rados_io_ops, "Called rados_io::exist()");
+	global_logger.log(rados_io_ops, "key : " + key);
 	int ret;
 	uint64_t size;
 	time_t mtime;
 
 	ret = ioctx.stat(key, &size, &mtime);
 	if (ret >= 0) {
-		global_logger.log("The object with key \""+ key + "\" exists.");
+		global_logger.log(rados_io_ops, "The object with key \""+ key + "\" exists.");
 		return true;
 	} else if (ret == -ENOENT) {
-		global_logger.log("The object with key \"" + key + "\" doesn't exist.");
+		global_logger.log(rados_io_ops, "The object with key \"" + key + "\" doesn't exist.");
 		return false;
 	} else {
 		throw runtime_error("rados_io::exist() failed");
@@ -204,15 +204,15 @@ bool rados_io::exist(const string &key)
 
 void rados_io::remove(const string &key)
 {
-	global_logger.log("Called rados_io::remove()");
-	global_logger.log("key : " + key);
+	global_logger.log(rados_io_ops, "Called rados_io::remove()");
+	global_logger.log(rados_io_ops, "key : " + key);
 	int ret;
 
 	ret = ioctx.remove(key);
 	if (ret >= 0) {
-		global_logger.log("Removed an object. (key: \"" + key + "\")");
+		global_logger.log(rados_io_ops, "Removed an object. (key: \"" + key + "\")");
 	} else if (ret == -ENOENT) {
-		global_logger.log("Tried to remove a non-existent object. (key: \"" + key + "\")");
+		global_logger.log(rados_io_ops, "Tried to remove a non-existent object. (key: \"" + key + "\")");
 	} else {
 		throw runtime_error("rados_io::remove() failed");
 	}
