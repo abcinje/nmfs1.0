@@ -208,9 +208,6 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 	global_logger.log(fuse_op, "Called mkdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	if(!S_ISDIR(mode))
-		return -ENOTDIR;
-
 	fuse_context *fuse_ctx = fuse_get_context();
 	try {
 		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));

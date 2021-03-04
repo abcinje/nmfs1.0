@@ -97,9 +97,9 @@ inode::inode(const std::string &path)
 				throw no_entry("No such file or Directory: inode number " + std::to_string(origin_ino));
 			}
 		}
-
-		if(!permission_check(target_inode, X_OK))
-			throw permission_denied("Permission Denied: " + target_name);
+		if(S_ISDIR(target_inode->get_mode()))
+			if(!permission_check(target_inode, X_OK))
+				throw permission_denied("Permission Denied: " + target_name);
 
 		// target become next parent
 		delete parent_inode;
