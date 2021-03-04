@@ -213,6 +213,7 @@ ino_t alloc_new_ino() {
 		global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
 	}
 
+	per_client_ino_offset++;
 	return new_ino;
 }
 
