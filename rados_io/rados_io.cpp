@@ -3,6 +3,33 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+rados_io::obj_lock::obj_lock(librados::IoCtx *ioctx, const string &obj_key, bool shared) : ctx(ioctx), key(obj_key)
+{
+	string op = shared ? "read" : "write";
+	int ret;
+
+	if (shared) {
+		ret = ctx->lock_shared(key, key, key, key, key, nullptr, 0);
+	} else {
+		ret = ctx->lock_exclusive(key, key, key, key, nullptr, 0);
+	}
+
+	if (ret == -EBUSY) {
+		throw cannot_acquire_lock("rados_io::" + op + "() failed "
+				"(the lock is already held by another (client, cookie) pair)");
+	} else if (ret == -EEXIST) {
+		throw cannot_acquire_lock("rados_io::" + op + "() failed "
+				"(the lock is already held by the same (client, cookie) pair)");
+	} else if (ret) {
+		throw cannot_acquire_lock("rados_io::" + op + "() failed ");
+	}
+}
+
+rados_io::obj_lock::~obj_lock(void)
+{
+	ctx->unlock(key, key, key);
+}
+
 size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offset)
 {
 	global_logger.log(rados_io_ops,"Called rados_io::read_obj()");
@@ -118,7 +145,6 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::read()");
 	global_logger.log(rados_io_ops, "key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
-	int ret = 0;
 
 	off_t cursor = offset;
 	off_t stop = offset + len;
@@ -131,16 +157,10 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		ret = ioctx.lock_shared(obj_key, obj_key, obj_key, obj_key, obj_key, nullptr, 0);
-		if (ret == -EBUSY) {
-			throw cannot_acquire_lock("rados_io::read() failed (the lock is already held by another (client, cookie) pair)");
-		} else if (ret == -EEXIST) {
-			throw cannot_acquire_lock("rados_io::read() failed (the lock is already held by the same (client, cookie) pair");
-		} else if (ret) {
-			throw cannot_acquire_lock("rados_io::read() failed");
+		{
+			obj_lock lock(&ioctx, obj_key, true);
+			sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 		}
-		sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
-		ioctx.unlock(obj_key, obj_key, obj_key);
 
 		cursor = next_bound;
 	}
@@ -152,7 +172,6 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 {
 	global_logger.log(rados_io_ops, "Called rados_io::write()");
 	global_logger.log(rados_io_ops, "key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
-	int ret = 0;
 
 	off_t cursor = offset;
 	off_t stop = offset + len;
@@ -165,16 +184,10 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		ret = ioctx.lock_exclusive(obj_key, obj_key, obj_key, obj_key, nullptr, 0);
-		if (ret == -EBUSY) {
-			throw cannot_acquire_lock("rados_io::write() failed (the lock is already held by another (client, cookie) pair)");
-		} else if (ret == -EEXIST) {
-			throw cannot_acquire_lock("rados_io::write() failed (the lock is already held by the same (client, cookie) pair");
-		} else if (ret) {
-			throw cannot_acquire_lock("rados_io::write() failed");
+		{
+			obj_lock lock(&ioctx, obj_key, false);
+			sum += this->write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 		}
-		sum += this->write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
-		ioctx.unlock(obj_key, obj_key, obj_key);
 
 		cursor = next_bound;
 	}
