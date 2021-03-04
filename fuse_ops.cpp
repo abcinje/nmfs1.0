@@ -298,7 +298,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 		unique_ptr<std::string> old_name = get_filename_from_path(old_path);
 		unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
-		size_t paradox_check = std::string(new_path).find_first_of(old_path);
+		size_t paradox_check = std::string(new_path).find(old_path);
 		if((paradox_check == 0) && (std::string(new_path).at(std::string(old_path).length()) == '/'))
 			return -EINVAL;
 
