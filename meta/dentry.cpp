@@ -129,3 +129,4 @@ void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler)
 }
 
 uint64_t dentry::get_child_num() {return this->child_num;}
+uint64_t dentry::get_total_name_legth() {return this->total_name_length;}

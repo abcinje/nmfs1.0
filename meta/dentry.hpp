@@ -33,6 +33,7 @@ public:
 	void fill_filler(void *buffer, fuse_fill_dir_t filler);
 
 	uint64_t get_child_num();
+	uint64_t get_total_name_legth();
 };
 
 
