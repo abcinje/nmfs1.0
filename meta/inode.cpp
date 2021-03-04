@@ -102,8 +102,8 @@ inode::inode(const std::string &path)
 				throw permission_denied("Permission Denied: " + target_name);
 
 		// target become next parent
-		delete parent_inode;
-		delete parent_dentry;
+		// delete parent_inode;
+		// delete parent_dentry;
 
 		parent_inode = target_inode;
 		if(S_ISDIR(parent_inode->get_mode()))
@@ -111,9 +111,9 @@ inode::inode(const std::string &path)
 	}
 
 	this->copy(parent_inode);
-	delete parent_inode;
-	if(S_ISDIR(parent_inode->get_mode()))
-		delete parent_dentry;
+	// delete parent_inode;
+	// if(S_ISDIR(parent_inode->get_mode()))
+		// delete parent_dentry;
 }
 
 inode::inode(ino_t ino)
