@@ -14,11 +14,23 @@ dentry::dentry(ino_t ino) : this_ino(ino)
 	}
 }
 
+dentry::dentry(ino_t ino, bool flag) : this_ino(ino)
+{
+	global_logger.log(dentry_ops, "Called dentry(" + std::to_string(ino) +") from mkdir");
+	if(flag){
+		this->child_num = 0;
+		this->total_name_length = 0;
+	} else {
+		throw std::runtime_error("Something wrong in mkdir");
+	}
+}
+
 void dentry::add_new_child(const std::string &filename, ino_t ino){
 	global_logger.log(dentry_ops, "Called dentry.add_new_child()");
 	global_logger.log(dentry_ops, "file : " + filename + " inode number : " + std::to_string(ino));
 	this->child_list.insert(std::make_pair(filename, ino));
 	this->child_num++;
+	this->total_name_length += filename.length();
 }
 
 void dentry::delete_child(const std::string &filename) {
@@ -26,28 +38,36 @@ void dentry::delete_child(const std::string &filename) {
 	global_logger.log(dentry_ops, "file : " + filename);
 	this->child_list.erase(filename);
 	this->child_num--;
+	this->total_name_length -= filename.length();
 }
 
-unique_ptr<char> dentry::serialize()
+char* dentry::serialize()
 {
+	int raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
 	global_logger.log(dentry_ops, "Called dentry.serialize()");
-	unique_ptr<char> raw(new char(sizeof(uint64_t) + ((this->child_num) * RAW_LINE_SIZE)));
-	char *pointer = raw.get();
+	char *raw = (char *)malloc(raw_size);
+	char *pointer = raw;
 
-	memset(pointer, '\0', sizeof(uint64_t) + ((this->child_num) * RAW_LINE_SIZE));
+	memset(pointer, '\0', raw_size);
 	memcpy(pointer, &(this->child_num), sizeof(uint64_t));
 	pointer += sizeof(uint64_t);
 
 	for(auto it = this->child_list.begin(); it != this->child_list.end(); it++){
-		/* serialize name */
-		memcpy(pointer, &(it->first), it->first.length());
-		/*serialize ino */
-		memcpy(pointer + 256, &(it->second), sizeof(ino_t));
+		/* serialiize name length */
+		int name_length = it->first.length();
+		memcpy(pointer, &(name_length), sizeof(int));
+		pointer += sizeof(int);
 
-		pointer += RAW_LINE_SIZE;
+		/* serialize name */
+		memcpy(pointer, &(it->first), name_length);
+		pointer += name_length;
+
+		/* serialize ino */
+		memcpy(pointer, &(it->second), sizeof(ino_t));
+		pointer += sizeof(ino_t);
 	}
 
-	return std::move(raw);
+	return raw;
 }
 
 void dentry::deserialize(char *raw)
@@ -60,15 +80,23 @@ void dentry::deserialize(char *raw)
 
 	global_logger.log(dentry_ops, "dentry child num : " + std::to_string(this->child_num));
 
+	this->total_name_length = 0;
 	for(int i = 0; i < this->child_num; i++){
+		int name_length;
+		memcpy(&name_length, pointer, sizeof(int));
+		pointer += sizeof(int);
+
 		std::string name;
-		memcpy(name.data(), pointer, 256);
+		name.reserve(name_length);
+		memcpy(name.data(), pointer, name_length);
+		pointer += name_length;
+
 		ino_t ino;
-		memcpy(&ino, pointer + 256, sizeof(ino_t));
+		memcpy(&ino, pointer, sizeof(ino_t));
+		pointer += sizeof(ino_t);
 
 		this->child_list.insert(std::pair<std::string, ino_t>(name, ino));
-		pointer += RAW_LINE_SIZE;
-
+		this->total_name_length += name_length;
 		global_logger.log(dentry_ops, "child name : " + name + " child ino : " + std::to_string(ino));
 	}
 
@@ -77,8 +105,11 @@ void dentry::deserialize(char *raw)
 void dentry::sync()
 {
 	global_logger.log(dentry_ops,"Called dentry.sync()");
-	unique_ptr<char> raw = this->serialize();
-	meta_pool->write("d$" + std::to_string(this->this_ino), raw.get(), sizeof(uint64_t) + ((this->child_num) * RAW_LINE_SIZE), 0);
+	int raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
+	char* raw = this->serialize();
+	meta_pool->write("d$" + std::to_string(this->this_ino), raw, raw_size - 1, 0);
+
+	free(raw);
 }
 
 ino_t dentry::get_child_ino(std::string child_name)
