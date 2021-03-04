@@ -222,9 +222,13 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
 		parent_d->sync();
 
+		dentry *new_d = new dentry(i->get_ino(), true);
+		new_d->sync();
+
 		free(parent_i);
 		free(parent_d);
 		free(i);
+		free(new_d);
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
