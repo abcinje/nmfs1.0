@@ -86,7 +86,7 @@ void dentry::deserialize(char *raw)
 		memcpy(&name_length, pointer, sizeof(int));
 		pointer += sizeof(int);
 
-		char * name = (char *)calloc(name_length + 1, sizeof(char));                                                                                                                 │
+		char* name=(char *)calloc(name_length + 1, sizeof(char));
 		memcpy(name, pointer, name_length);
 		pointer += name_length;
 
