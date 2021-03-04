@@ -129,6 +129,9 @@ int fuse_ops::symlink(const char *src, const char *dst){
 		dst_parent_d->sync();
 		symlink_i->sync();
 
+		dst_parent_i->set_size(dst_parent_d->get_total_name_legth());
+		dst_parent_i->sync();
+
 		delete dst_parent_d;
 		delete dst_parent_i;
 		delete src_i;
@@ -218,11 +221,15 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 		inode *i = new inode(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
 		i->sync();
 
+
 		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
 		parent_d->sync();
 
 		dentry *new_d = new dentry(i->get_ino(), true);
 		new_d->sync();
+
+		parent_i->set_size(parent_d->get_total_name_legth());
+		parent_i->sync();
 
 		delete parent_i;
 		delete parent_d;
@@ -262,6 +269,9 @@ int fuse_ops::rmdir(const char* path) {
 
 		parent_d->delete_child(*(get_filename_from_path(path).get()));
 		parent_d->sync();
+
+		parent_i->set_size(parent_d->get_total_name_legth());
+		parent_i->sync();
 
 		delete parent_i;
 		delete parent_d;
@@ -317,7 +327,6 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 					if(S_ISREG(src_i->get_mode()) && S_ISDIR(exchange_target_i->get_mode()))
 						return -EISDIR;
 
-					/* TODO : directory inode should track their block size */
 					if(S_ISDIR(exchange_target_i->get_mode()) && (exchange_target_i->get_size() != 0))
 						return -EEXIST;
 
@@ -335,7 +344,14 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 					d->sync();
 				}
 			} else {
-				return -EINVAL;
+				if(check_dst_ino != -1) {
+					d->delete_child(new_name->data());
+					meta_pool->remove("i$"+check_dst_ino);
+				}
+				d->delete_child(old_name->data());
+				d->add_new_child(new_name->data(), target_ino);
+
+				d->sync();
 			}
 
 
@@ -343,6 +359,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			d->add_new_child(new_name->data(), target_ino);
 			d->sync();
 
+			parent_i->set_size(d->get_total_name_legth());
 			delete parent_i;
 			delete d;
 
@@ -394,8 +411,19 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 					dst_d->sync();
 				}
 			} else {
-				return -EINVAL;
+				if(check_dst_ino != -1) {
+					dst_d->delete_child(new_name->data());
+					meta_pool->remove("i$"+check_dst_ino);
+				}
+				src_d->delete_child(old_name->data());
+				dst_d->add_new_child(new_name->data(), target_ino);
+
+				src_d->sync();
+				dst_d->sync();
 			}
+
+			src_parent_i->set_size(src_d->get_total_name_legth());
+			dst_parent_i->set_size(dst_d->get_total_name_legth());
 
 			delete src_parent_i;
 			delete dst_parent_i;
@@ -487,6 +515,9 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 
+		parent_i->set_size(parent_d->get_total_name_legth());
+		parent_i->sync();
+
 		delete parent_i;
 		delete parent_d;
 		delete i;
@@ -516,6 +547,9 @@ int fuse_ops::unlink(const char* path){
 
 		parent_d->delete_child(*(get_filename_from_path(path).get()));
 		parent_d->sync();
+
+		parent_i->set_size(parent_d->get_total_name_legth());
+		parent_i->sync();
 
 		delete parent_i;
 		delete parent_d;
