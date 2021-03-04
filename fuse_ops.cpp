@@ -288,8 +288,8 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 	global_logger.log(fuse_op, "Called rename()");
 	global_logger.log(fuse_op, "src : " + std::string(old_path) + " dst : " + std::string(new_path));
 
-	if(std::string(new_path).find(old_path) != string::npos)
-		return -EINVAL;
+	if(std::string(old_path) == std::string(new_path))
+		return -EEXIST;
 
 	try {
 		unique_ptr<std::string> src_parent_path = get_parent_dir_path(old_path);
@@ -298,10 +298,11 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 		unique_ptr<std::string> old_name = get_filename_from_path(old_path);
 		unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
-		if(*src_parent_path == *dst_parent_path){
-			if(*old_name == *new_name)
-				return -EEXIST;
+		size_t paradox_check = std::string(new_path).find_first_of(old_path);
+		if((paradox_check == 0) && (std::string(new_path).at(std::string(old_path).length()) == '/'))
+			return -EINVAL;
 
+		if(*src_parent_path == *dst_parent_path){
 			inode *parent_i = new inode(src_parent_path->data());
 
 			dentry *d = new dentry(parent_i->get_ino());
@@ -346,7 +347,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			} else {
 				if(check_dst_ino != -1) {
 					d->delete_child(new_name->data());
-					meta_pool->remove("i$"+check_dst_ino);
+					meta_pool->remove("i$" + std::to_string(check_dst_ino));
 				}
 				d->delete_child(old_name->data());
 				d->add_new_child(new_name->data(), target_ino);
@@ -413,7 +414,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			} else {
 				if(check_dst_ino != -1) {
 					dst_d->delete_child(new_name->data());
-					meta_pool->remove("i$"+check_dst_ino);
+					meta_pool->remove("i$" + std::to_string(check_dst_ino));
 				}
 				src_d->delete_child(old_name->data());
 				dst_d->add_new_child(new_name->data(), target_ino);
