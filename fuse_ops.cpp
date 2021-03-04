@@ -647,7 +647,7 @@ fuse_operations fuse_ops::get_fuse_ops(void)
 	memset(&fops, 0, sizeof(fuse_operations));
 
 	fops.init	= init;
-	fops.destroy	= destroy;
+	fops.destroy = destroy;
 	fops.getattr = getattr;
 	fops.access = access;
 	fops.symlink = symlink;
