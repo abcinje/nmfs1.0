@@ -289,7 +289,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 		unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
 		if(*src_parent_path == *dst_parent_path){
-			if(*old_path == *new_path)
+			if(*old_name == *new_name)
 				return -EEXIST;
 
 			inode *parent_i = new inode(src_parent_path->data());
