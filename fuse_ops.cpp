@@ -302,7 +302,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 		if((paradox_check == 0) && (std::string(new_path).at(std::string(old_path).length()) == '/'))
 			return -EINVAL;
 
-		if(*src_parent_path == *dst_parent_path){
+		if (*src_parent_path == *dst_parent_path) {
 			inode *parent_i = new inode(src_parent_path->data());
 
 			dentry *d = new dentry(parent_i->get_ino());
@@ -310,41 +310,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			ino_t target_ino = d->get_child_ino(old_name->data());
 			ino_t check_dst_ino = d->get_child_ino(new_name->data());
 
-
-			if (flags == RENAME_NOREPLACE){
-				if(check_dst_ino != -1)
-					return -EEXIST;
-
-				d->delete_child(old_name->data());
-				d->add_new_child(new_name->data(), target_ino);
-
-				d->sync();
-
-			} else if (flags == RENAME_EXCHANGE) {
-				if(check_dst_ino != -1){
-					inode *src_i = new inode(target_ino);
-					inode *exchange_target_i = new inode(check_dst_ino);
-
-					if(S_ISREG(src_i->get_mode()) && S_ISDIR(exchange_target_i->get_mode()))
-						return -EISDIR;
-
-					if(S_ISDIR(exchange_target_i->get_mode()) && (exchange_target_i->get_size() != 0))
-						return -EEXIST;
-
-					d->delete_child(old_name->data());
-					d->add_new_child(old_name->data(), check_dst_ino);
-
-					d->delete_child(new_name->data());
-					d->add_new_child(new_name->data(), target_ino);
-
-					d->sync();
-				} else if (check_dst_ino == -1){
-					d->delete_child(old_name->data());
-					d->add_new_child(new_name->data(), target_ino);
-
-					d->sync();
-				}
-			} else {
+			if (flags == 0) {
 				if(check_dst_ino != -1) {
 					d->delete_child(new_name->data());
 					meta_pool->remove("i$" + std::to_string(check_dst_ino));
@@ -353,12 +319,9 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 				d->add_new_child(new_name->data(), target_ino);
 
 				d->sync();
+			} else {
+				return -ENOSYS;
 			}
-
-
-			d->delete_child(old_name->data());
-			d->add_new_child(new_name->data(), target_ino);
-			d->sync();
 
 			parent_i->set_size(d->get_total_name_legth());
 			delete parent_i;
@@ -374,44 +337,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			ino_t target_ino = src_d->get_child_ino(old_name->data());
 			ino_t check_dst_ino = dst_d->get_child_ino(new_name->data());
 
-			if (flags == RENAME_NOREPLACE){
-				if(check_dst_ino != -1)
-					return -EEXIST;
-
-				src_d->delete_child(old_name->data());
-				dst_d->add_new_child(new_name->data(), target_ino);
-
-				src_d->sync();
-				dst_d->sync();
-
-			} else if (flags == RENAME_EXCHANGE) {
-				if(check_dst_ino != -1){
-					inode *src_i = new inode(target_ino);
-					inode *exchange_target_i = new inode(check_dst_ino);
-
-					if(S_ISREG(src_i->get_mode()) && S_ISDIR(exchange_target_i->get_mode()))
-						return -EISDIR;
-
-					/* TODO : directory inode should track their block size */
-					if(S_ISDIR(exchange_target_i->get_mode()) && (exchange_target_i->get_size() != 0))
-						return -EEXIST;
-
-					src_d->delete_child(old_name->data());
-					src_d->add_new_child(old_name->data(), check_dst_ino);
-
-					dst_d->delete_child(new_name->data());
-					dst_d->add_new_child(new_name->data(), target_ino);
-
-					src_d->sync();
-					dst_d->sync();
-				} else if (check_dst_ino == -1){
-					src_d->delete_child(old_name->data());
-					dst_d->add_new_child(new_name->data(), target_ino);
-
-					src_d->sync();
-					dst_d->sync();
-				}
-			} else {
+			if (flags == 0) {
 				if(check_dst_ino != -1) {
 					dst_d->delete_child(new_name->data());
 					meta_pool->remove("i$" + std::to_string(check_dst_ino));
@@ -421,6 +347,8 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 
 				src_d->sync();
 				dst_d->sync();
+			} else {
+				return -ENOSYS;
 			}
 
 			src_parent_i->set_size(src_d->get_total_name_legth());
@@ -431,7 +359,6 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			delete src_d;
 			delete dst_d;
 		}
-
 
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
