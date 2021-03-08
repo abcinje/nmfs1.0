@@ -113,9 +113,7 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		{
-			sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
-		}
+		sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 
 		cursor = next_bound;
 	}
@@ -139,9 +137,7 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		{
-			sum += this->write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
-		}
+		sum += this->write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 
 		cursor = next_bound;
 	}
