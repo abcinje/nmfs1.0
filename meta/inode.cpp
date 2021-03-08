@@ -38,9 +38,11 @@ inode::inode(uid_t owner, gid_t group, mode_t mode) : i_mode(mode), i_uid(owner)
 	i_ino = alloc_new_ino();
 }
 
+/* TODO : allocated target name should be freed later */
 inode::inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const char *link_target_name) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0)
 {
 	global_logger.log(inode_ops,"Called inode(symlink)");
+	global_logger.log(inode_ops,"link_target_len : " + std::to_string(link_target_len) + " link_target_name : " + std::string(link_target_name));
 	struct timespec ts;
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
@@ -159,7 +161,8 @@ unique_ptr<char> inode::serialize(void)
 	unique_ptr<char> value(new char[REG_INODE_SIZE + this->link_target_len]);
 	memcpy(value.get(), this, REG_INODE_SIZE);
 
-	if(S_ISLNK(this->get_mode())){
+	if(S_ISLNK(this->get_mode()) && (this->link_target_len > 0)){
+		global_logger.log(inode_ops, "serialize symbolic link inode");
 		memcpy(value.get() + REG_INODE_SIZE, (this->link_target_name), this->link_target_len);
 	}
 	return std::move(value);
@@ -171,12 +174,12 @@ void inode::deserialize(const char *value)
 	memcpy(this, value, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->get_mode())){
-		if(this->link_target_name == nullptr) {
-			char *raw = (char *)calloc(this->link_target_len + 1, sizeof(char));
-			meta_pool->read("i$" + std::to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);
-			this->link_target_name = raw;
-		}
+		char *raw = (char *)calloc(this->link_target_len + 1, sizeof(char));
+		meta_pool->read("i$" + std::to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);
+		this->link_target_name = raw;
+		global_logger.log(inode_ops, "serialized link target name : " + std::string(this->link_target_name));
 	}
+
 	global_logger.log(inode_ops, "serialized ino : " + std::to_string(this->i_ino));
 	global_logger.log(inode_ops, "serialized size : " + std::to_string(this->i_size));
 }
@@ -214,8 +217,6 @@ void inode::set_mtime(struct timespec mtime){this->i_mtime = mtime;}
 
 void inode::set_link_target_len(int len){this->link_target_len = len;}
 void inode::set_link_target_name(const char *name){
-	if(this->link_target_name != NULL)
-		free(this->link_target_name);
 	this->link_target_name = (char *)calloc(this->link_target_len + 1, sizeof(char));
 	memcpy(this->link_target_name, name, this->link_target_len);
 }
