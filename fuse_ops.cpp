@@ -43,6 +43,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 
 		dentry d(0, true);
 		d.add_new_child(".", 0);
+		d.add_new_child("..", 0);
 
 		i.set_size(d.get_total_name_legth());
 		i.sync();
@@ -71,15 +72,21 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *parent_i = new inode(parent_name->data());
-		dentry *parent_d = new dentry(parent_i->get_ino());
+		if(std::string(path) == "/") {
+			inode *i = new inode(0);
+			i->fill_stat(stat);
 
-		ino_t target_ino = parent_d->get_child_ino(file_name->data());
+			delete i;
+		} else {
+			inode *parent_i = new inode(parent_name->data());
+			dentry *parent_d = new dentry(parent_i->get_ino());
 
-		inode *i = new inode(target_ino);
-		i->fill_stat(stat);
+			ino_t target_ino = parent_d->get_child_ino(file_name->data());
+			inode *i = new inode(target_ino);
+			i->fill_stat(stat);
 
-		delete i;
+			delete i;
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
