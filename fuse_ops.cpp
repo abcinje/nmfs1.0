@@ -68,8 +68,15 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 	global_logger.log(fuse_op, "Called getattr()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *i = new inode(path);
+		inode *parent_i = new inode(parent_name->data());
+		dentry *parent_d = new dentry(parent_i->get_ino());
+
+		ino_t target_ino = parent_d->get_child_ino(file_name->data());
+
+		inode *i = new inode(target_ino);
 		i->fill_stat(stat);
 
 		delete i;
@@ -125,6 +132,8 @@ int fuse_ops::symlink(const char *src, const char *dst){
 		}
 
 		inode *symlink_i = new inode(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
+		symlink_i->set_size(std::string(src).length());
+
 		dst_parent_d->add_new_child(symlink_name->data(), symlink_i->get_ino());
 
 		dst_parent_d->sync();
