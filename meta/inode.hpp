@@ -11,7 +11,7 @@
 #include "dentry.hpp"
 
 #define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
-
+#define REG_INODE_SIZE (sizeof(inode) - sizeof(char *))
 using std::unique_ptr;
 using std::runtime_error;
 using std::string;
@@ -29,7 +29,9 @@ private:
 	struct timespec	i_mtime;
 	struct timespec	i_ctime;
 
-	ino_t symlink_target_ino;
+	int link_target_len;
+	char *link_target_name;
+
 public:
 	class no_entry : public runtime_error {
 	public:
@@ -47,8 +49,8 @@ public:
 
 	inode(uid_t owner, gid_t group, mode_t mode);
 	/* for symlink */
-	inode(uid_t owner, gid_t group, mode_t mode, ino_t symlink_target_ino);
-	inode(const std::string &path);
+	inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const char *link_target_name);
+	inode(std::string &path);
 
 	/* TODO : add permission check */
 	inode(ino_t ino);
@@ -70,6 +72,10 @@ public:
 	struct timespec get_mtime();
 	struct timespec get_ctime();
 
+	int get_link_target_len();
+	ino_t get_link_target_ino();
+	std::string get_link_target_name();
+
 	// setter
 	void set_mode(mode_t mode);
 	void set_uid(uid_t uid);
@@ -80,8 +86,12 @@ public:
 	void set_atime(struct timespec atime);
 	void set_mtime(struct timespec mtime);
 
+	void set_link_target_len(int len);
+	void set_link_target_name(const char *name);
+
 };
 
 ino_t alloc_new_ino();
 bool permission_check(inode *i, int mask);
+int set_name_bound(int &start_name, int &end_name, std::string &path, int path_len);
 #endif /* _INODE_HPP_ */
