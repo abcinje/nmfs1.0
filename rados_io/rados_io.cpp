@@ -3,33 +3,6 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-rados_io::obj_lock::obj_lock(librados::IoCtx *ioctx, const string &obj_key, bool shared) : ctx(ioctx), key(obj_key)
-{
-	string op = shared ? "read" : "write";
-	int ret;
-
-	if (shared) {
-		ret = ctx->lock_shared(key, key, key, key, key, nullptr, 0);
-	} else {
-		ret = ctx->lock_exclusive(key, key, key, key, nullptr, 0);
-	}
-
-	if (ret == -EBUSY) {
-		throw cannot_acquire_lock("rados_io::" + op + "() failed "
-				"(the lock is already held by another (client, cookie) pair)");
-	} else if (ret == -EEXIST) {
-		throw cannot_acquire_lock("rados_io::" + op + "() failed "
-				"(the lock is already held by the same (client, cookie) pair)");
-	} else if (ret) {
-		throw cannot_acquire_lock("rados_io::" + op + "() failed ");
-	}
-}
-
-rados_io::obj_lock::~obj_lock(void)
-{
-	ctx->unlock(key, key, key);
-}
-
 size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offset)
 {
 	global_logger.log(rados_io_ops,"Called rados_io::read_obj()");
@@ -82,19 +55,6 @@ rados_io::no_such_object::no_such_object(const string &msg) : runtime_error(msg.
 }
 
 const char *rados_io::no_such_object::what(void)
-{
-	return runtime_error::what();
-}
-
-rados_io::cannot_acquire_lock::cannot_acquire_lock(const char *msg) : runtime_error(msg)
-{
-}
-
-rados_io::cannot_acquire_lock::cannot_acquire_lock(const string &msg) :runtime_error(msg.c_str())
-{
-}
-
-const char *rados_io::cannot_acquire_lock::what(void)
 {
 	return runtime_error::what();
 }
