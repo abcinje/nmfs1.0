@@ -51,7 +51,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const c
 	this->set_link_target_name(link_target_name);
 }
 
-inode::inode(std::string &path)
+inode::inode(std::string path)
 {
 	global_logger.log(inode_ops, "Called inode(" + path + ")");
 	inode *parent_inode, *target_inode;
@@ -214,7 +214,7 @@ void inode::set_mtime(struct timespec mtime){this->i_mtime = mtime;}
 
 void inode::set_link_target_len(int len){this->link_target_len = len;}
 void inode::set_link_target_name(const char *name){
-	if(this->link_target_len != NULL)
+	if(this->link_target_name != NULL)
 		free(this->link_target_name);
 	this->link_target_name = (char *)calloc(this->link_target_len + 1, sizeof(char));
 	memcpy(this->link_target_name, name, this->link_target_len);
