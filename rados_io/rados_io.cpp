@@ -46,7 +46,7 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	return len;
 }
 
-rados_io::no_such_object::no_such_object(const string &msg) : runtime_error(msg)
+rados_io::no_such_object::no_such_object(const string &msg, size_t nb) : runtime_error(msg), num_bytes(nb)
 {
 }
 
@@ -113,7 +113,11 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
+		try {
+			sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
+		} catch (no_such_object &e) {
+			throw no_such_object(e.what(), sum);
+		}
 
 		cursor = next_bound;
 	}

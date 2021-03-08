@@ -23,7 +23,9 @@ private:
 public:
 	class no_such_object : public runtime_error {
 	public:
-		no_such_object(const string &msg);
+		const size_t num_bytes;
+
+		no_such_object(const string &msg, size_t nb = 0);
 		const char *what(void);
 	};
 
