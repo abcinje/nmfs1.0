@@ -118,7 +118,7 @@ int fuse_ops::symlink(const char *src, const char *dst){
 
 		unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 
-		if(dst_parent_d->get_child_ino(symlink_name->data())) {
+		if(dst_parent_d->get_child_ino(symlink_name->data()) != -1) {
 			delete dst_parent_d;
 			delete dst_parent_i;
 			return -EEXIST;
