@@ -46,11 +46,7 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	return len;
 }
 
-rados_io::no_such_object::no_such_object(const char *msg) : runtime_error(msg)
-{
-}
-
-rados_io::no_such_object::no_such_object(const string &msg) : runtime_error(msg.c_str())
+rados_io::no_such_object::no_such_object(const string &msg) : runtime_error(msg)
 {
 }
 

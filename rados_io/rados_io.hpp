@@ -23,7 +23,6 @@ private:
 public:
 	class no_such_object : public runtime_error {
 	public:
-		no_such_object(const char *msg);
 		no_such_object(const string &msg);
 		const char *what(void);
 	};
