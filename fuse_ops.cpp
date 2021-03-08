@@ -40,10 +40,13 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 		fuse_context *fuse_ctx = fuse_get_context();
 		inode i(fuse_ctx->uid, fuse_ctx->gid, S_IFDIR | 0755);
 		i.set_ino(0);
-		auto value = i.serialize();
-		meta_pool->write("i$0", value.get(), sizeof(inode), 0);
-		uint64_t child_num = 0;
-		meta_pool->write("d$0", (char*)&child_num , sizeof(uint64_t), 0);
+
+		dentry d(0, true);
+		d.add_new_child(".", 0);
+
+		i.set_size(d.get_total_name_legth());
+		i.sync();
+		d.sync();
 	}
 
 	return (void *)this_client;
@@ -66,7 +69,7 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 		i->fill_stat(stat);
 
 		delete i;
@@ -86,7 +89,7 @@ int fuse_ops::access(const char* path, int mask) {
 	fuse_context *fuse_ctx = fuse_get_context();
 
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 		bool ret = permission_check(i, mask);
 
 		delete i;
@@ -107,11 +110,10 @@ int fuse_ops::symlink(const char *src, const char *dst){
 	global_logger.log(fuse_op, "Called symlink()");
 	global_logger.log(fuse_op, "src : " + std::string(src) + " dst : " + std::string(dst));
 
+	fuse_context *fuse_ctx = fuse_get_context();
 	try {
-		inode *src_i = new inode(src);
-
 		unique_ptr<std::string> dst_parent_name = get_parent_dir_path(dst);
-		inode *dst_parent_i = new inode(dst_parent_name->data());
+		inode *dst_parent_i = new inode(*(dst_parent_name->data()));
 		dentry *dst_parent_d = new dentry(dst_parent_i->get_ino());
 
 		unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
@@ -119,11 +121,10 @@ int fuse_ops::symlink(const char *src, const char *dst){
 		if(dst_parent_d->get_child_ino(symlink_name->data())) {
 			delete dst_parent_d;
 			delete dst_parent_i;
-			delete src_i;
 			return -EEXIST;
 		}
 
-		inode *symlink_i = new inode(src_i->get_uid(), src_i->get_gid(), S_IFLNK | 0777, src_i->get_ino());
+		inode *symlink_i = new inode(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
 		dst_parent_d->add_new_child(symlink_name->data(), symlink_i->get_ino());
 
 		dst_parent_d->sync();
@@ -134,7 +135,6 @@ int fuse_ops::symlink(const char *src, const char *dst){
 
 		delete dst_parent_d;
 		delete dst_parent_i;
-		delete src_i;
 		delete symlink_i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -150,7 +150,7 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 
 		if(!S_ISDIR(i->get_mode())) {
 			delete i;
@@ -177,7 +177,7 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "Called releasedir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	inode *i = new inode(path);
+	inode *i = new inode(*path);
 
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 	it = fh_list.find(i->get_ino());
@@ -195,10 +195,7 @@ int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, of
 	global_logger.log(fuse_op, "Called readdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	filler(buffer, ".", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
-	filler(buffer, "..", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
-
-	inode *i = new inode(path);
+	inode *i = new inode(*path);
 	dentry *d = new dentry(i->get_ino());
 
 	d->fill_filler(buffer, filler);
@@ -219,13 +216,16 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 		dentry *parent_d = new dentry(parent_ino);
 
 		inode *i = new inode(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
-		i->sync();
-
 
 		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
 		parent_d->sync();
 
 		dentry *new_d = new dentry(i->get_ino(), true);
+		new_d->add_new_child(".", i->get_ino());
+		new_d->add_new_child("..", parent_i->get_ino());
+
+		i->set_size(new_d->get_total_name_legth());
+		i->sync();
 		new_d->sync();
 
 		parent_i->set_size(parent_d->get_total_name_legth());
@@ -284,7 +284,7 @@ int fuse_ops::rmdir(const char* path) {
 	return 0;
 }
 
-int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int flags) {
+int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int flags) {
 	global_logger.log(fuse_op, "Called rename()");
 	global_logger.log(fuse_op, "src : " + std::string(old_path) + " dst : " + std::string(new_path));
 
@@ -303,7 +303,7 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			return -EINVAL;
 
 		if (*src_parent_path == *dst_parent_path) {
-			inode *parent_i = new inode(src_parent_path->data());
+			inode *parent_i = new inode(*(src_parent_path->data()));
 
 			dentry *d = new dentry(parent_i->get_ino());
 
@@ -328,8 +328,8 @@ int fuse_ops:: rename(const char* old_path, const char* new_path, unsigned int f
 			delete d;
 
 		} else {
-			inode *src_parent_i = new inode(src_parent_path->data());
-			inode *dst_parent_i = new inode(dst_parent_path->data());
+			inode *src_parent_i = new inode(*(src_parent_path->data()));
+			inode *dst_parent_i = new inode(*(dst_parent_path->data()));
 
 			dentry *src_d = new dentry(src_parent_i->get_ino());
 			dentry *dst_d = new dentry(dst_parent_i->get_ino());
@@ -374,7 +374,7 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 
 		if(S_ISDIR(i->get_mode())) {
 			delete i;
@@ -401,7 +401,7 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	global_logger.log(fuse_op, "Called release()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	inode *i = new inode(path);
+	inode *i = new inode(*path);
 
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 	it = fh_list.find(i->get_ino());
@@ -496,7 +496,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 
 	int read_len = 0;
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 
 		read_len = data_pool->read(std::to_string(i->get_ino()), buffer, size, offset);
 		delete i;
@@ -516,7 +516,7 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 	int written_len = 0;
 
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 
 		written_len = data_pool->write(std::to_string(i->get_ino()), buffer, size, offset);
 
@@ -546,7 +546,7 @@ int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_i
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 
 		mode_t type = i->get_mode() & S_IFMT;
 		i->set_mode(mode | type);
@@ -567,7 +567,7 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 
 		i->set_uid(uid);
 		i->set_gid(gid);
@@ -587,7 +587,7 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *i = new inode(path);
+		inode *i = new inode(*path);
 
 		i->set_atime(tv[0]);
 		i->set_mtime(tv[1]);
