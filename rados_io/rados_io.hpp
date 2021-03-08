@@ -14,16 +14,6 @@ using std::string;
 
 class rados_io {
 private:
-	class obj_lock {
-	private:
-		librados::IoCtx *ctx;
-		string key;
-
-	public:
-		obj_lock(librados::IoCtx *ioctx, const string &obj_key, bool shared);
-		~obj_lock(void);
-	};
-
 	librados::Rados cluster;
 	librados::IoCtx ioctx;
 
@@ -33,15 +23,7 @@ private:
 public:
 	class no_such_object : public runtime_error {
 	public:
-		no_such_object(const char *msg);
 		no_such_object(const string &msg);
-		const char *what(void);
-	};
-
-	class cannot_acquire_lock : public runtime_error {
-	public:
-		cannot_acquire_lock(const char *msg);
-		cannot_acquire_lock(const string &msg);
 		const char *what(void);
 	};
 
