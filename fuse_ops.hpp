@@ -17,6 +17,7 @@ int readdir(const char* path, void* buffer, fuse_fill_dir_t filler, off_t offset
 int mkdir(const char* path, mode_t mode);
 int rmdir(const char* path);
 int symlink(const char *src, const char *dst);
+int readlink(const char *path, char *buf, size_t size);
 int rename(const char* old_path, const char* new_path, unsigned int flags);
 int open(const char* path, struct fuse_file_info* file_info);
 int release(const char* path, struct fuse_file_info* file_info);

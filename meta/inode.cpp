@@ -83,7 +83,7 @@ inode::inode(std::string path)
 
 		/* resolve symlink to original file/directory */
 		if(S_ISLNK(target_inode->get_mode())) {
-			path = target_inode->get_link_target_name();
+			path = std::string(target_inode->get_link_target_name());
 			if(path.at(0) == '/')
 				end_name = -1;
 			else
@@ -203,7 +203,7 @@ struct timespec inode::get_mtime(){return this->i_mtime;}
 struct timespec inode::get_ctime(){return this->i_ctime;}
 
 int inode::get_link_target_len(){return this->link_target_len;}
-std::string inode::get_link_target_name(){return std::string(this->link_target_name);}
+char *inode::get_link_target_name(){return this->link_target_name;}
 
 // setter
 void inode::set_mode(mode_t mode){this->i_mode = mode;}

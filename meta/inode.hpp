@@ -74,7 +74,7 @@ public:
 
 	int get_link_target_len();
 	ino_t get_link_target_ino();
-	std::string get_link_target_name();
+	char *get_link_target_name();
 
 	// setter
 	void set_mode(mode_t mode);

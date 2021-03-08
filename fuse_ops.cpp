@@ -10,6 +10,8 @@
 #include <map>
 #include <utility>
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 #define META_POOL "nmfs.meta"
 #define DATA_POOL "nmfs.data"
 
@@ -152,6 +154,33 @@ int fuse_ops::symlink(const char *src, const char *dst){
 		delete dst_parent_d;
 		delete dst_parent_i;
 		delete symlink_i;
+	} catch(inode::no_entry &e) {
+		return -ENOENT;
+	} catch(inode::permission_denied &e) {
+		return -EACCES;
+	}
+
+	return 0;
+}
+
+int fuse_ops::readlink(const char* path, char* buf, size_t size)
+{
+	global_logger.log(fuse_op, "Called readlink()");
+	global_logger.log(fuse_op, "path : " + std::string(path));
+
+	try {
+		inode *i = new inode(path);
+
+		if (!S_ISLNK(i->get_mode())) {
+			delete i;
+			return -EINVAL;
+		}
+
+		size_t len = MIN(i->get_link_target_len(), size-1);
+		memcpy(buf, i->get_link_target_name(), len);
+		buf[len] = '\0';
+
+		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -629,6 +658,7 @@ fuse_operations fuse_ops::get_fuse_ops(void)
 	fops.getattr = getattr;
 	fops.access = access;
 	fops.symlink = symlink;
+	fops.readlink = readlink;
 
 	fops.opendir = opendir;
 	fops.releasedir = releasedir;
