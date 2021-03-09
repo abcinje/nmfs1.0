@@ -5,6 +5,7 @@
 
 void logger::log(enum code_location location, std::string message)
 {
+#ifdef DEBUG
 	std::string location_str;
 
 	switch(location){
@@ -26,6 +27,7 @@ void logger::log(enum code_location location, std::string message)
 	}
 
 	std::cout<< "[" + location_str + "]\t" + message << std::endl;
+#endif
 }
 
 logger global_logger;
