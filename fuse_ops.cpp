@@ -168,15 +168,21 @@ int fuse_ops::readlink(const char* path, char* buf, size_t size)
 	global_logger.log(fuse_op, "Called readlink()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *i = new inode(path);
+		inode *parent_i = new inode(parent_name->data());
+		dentry *parent_d = new dentry(parent_i->get_ino());
+
+		ino_t target_ino = parent_d->get_child_ino(file_name->data());
+		inode *i = new inode(target_ino);
 
 		if (!S_ISLNK(i->get_mode())) {
 			delete i;
 			return -EINVAL;
 		}
 
-		size_t len = MIN(i->get_link_target_len(), size-1);
+		size_t len = i->get_link_target_len();
 		memcpy(buf, i->get_link_target_name(), len);
 		buf[len] = '\0';
 
