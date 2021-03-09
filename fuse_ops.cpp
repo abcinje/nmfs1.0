@@ -178,14 +178,19 @@ int fuse_ops::readlink(const char* path, char* buf, size_t size)
 		inode *i = new inode(target_ino);
 
 		if (!S_ISLNK(i->get_mode())) {
+			delete parent_i;
+			delete parent_d;
 			delete i;
+
 			return -EINVAL;
 		}
 
-		size_t len = i->get_link_target_len();
+		size_t len = MIN(i->get_link_target_len(), size-1);
 		memcpy(buf, i->get_link_target_name(), len);
 		buf[len] = '\0';
 
+		delete parent_i;
+		delete parent_d;
 		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
