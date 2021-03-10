@@ -289,7 +289,7 @@ int fuse_ops::rmdir(const char* path) {
 			return -ENOTDIR;
 
 		unique_ptr<dentry> target_dentry = make_unique<dentry>(target_ino);
-		if(target_dentry->get_child_num())
+		if(target_dentry->get_child_num() > 2)
 			return -ENOTEMPTY;
 
 		meta_pool->remove("d$" + std::to_string(i->get_ino()));
