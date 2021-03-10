@@ -33,7 +33,6 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	global_logger.log(rados_io_ops,"key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret;
 
-	std::cout << std::string(value) << std::endl;
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(const_cast<char *>(value), len);
 	ret = ioctx.write(key, bl, len, offset);
 
