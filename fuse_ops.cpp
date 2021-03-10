@@ -9,6 +9,7 @@
 #include <cstring>
 #include <map>
 #include <utility>
+#include <mutex>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -18,6 +19,7 @@
 rados_io *meta_pool;
 rados_io *data_pool;
 
+std::mutex m;
 std::map<ino_t, unique_ptr<file_handler>> fh_list;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
@@ -213,6 +215,7 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 			return -ENOTDIR;
 		}
 
+		std::scoped_lock<std::mutex > lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
@@ -235,7 +238,9 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 
 	inode *i = new inode(path);
 
+
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+	std::scoped_lock<std::mutex > lock(m);
 	it = fh_list.find(i->get_ino());
 
 	if(it == fh_list.end())
@@ -437,6 +442,7 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 			return -EISDIR;
 		}
 
+		std::scoped_lock<std::mutex > lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
@@ -460,6 +466,7 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	inode *i = new inode(path);
 
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+	std::scoped_lock<std::mutex > lock(m);
 	it = fh_list.find(i->get_ino());
 
 	if(it == fh_list.end()) {
@@ -493,6 +500,7 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
 		parent_d->sync();
 
+		std::scoped_lock<std::mutex > lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
