@@ -11,6 +11,9 @@
 #include <utility>
 #include <mutex>
 
+using std::unique_ptr;
+using std::make_unique;
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #define META_POOL "nmfs.meta"
@@ -75,21 +78,18 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
+
 	try {
 		if(std::string(path) == "/") {
-			inode *i = new inode(0);
+			unique_ptr<inode> i = make_unique<inode>(0);
 			i->fill_stat(stat);
-
-			delete i;
 		} else {
-			inode *parent_i = new inode(parent_name->data());
-			dentry *parent_d = new dentry(parent_i->get_ino());
+			unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
+			unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
 
 			ino_t target_ino = parent_d->get_child_ino(file_name->data());
-			inode *i = new inode(target_ino);
+			unique_ptr<inode> i = make_unique<inode>(target_ino);
 			i->fill_stat(stat);
-
-			delete i;
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -104,17 +104,10 @@ int fuse_ops::access(const char* path, int mask) {
 	global_logger.log(fuse_op, "Called access()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	fuse_context *fuse_ctx = fuse_get_context();
-
 	try {
-		inode *i = new inode(path);
-		bool ret = permission_check(i, mask);
-
-		delete i;
-
-		if(!ret)
+		unique_ptr<inode> i = make_unique<inode>(path);
+		if (!permission_check(i.get(), mask))
 			return -EACCES;
-
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -129,20 +122,18 @@ int fuse_ops::symlink(const char *src, const char *dst){
 	global_logger.log(fuse_op, "src : " + std::string(src) + " dst : " + std::string(dst));
 
 	fuse_context *fuse_ctx = fuse_get_context();
+
 	try {
 		unique_ptr<std::string> dst_parent_name = get_parent_dir_path(dst);
-		inode *dst_parent_i = new inode(dst_parent_name->data());
-		dentry *dst_parent_d = new dentry(dst_parent_i->get_ino());
+		unique_ptr<inode> dst_parent_i = make_unique<inode>(dst_parent_name->data());
+		unique_ptr<dentry> dst_parent_d = make_unique<dentry>(dst_parent_i->get_ino());
 
 		unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 
-		if(dst_parent_d->get_child_ino(symlink_name->data()) != -1) {
-			delete dst_parent_d;
-			delete dst_parent_i;
+		if (dst_parent_d->get_child_ino(symlink_name->data()) != -1)
 			return -EEXIST;
-		}
 
-		inode *symlink_i = new inode(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
+		unique_ptr<inode> symlink_i = make_unique<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
 		symlink_i->set_size(std::string(src).length());
 
 		dst_parent_d->add_new_child(symlink_name->data(), symlink_i->get_ino());
@@ -152,10 +143,6 @@ int fuse_ops::symlink(const char *src, const char *dst){
 
 		dst_parent_i->set_size(dst_parent_d->get_total_name_legth());
 		dst_parent_i->sync();
-
-		delete dst_parent_d;
-		delete dst_parent_i;
-		delete symlink_i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -172,28 +159,20 @@ int fuse_ops::readlink(const char* path, char* buf, size_t size)
 
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
+
 	try {
-		inode *parent_i = new inode(parent_name->data());
-		dentry *parent_d = new dentry(parent_i->get_ino());
+		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
 
 		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		inode *i = new inode(target_ino);
+		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
-		if (!S_ISLNK(i->get_mode())) {
-			delete parent_i;
-			delete parent_d;
-			delete i;
-
+		if (!S_ISLNK(i->get_mode()))
 			return -EINVAL;
-		}
 
 		size_t len = MIN(i->get_link_target_len(), size-1);
 		memcpy(buf, i->get_link_target_name(), len);
 		buf[len] = '\0';
-
-		delete parent_i;
-		delete parent_d;
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -208,21 +187,17 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *i = new inode(path);
+		unique_ptr<inode> i = make_unique<inode>(path);
 
-		if(!S_ISDIR(i->get_mode())) {
-			delete i;
+		if(!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
-		}
 
-		std::scoped_lock<std::mutex > lock(m);
+		std::scoped_lock<std::mutex> lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
-
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -236,11 +211,10 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "Called releasedir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	inode *i = new inode(path);
-
+	unique_ptr<inode> i = make_unique<inode>(path);
 
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-	std::scoped_lock<std::mutex > lock(m);
+	std::scoped_lock<std::mutex> lock(m);
 	it = fh_list.find(i->get_ino());
 
 	if(it == fh_list.end())
@@ -248,7 +222,6 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 
 	fh_list.erase(it);
 
-	delete i;
 	return 0;
 }
 
@@ -256,13 +229,11 @@ int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, of
 	global_logger.log(fuse_op, "Called readdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	inode *i = new inode(path);
-	dentry *d = new dentry(i->get_ino());
+	unique_ptr<inode> i = make_unique<inode>(path);
+	unique_ptr<dentry> d = make_unique<dentry>(i->get_ino());
 
 	d->fill_filler(buffer, filler);
 
-	delete i;
-	delete d;
 	return 0;
 }
 int fuse_ops::mkdir(const char* path, mode_t mode){
@@ -270,18 +241,19 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	fuse_context *fuse_ctx = fuse_get_context();
+
 	try {
-		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
+		unique_ptr<inode> parent_i = make_unique<inode>(*(get_parent_dir_path(path).get()));
 		uint64_t parent_ino = parent_i->get_ino();
 
-		dentry *parent_d = new dentry(parent_ino);
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_ino);
 
-		inode *i = new inode(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
+		unique_ptr<inode> i = make_unique<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
 
 		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
 		parent_d->sync();
 
-		dentry *new_d = new dentry(i->get_ino(), true);
+		unique_ptr<dentry> new_d = make_unique<dentry>(i->get_ino(), true);
 		new_d->add_new_child(".", i->get_ino());
 		new_d->add_new_child("..", parent_i->get_ino());
 
@@ -291,11 +263,6 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 
 		parent_i->set_size(parent_d->get_total_name_legth());
 		parent_i->sync();
-
-		delete parent_i;
-		delete parent_d;
-		delete i;
-		delete new_d;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -310,18 +277,18 @@ int fuse_ops::rmdir(const char* path) {
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
+		unique_ptr<inode> parent_i = make_unique<inode>(*(get_parent_dir_path(path).get()));
 		uint64_t parent_ino = parent_i->get_ino();
 
-		dentry *parent_d = new dentry(parent_ino);
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_ino);
 
 		ino_t target_ino = parent_d->get_child_ino(*(get_filename_from_path(path).get())); // perform target's permission check
-		inode *i = new inode(target_ino);
+		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
 		if(!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
 
-		dentry *target_dentry = new dentry(target_ino);
+		unique_ptr<dentry> target_dentry = make_unique<dentry>(target_ino);
 		if(target_dentry->get_child_num())
 			return -ENOTEMPTY;
 
@@ -333,10 +300,6 @@ int fuse_ops::rmdir(const char* path) {
 
 		parent_i->set_size(parent_d->get_total_name_legth());
 		parent_i->sync();
-
-		delete parent_i;
-		delete parent_d;
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -364,9 +327,9 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 			return -EINVAL;
 
 		if (*src_parent_path == *dst_parent_path) {
-			inode *parent_i = new inode(src_parent_path->data());
+			unique_ptr<inode> parent_i = make_unique<inode>(src_parent_path->data());
 
-			dentry *d = new dentry(parent_i->get_ino());
+			unique_ptr<dentry> d = make_unique<dentry>(parent_i->get_ino());
 
 			ino_t target_ino = d->get_child_ino(old_name->data());
 			ino_t check_dst_ino = d->get_child_ino(new_name->data());
@@ -385,15 +348,12 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 			}
 
 			parent_i->set_size(d->get_total_name_legth());
-			delete parent_i;
-			delete d;
-
 		} else {
-			inode *src_parent_i = new inode(src_parent_path->data());
-			inode *dst_parent_i = new inode(dst_parent_path->data());
+			unique_ptr<inode> src_parent_i = make_unique<inode>(src_parent_path->data());
+			unique_ptr<inode> dst_parent_i = make_unique<inode>(dst_parent_path->data());
 
-			dentry *src_d = new dentry(src_parent_i->get_ino());
-			dentry *dst_d = new dentry(dst_parent_i->get_ino());
+			unique_ptr<dentry> src_d = make_unique<dentry>(src_parent_i->get_ino());
+			unique_ptr<dentry> dst_d = make_unique<dentry>(dst_parent_i->get_ino());
 
 			ino_t target_ino = src_d->get_child_ino(old_name->data());
 			ino_t check_dst_ino = dst_d->get_child_ino(new_name->data());
@@ -414,11 +374,6 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 
 			src_parent_i->set_size(src_d->get_total_name_legth());
 			dst_parent_i->set_size(dst_d->get_total_name_legth());
-
-			delete src_parent_i;
-			delete dst_parent_i;
-			delete src_d;
-			delete dst_d;
 		}
 
 	} catch(inode::no_entry &e) {
@@ -435,21 +390,17 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *i = new inode(path);
+		unique_ptr<inode> i = make_unique<inode>(path);
 
-		if(S_ISDIR(i->get_mode())) {
-			delete i;
+		if(S_ISDIR(i->get_mode()))
 			return -EISDIR;
-		}
 
-		std::scoped_lock<std::mutex > lock(m);
+		std::scoped_lock<std::mutex> lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
-
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -463,20 +414,17 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	global_logger.log(fuse_op, "Called release()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	inode *i = new inode(path);
+	unique_ptr<inode> i = make_unique<inode>(path);
 
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-	std::scoped_lock<std::mutex > lock(m);
+	std::scoped_lock<std::mutex> lock(m);
 	it = fh_list.find(i->get_ino());
 
-	if(it == fh_list.end()) {
-		delete i;
+	if(it == fh_list.end())
 		return -EIO;
-	}
 
 	fh_list.erase(it);
 
-	delete i;
 	return 0;
 }
 
@@ -489,18 +437,18 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 
 	fuse_context *fuse_ctx = fuse_get_context();
 	try {
-		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
+		unique_ptr<inode> parent_i = make_unique<inode>(*(get_parent_dir_path(path).get()));
 		uint64_t parent_ino = parent_i->get_ino();
 
-		dentry *parent_d = new dentry(parent_ino);
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_ino);
 
-		inode *i = new inode(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
+		unique_ptr<inode> i = make_unique<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
 		i->sync();
 
 		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
 		parent_d->sync();
 
-		std::scoped_lock<std::mutex > lock(m);
+		std::scoped_lock<std::mutex> lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
@@ -509,10 +457,6 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 
 		parent_i->set_size(parent_d->get_total_name_legth());
 		parent_i->sync();
-
-		delete parent_i;
-		delete parent_d;
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -527,13 +471,13 @@ int fuse_ops::unlink(const char* path){
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		inode *parent_i = new inode(*(get_parent_dir_path(path).get()));
+		unique_ptr<inode> parent_i = make_unique<inode>(*(get_parent_dir_path(path).get()));
 		uint64_t parent_ino = parent_i->get_ino();
 
-		dentry *parent_d = new dentry(parent_ino);
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_ino);
 
 		ino_t target_ino = parent_d->get_child_ino(*(get_filename_from_path(path).get())); // perform target's permission check
-		inode *i = new inode(target_ino);
+		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
 		meta_pool->remove("i$" + std::to_string(i->get_ino()));
 
@@ -542,10 +486,6 @@ int fuse_ops::unlink(const char* path){
 
 		parent_i->set_size(parent_d->get_total_name_legth());
 		parent_i->sync();
-
-		delete parent_i;
-		delete parent_d;
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -560,10 +500,9 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 
 	int read_len = 0;
 	try {
-		inode *i = new inode(path);
+		unique_ptr<inode> i = make_unique<inode>(path);
 
 		read_len = data_pool->read(std::to_string(i->get_ino()), buffer, size, offset);
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -582,7 +521,7 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 	int written_len = 0;
 
 	try {
-		inode *i = new inode(path);
+		unique_ptr<inode> i = make_unique<inode>(path);
 
 		written_len = data_pool->write(std::to_string(i->get_ino()), buffer, size, offset);
 
@@ -596,8 +535,6 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 
 		i->set_size(updated_size);
 		i->sync();
-
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -614,17 +551,16 @@ int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_i
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *parent_i = new inode(parent_name->data());
-		dentry *parent_d = new dentry(parent_i->get_ino());
+		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
 
 		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		inode *i = new inode(target_ino);
+		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
 		mode_t type = i->get_mode() & S_IFMT;
 		i->set_mode(mode | type);
 
 		i->sync();
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -641,17 +577,16 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *parent_i = new inode(parent_name->data());
-		dentry *parent_d = new dentry(parent_i->get_ino());
+		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
 
 		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		inode *i = new inode(target_ino);
+		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
 		i->set_uid(uid);
 		i->set_gid(gid);
 
 		i->sync();
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -660,6 +595,7 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 
 	return 0;
 }
+
 int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi) {
 	global_logger.log(fuse_op, "Called utimens()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
@@ -667,17 +603,16 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *parent_i = new inode(parent_name->data());
-		dentry *parent_d = new dentry(parent_i->get_ino());
+		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
 
 		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		inode *i = new inode(target_ino);
+		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
 		i->set_atime(tv[0]);
 		i->set_mtime(tv[1]);
 
 		i->sync();
-		delete i;
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
