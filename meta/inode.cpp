@@ -56,12 +56,13 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const c
 inode::inode(std::string path)
 {
 	global_logger.log(inode_ops, "Called inode(" + path + ")");
-	inode *parent_inode, *target_inode;
-	dentry *parent_dentry;
+	std::unique_ptr<inode> parent_inode;
+	std::unique_ptr<inode> target_inode;
+	std::unique_ptr<dentry> parent_dentry;
 
 	/* exception handle if path == "/" */
-	parent_inode = new inode(0);
-	parent_dentry = new dentry(0);
+	parent_inode = std::make_unique<inode>(0);
+	parent_dentry = std::make_unique<dentry>(0);
 
 	int start_name, end_name = -1;
 	int path_len = path.length();
@@ -79,7 +80,7 @@ inode::inode(std::string path)
 		if (target_ino == -1)
 			throw no_entry("No such file or Directory: inode number " + std::to_string(target_ino));
 
-		inode *target_inode = new inode(target_ino);
+		target_inode = std::make_unique<inode>(target_ino);
 
 		/* resolve symlink to original file/directory */
 		if(S_ISLNK(target_inode->get_mode())) {
@@ -96,27 +97,20 @@ inode::inode(std::string path)
 			std::string origin_name = path.substr(start_name, end_name - start_name + 1);
 			target_ino = parent_dentry->get_child_ino(origin_name);
 
-			delete target_inode;
-			target_inode = new inode(target_ino);
+			target_inode = std::make_unique<inode>(target_ino);
 		}
 
 		if(S_ISDIR(target_inode->get_mode()))
-			if(!permission_check(target_inode, X_OK))
+			if(!permission_check(target_inode.get(), X_OK))
 				throw permission_denied("Permission Denied: " + target_name);
 
-		// target become next parent
-		// delete parent_inode;
-		// delete parent_dentry;
-
-		parent_inode = target_inode;
+		parent_inode = std::move(target_inode);
 		if(S_ISDIR(parent_inode->get_mode()))
-			parent_dentry = new dentry(parent_inode->get_ino());
+			parent_dentry = std::make_unique<dentry>(parent_inode->get_ino());
 	}
 
-	this->copy(parent_inode);
-	// delete parent_inode;
-	// if(S_ISDIR(parent_inode->get_mode()))
-		// delete parent_dentry;
+	this->copy(parent_inode.get());
+
 }
 
 inode::inode(ino_t ino)
@@ -129,6 +123,8 @@ inode::inode(ino_t ino)
 	} catch(rados_io::no_such_object &e){
 		throw no_entry("No such file or Directory: inode number " + std::to_string(ino));
 	}
+
+	free(raw_data);
 }
 
 void inode::copy(inode *src)
