@@ -603,8 +603,14 @@ int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_i
 	global_logger.log(fuse_op, "Called chmod()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *i = new inode(path);
+		inode *parent_i = new inode(parent_name->data());
+		dentry *parent_d = new dentry(parent_i->get_ino());
+
+		ino_t target_ino = parent_d->get_child_ino(file_name->data());
+		inode *i = new inode(target_ino);
 
 		mode_t type = i->get_mode() & S_IFMT;
 		i->set_mode(mode | type);
@@ -624,8 +630,14 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 	global_logger.log(fuse_op, "Called chown()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *i = new inode(path);
+		inode *parent_i = new inode(parent_name->data());
+		dentry *parent_d = new dentry(parent_i->get_ino());
+
+		ino_t target_ino = parent_d->get_child_ino(file_name->data());
+		inode *i = new inode(target_ino);
 
 		i->set_uid(uid);
 		i->set_gid(gid);
@@ -644,8 +656,14 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	global_logger.log(fuse_op, "Called utimens()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		inode *i = new inode(path);
+		inode *parent_i = new inode(parent_name->data());
+		dentry *parent_d = new dentry(parent_i->get_ino());
+
+		ino_t target_ino = parent_d->get_child_ino(file_name->data());
+		inode *i = new inode(target_ino);
 
 		i->set_atime(tv[0]);
 		i->set_mtime(tv[1]);
