@@ -560,6 +560,8 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
 		return -EACCES;
+	} catch(rados_io::no_such_object &e) {
+		return e.num_bytes;
 	}
 
 	return read_len;
