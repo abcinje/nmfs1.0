@@ -172,7 +172,6 @@ void inode::deserialize(const char *value)
 		meta_pool->read("i$" + std::to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);
 		this->link_target_name = raw;
 		global_logger.log(inode_ops, "serialized link target name : " + std::string(this->link_target_name));
-		free(raw);
 	}
 
 	global_logger.log(inode_ops, "serialized ino : " + std::to_string(this->i_ino));
