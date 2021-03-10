@@ -5,10 +5,10 @@ extern rados_io *meta_pool;
 dentry::dentry(ino_t ino) : this_ino(ino)
 {
 	global_logger.log(dentry_ops, "Called dentry(" + std::to_string(ino) +")");
-	char *raw_data = (char *)malloc(MAX_DENTRY_OBJ_SIZE);
+	unique_ptr<char[]> raw_data = std::make_unique<char[]>(MAX_DENTRY_OBJ_SIZE);
 	try {
-		meta_pool->read("d$" + std::to_string(ino), raw_data, MAX_DENTRY_OBJ_SIZE, 0);
-		this->deserialize(raw_data);
+		meta_pool->read("d$" + std::to_string(ino), raw_data.get(), MAX_DENTRY_OBJ_SIZE, 0);
+		this->deserialize(raw_data.get());
 	} catch(rados_io::no_such_object &e){
 		throw std::runtime_error("Dentry Corrupted: inode number " + std::to_string(ino));
 	}
@@ -41,12 +41,12 @@ void dentry::delete_child(const std::string &filename) {
 	this->total_name_length -= filename.length();
 }
 
-char* dentry::serialize()
+unique_ptr<char[]> dentry::serialize()
 {
 	int raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
 	global_logger.log(dentry_ops, "Called dentry.serialize()");
-	char *raw = (char *)malloc(raw_size);
-	char *pointer = raw;
+	unique_ptr<char[]> raw = std::make_unique<char[]>(raw_size);
+	char *pointer = raw.get();
 
 	memset(pointer, '\0', raw_size);
 	memcpy(pointer, &(this->child_num), sizeof(uint64_t));
@@ -106,10 +106,8 @@ void dentry::sync()
 {
 	global_logger.log(dentry_ops,"Called dentry.sync()");
 	int raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
-	char* raw = this->serialize();
-	meta_pool->write("d$" + std::to_string(this->this_ino), raw, raw_size - 1, 0);
-
-	free(raw);
+	unique_ptr<char[]> raw = this->serialize();
+	meta_pool->write("d$" + std::to_string(this->this_ino), raw.get(), raw_size - 1, 0);
 }
 
 ino_t dentry::get_child_ino(std::string child_name)

@@ -25,7 +25,7 @@ public:
 	void add_new_child(const std::string &filename, ino_t ino);
 	void delete_child(const std::string &filename);
 
-	char* serialize();
+	unique_ptr<char[]> serialize();
 	void deserialize(char *raw);
 	void sync();
 

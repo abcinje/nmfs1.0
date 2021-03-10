@@ -116,15 +116,13 @@ inode::inode(std::string path)
 inode::inode(ino_t ino)
 {
 	global_logger.log(inode_ops, "Called inode(" + std::to_string(ino) + ")");
-	char *raw_data = (char *)malloc(REG_INODE_SIZE);
+	unique_ptr<char[]> raw_data = std::make_unique<char[]>(REG_INODE_SIZE);
 	try {
-		meta_pool->read("i$" + std::to_string(ino), raw_data, REG_INODE_SIZE, 0);
-		this->deserialize(raw_data);
+		meta_pool->read("i$" + std::to_string(ino), raw_data.get(), REG_INODE_SIZE, 0);
+		this->deserialize(raw_data.get());
 	} catch(rados_io::no_such_object &e){
 		throw no_entry("No such file or Directory: inode number " + std::to_string(ino));
 	}
-
-	free(raw_data);
 }
 
 void inode::copy(inode *src)
@@ -174,6 +172,7 @@ void inode::deserialize(const char *value)
 		meta_pool->read("i$" + std::to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);
 		this->link_target_name = raw;
 		global_logger.log(inode_ops, "serialized link target name : " + std::string(this->link_target_name));
+		free(raw);
 	}
 
 	global_logger.log(inode_ops, "serialized ino : " + std::to_string(this->i_ino));
