@@ -100,8 +100,8 @@ inode::inode(std::string path)
 		}
 
 		if(S_ISDIR(target_inode->get_mode()))
-			if(!permission_check(target_inode.get(), X_OK))
-				throw permission_denied("Permission Denied: " + target_name);
+			permission_check(target_inode.get(), X_OK);
+
 
 		parent_inode = std::move(target_inode);
 		if(S_ISDIR(parent_inode->get_mode()))
@@ -235,7 +235,7 @@ ino_t alloc_new_ino() {
 	return new_ino;
 }
 
-bool permission_check(inode *i, int mask){
+void permission_check(inode *i, int mask){
 	global_logger.log(inode_ops, "Called permission_check");
 	bool check_read = (mask & R_OK) ? true : false;
 	bool check_write = (mask & W_OK) ? true : false;
@@ -263,7 +263,10 @@ bool permission_check(inode *i, int mask){
 		ret = ret & (target_mode & X_OK);
 	}
 
-	return ret;
+	if(!ret)
+        throw inode::permission_denied("Permission Denied: ");
+	else
+	    return;
 
 }
 
