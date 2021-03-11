@@ -254,13 +254,13 @@ void permission_check(inode *i, int mask){
 	}
 
 	if(check_read){
-		ret = ret & (target_mode & R_OK);
+		ret = ret && (target_mode & R_OK);
 	}
 	if(check_write){
-		ret = ret & (target_mode & W_OK);
+		ret = ret && (target_mode & W_OK);
 	}
 	if(check_exec){
-		ret = ret & (target_mode & X_OK);
+		ret = ret && (target_mode & X_OK);
 	}
 
 	if(!ret)
