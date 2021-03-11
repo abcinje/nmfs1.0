@@ -35,7 +35,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	data_pool = new rados_io(ci, DATA_POOL);
 
 	/* client id allocation */
-	if (!meta_pool->exist("client.list")) {
+	if (!meta_pool->exist("client.list$0")) {
 		global_logger.log(fuse_op, "Very first Client is mounted");
 		meta_pool->write("client.list", "?o", 2, 0);
 		this_client = new client(1);
