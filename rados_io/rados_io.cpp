@@ -148,6 +148,7 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 	return sum;
 }
 
+/* TODO : consider object number of key in this function */
 bool rados_io::exist(const string &key)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::exist()");
