@@ -26,25 +26,14 @@ const char *inode::permission_denied::what(void)
 	return runtime_error::what();
 }
 
-
-inode::inode(uid_t owner, gid_t group, mode_t mode) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0), link_target_len(0), link_target_name(NULL)
+inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0), link_target_len(0), link_target_name(NULL)
 {
 	global_logger.log(inode_ops, "Called inode(new file)");
 	struct timespec ts;
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
-	i_ino = alloc_new_ino();
-}
-
-inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0), link_target_len(0), link_target_name(NULL)
-{
-	global_logger.log(inode_ops, "Called inode(root)");
-	struct timespec ts;
-	if (!timespec_get(&ts, TIME_UTC))
-		runtime_error("timespec_get() failed");
-	i_atime = i_mtime = i_ctime = ts;
-	i_ino = 0;
+	i_ino = root ? 0 : alloc_new_ino();
 }
 
 

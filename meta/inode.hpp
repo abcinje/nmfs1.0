@@ -47,8 +47,8 @@ public:
 		const char *what(void);
 	};
 
-	inode(uid_t owner, gid_t group, mode_t mode);
-	inode(uid_t owner, gid_t group, mode_t mode, bool root);
+	//inode(uid_t owner, gid_t group, mode_t mode);
+	inode(uid_t owner, gid_t group, mode_t mode, bool root = false);
 	/* for symlink */
 	inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const char *link_target_name);
 	inode(std::string path);
