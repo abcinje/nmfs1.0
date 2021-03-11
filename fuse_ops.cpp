@@ -108,11 +108,12 @@ int fuse_ops::access(const char* path, int mask) {
 
 	try {
 		unique_ptr<inode> i = make_unique<inode>(path);
-		if (!permission_check(i.get(), mask))
-			return -EACCES;
+		permission_check(i.get(), mask);
+
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
+	    /* from inode constructor */
 		return -EACCES;
 	}
 
@@ -401,6 +402,11 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
+        if(file_info->flags & O_TRUNC) {
+            i->set_size(0);
+            i->sync();
+        }
+
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 	} catch(inode::no_entry &e) {
@@ -516,7 +522,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 	return read_len;
 }
 
-int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info){
+int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info) {
 	global_logger.log(fuse_op, "Called write()");
 	global_logger.log(fuse_op, "path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " + std::to_string(offset));
 
@@ -527,12 +533,17 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 
 		written_len = data_pool->write(std::to_string(i->get_ino()), buffer, size, offset);
 
-		off_t updated_size;
-		if(offset >= i->get_size())
-			updated_size = i->get_size() + size;
-		else if (offset < i->get_size()) {
-			if(offset + size >= i->get_size())
-				updated_size = offset + size;
+		off_t updated_size = 0;
+		if(offset >= i->get_size()) {
+            updated_size = i->get_size() + size;
+        }
+		else {
+			if(offset + size >= i->get_size()) {
+                updated_size = offset + size;
+            }
+			else {
+                updated_size = i->get_size();
+            }
 		}
 
 		i->set_size(updated_size);
@@ -540,6 +551,7 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
+
 		return -EACCES;
 	}
 
