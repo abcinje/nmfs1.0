@@ -4,7 +4,6 @@
 using std::runtime_error;
 
 extern rados_io *meta_pool;
-uint64_t per_client_ino_offset = 1;
 
 inode::no_entry::no_entry(const char *msg) : runtime_error(msg){
 }
@@ -224,15 +223,15 @@ ino_t alloc_new_ino() {
 	/* new_ino use client_id for first 24 bit and use ino_offset for next 40 bit, total 64bit(8bytes) */
 	if (c != NULL) {
 		new_ino = (c->get_client_id()) << 40;
-		new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
+		new_ino = new_ino + (c->get_per_client_ino_offset() & INO_OFFSET_MASK);
 		global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
 	} else { /* for very first client */
 		new_ino = (uint64_t)(1) << 40;
-		new_ino = new_ino + (per_client_ino_offset & INO_OFFSET_MASK);
+		new_ino = new_ino + (c->get_per_client_ino_offset() & INO_OFFSET_MASK);
 		global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
 	}
 
-	per_client_ino_offset++;
+	c->increase_ino_offset();
 	return new_ino;
 }
 

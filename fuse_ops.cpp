@@ -36,14 +36,17 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 
 	/* client id allocation */
 	if (!meta_pool->exist("client.list")) {
+		global_logger.log(fuse_op, "Very first Client is mounted");
 		meta_pool->write("client.list", "?o", 2, 0);
 		this_client = new client(1);
 	} else {
 		this_client = new client();
+		global_logger.log(fuse_op, "Client(ID=" + std::to_string(this_client->get_client_id()) + ") is mounted");
+		global_logger.log(fuse_op, "Start Inode offset = " + std::to_string(this_client->get_per_client_ino_offset()));
 	}
 
 	/* root */
-	if (!meta_pool->exist("i$0")) {
+	if (!meta_pool->exist("i$0$0")) {
 		fuse_context *fuse_ctx = fuse_get_context();
 		inode i(fuse_ctx->uid, fuse_ctx->gid, S_IFDIR | 0755);
 		i.set_ino(0);
