@@ -48,8 +48,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	/* root */
 	if (!meta_pool->exist("i$0$0")) {
 		fuse_context *fuse_ctx = fuse_get_context();
-		inode i(fuse_ctx->uid, fuse_ctx->gid, S_IFDIR | 0755);
-		i.set_ino(0);
+		inode i(0, fuse_ctx->gid, S_IFDIR | 0777, true);
 
 		dentry d(0, true);
 		d.add_new_child(".", 0);
