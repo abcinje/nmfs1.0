@@ -8,6 +8,8 @@ find_package(PkgConfig REQUIRED)
 find_library(rados librados.so)
 pkg_check_modules(FUSE3 REQUIRED fuse3)
 
+add_definitions(-DDEBUG)
+
 add_executable(
 	nmfs0
 
