@@ -3,6 +3,27 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+static string get_prefix(enum obj_category category)
+{
+	switch (category) {
+	case INODE:
+		return "i$";
+	case DENTRY:
+		return "e$";
+	case DATA:
+		return "d$";
+	case CLIENT:
+		return "c$";
+	default:
+		throw logic_error("get_prefix() failed (unknown category " + std::to_string(category));
+	}
+}
+
+static string get_postfix(uint64_t num)
+{
+	return "#" + std::to_string(num);
+}
+
 size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offset)
 {
 	global_logger.log(rados_io_ops,"Called rados_io::read_obj()");
@@ -96,10 +117,12 @@ rados_io::~rados_io(void)
 	global_logger.log(rados_io_ops, "Shut down the handle.");
 }
 
-size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
+size_t rados_io::read(enum obj_category category, const string &key, char *value, size_t len, off_t offset)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::read()");
 	global_logger.log(rados_io_ops, "key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
+
+	string p_key = get_prefix(category) + key;
 
 	off_t cursor = offset;
 	off_t stop = offset + len;
@@ -107,7 +130,7 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 
 	while (cursor < stop) {
 		uint64_t obj_num = cursor >> OBJ_BITS;
-		string obj_key = key + "$" + std::to_string(obj_num);
+		string obj_key = p_key + get_postfix(obj_num);
 
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
@@ -124,10 +147,12 @@ size_t rados_io::read(const string &key, char *value, size_t len, off_t offset)
 	return sum;
 }
 
-size_t rados_io::write(const string &key, const char *value, size_t len, off_t offset)
+size_t rados_io::write(enum obj_category category, const string &key, const char *value, size_t len, off_t offset)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::write()");
 	global_logger.log(rados_io_ops, "key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
+
+	string p_key = get_prefix(category) + key;
 
 	off_t cursor = offset;
 	off_t stop = offset + len;
@@ -135,7 +160,7 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 
 	while (cursor < stop) {
 		uint64_t obj_num = cursor >> OBJ_BITS;
-		string obj_key = key + "$" + std::to_string(obj_num);
+		string obj_key = p_key + get_postfix(obj_num);
 
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
@@ -148,16 +173,19 @@ size_t rados_io::write(const string &key, const char *value, size_t len, off_t o
 	return sum;
 }
 
-/* TODO : consider object number of key in this function */
-bool rados_io::exist(const string &key)
+bool rados_io::exist(enum obj_category category, const string &key)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::exist()");
 	global_logger.log(rados_io_ops, "key : " + key);
+
+	/* It suffices to check if the first object exists. */
+	string obj_key = get_prefix(category) + key + get_postfix(0);
+
 	int ret;
 	uint64_t size;
 	time_t mtime;
 
-	ret = ioctx.stat(key, &size, &mtime);
+	ret = ioctx.stat(obj_key, &size, &mtime);
 	if (ret >= 0) {
 		global_logger.log(rados_io_ops, "The object with key \""+ key + "\" exists.");
 		return true;
@@ -169,18 +197,26 @@ bool rados_io::exist(const string &key)
 	}
 }
 
-void rados_io::remove(const string &key)
+void rados_io::remove(enum obj_category category, const string &key)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::remove()");
 	global_logger.log(rados_io_ops, "key : " + key);
+
+	string p_key = get_prefix(category) + key;
+
 	int ret;
 
-	ret = ioctx.remove(key);
-	if (ret >= 0) {
-		global_logger.log(rados_io_ops, "Removed an object. (key: \"" + key + "\")");
-	} else if (ret == -ENOENT) {
-		global_logger.log(rados_io_ops, "Tried to remove a non-existent object. (key: \"" + key + "\")");
-	} else {
-		throw runtime_error("rados_io::remove() failed");
+	for (uint64_t obj_num = 0; ; obj_num++) {
+		ret = ioctx.remove(p_key + get_postfix(obj_num));
+
+		if (ret == -ENOENT && obj_num == 0) {
+			global_logger.log(rados_io_ops, "Tried to remove a non-existent object. (key: \"" + key + "\")");
+			return;
+		} else if (ret == -ENOENT) {
+			global_logger.log(rados_io_ops, "Removed an object. (key: \"" + key + "\")");
+			return;
+		} else if (ret < 0) {
+			throw runtime_error("rados_io::remove() failed");
+		}
 	}
 }

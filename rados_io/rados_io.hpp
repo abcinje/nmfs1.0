@@ -5,12 +5,20 @@
 #include <string>
 #include <rados/librados.hpp>
 
+using std::logic_error;
 using std::runtime_error;
 using std::string;
 
 #define OBJ_SIZE	(4194304)
 #define OBJ_BITS	(22)
 #define OBJ_MASK	((~0) << OBJ_BITS)
+
+enum obj_category {
+	INODE,
+	DENTRY,
+	DATA,
+	CLIENT,
+};
 
 class rados_io {
 private:
@@ -38,10 +46,10 @@ public:
 	rados_io(const conn_info &ci, string pool);
 	~rados_io(void);
 
-	size_t read(const string &key, char *value, size_t len, off_t offset);
-	size_t write(const string &key, const char *value, size_t len, off_t offset);
-	bool exist(const string &key);
-	void remove(const string &key);
+	size_t read(enum obj_category category, const string &key, char *value, size_t len, off_t offset);
+	size_t write(enum obj_category category, const string &key, const char *value, size_t len, off_t offset);
+	bool exist(enum obj_category category, const string &key);
+	void remove(enum obj_category category, const string &key);
 };
 
 #endif /* _RADOS_IO_HPP_ */

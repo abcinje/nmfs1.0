@@ -35,9 +35,9 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	data_pool = new rados_io(ci, DATA_POOL);
 
 	/* client id allocation */
-	if (!meta_pool->exist("client.list$0")) {
+	if (!meta_pool->exist(CLIENT, "client.list")) {
 		global_logger.log(fuse_op, "Very first Client is mounted");
-		meta_pool->write("client.list", "?o", 2, 0);
+		meta_pool->write(CLIENT, "client.list", "?o", 2, 0);
 		this_client = new client(1);
 	} else {
 		this_client = new client();
@@ -46,7 +46,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	}
 
 	/* root */
-	if (!meta_pool->exist("i$0$0")) {
+	if (!meta_pool->exist(INODE, "0")) {
 		fuse_context *fuse_ctx = fuse_get_context();
 		inode i(0, fuse_ctx->gid, S_IFDIR | 0777, true);
 
@@ -295,8 +295,8 @@ int fuse_ops::rmdir(const char* path) {
 		if(target_dentry->get_child_num() > 2)
 			return -ENOTEMPTY;
 
-		meta_pool->remove("d$" + std::to_string(i->get_ino()));
-		meta_pool->remove("i$" + std::to_string(i->get_ino()));
+		meta_pool->remove(DENTRY, std::to_string(i->get_ino()));
+		meta_pool->remove(INODE, std::to_string(i->get_ino()));
 
 		parent_d->delete_child(*(get_filename_from_path(path).get()));
 		parent_d->sync();
@@ -340,7 +340,7 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 			if (flags == 0) {
 				if(check_dst_ino != -1) {
 					d->delete_child(new_name->data());
-					meta_pool->remove("i$" + std::to_string(check_dst_ino));
+					meta_pool->remove(INODE, std::to_string(check_dst_ino));
 				}
 				d->delete_child(old_name->data());
 				d->add_new_child(new_name->data(), target_ino);
@@ -364,7 +364,7 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 			if (flags == 0) {
 				if(check_dst_ino != -1) {
 					dst_d->delete_child(new_name->data());
-					meta_pool->remove("i$" + std::to_string(check_dst_ino));
+					meta_pool->remove(INODE, std::to_string(check_dst_ino));
 				}
 				src_d->delete_child(old_name->data());
 				dst_d->add_new_child(new_name->data(), target_ino);
@@ -503,7 +503,7 @@ int fuse_ops::unlink(const char* path){
 		ino_t target_ino = parent_d->get_child_ino(*(get_filename_from_path(path).get())); // perform target's permission check
 		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
-		meta_pool->remove("i$" + std::to_string(i->get_ino()));
+		meta_pool->remove(INODE, std::to_string(i->get_ino()));
 
 		parent_d->delete_child(*(get_filename_from_path(path).get()));
 		parent_d->sync();
@@ -526,7 +526,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 	try {
 		unique_ptr<inode> i = make_unique<inode>(path);
 
-		read_len = data_pool->read(std::to_string(i->get_ino()), buffer, size, offset);
+		read_len = data_pool->read(DATA, std::to_string(i->get_ino()), buffer, size, offset);
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -547,7 +547,7 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 	try {
 		unique_ptr<inode> i = make_unique<inode>(path);
 
-		written_len = data_pool->write(std::to_string(i->get_ino()), buffer, size, offset);
+		written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, offset);
 
 		off_t updated_size = 0;
 		if(offset >= i->get_size()) {

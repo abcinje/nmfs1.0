@@ -33,7 +33,7 @@ int main(void)
 	rados_io rio(ci, pool_name);
 
 	char *buf = new char[sizeof(inode)];
-	rio.read("i$" + std::to_string(ino), buf, sizeof(inode), 0);
+	rio.read(INODE, std::to_string(ino), buf, sizeof(inode), 0);
 	inode *i = reinterpret_cast<inode *>(buf);
 
 	std::cout << "mode:	" << i->i_mode	<< std::endl;
