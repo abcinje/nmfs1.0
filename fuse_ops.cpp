@@ -494,22 +494,34 @@ int fuse_ops::unlink(const char* path){
 	global_logger.log(fuse_op, "Called unlink()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(*(get_parent_dir_path(path).get()));
-		uint64_t parent_ino = parent_i->get_ino();
+		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
 
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_ino);
-
-		ino_t target_ino = parent_d->get_child_ino(*(get_filename_from_path(path).get())); // perform target's permission check
+		ino_t target_ino = parent_d->get_child_ino(file_name->data());
 		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
-		meta_pool->remove(INODE, std::to_string(i->get_ino()));
+		nlink_t nlink = i->get_nlink() - 1;
+		if (nlink == 0) {
+			/* data */
+			meta_pool->remove(DATA, std::to_string(i->get_ino()));
 
-		parent_d->delete_child(*(get_filename_from_path(path).get()));
-		parent_d->sync();
+			/* inode */
+			meta_pool->remove(INODE, std::to_string(i->get_ino()));
 
-		parent_i->set_size(parent_d->get_total_name_legth());
-		parent_i->sync();
+			/* parent dentry */
+			parent_d->delete_child(file_name->data());
+			parent_d->sync();
+
+			/* parent inode */
+			parent_i->set_size(parent_d->get_total_name_legth());
+			parent_i->sync();
+		} else {
+			i->set_nlink(nlink);
+			i->sync();
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
