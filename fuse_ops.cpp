@@ -506,7 +506,7 @@ int fuse_ops::unlink(const char* path){
 		nlink_t nlink = i->get_nlink() - 1;
 		if (nlink == 0) {
 			/* data */
-			meta_pool->remove(DATA, std::to_string(i->get_ino()));
+			data_pool->remove(DATA, std::to_string(i->get_ino()));
 
 			/* inode */
 			meta_pool->remove(INODE, std::to_string(i->get_ino()));
