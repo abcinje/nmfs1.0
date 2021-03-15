@@ -15,7 +15,7 @@ static string get_prefix(enum obj_category category)
 	case CLIENT:
 		return "c$";
 	default:
-		throw logic_error("get_prefix() failed (unknown category " + std::to_string(category));
+		throw logic_error("get_prefix() failed (unknown category " + std::to_string(category) + ")");
 	}
 }
 
