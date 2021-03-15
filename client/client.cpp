@@ -35,15 +35,16 @@ client::client() {
 	// if reserve doesn't really span str.data(), client_list += "o";
 	client_list[this->client_id] = 'o';
 	meta_pool->write(CLIENT, "client.list", client_list.get(), client_list_len + 1, 0);
-	this->per_client_ino_offset = 1;
+	this->per_client_ino_offset = 0;
+	this->increase_ino_offset();
 }
 
 /*
  * client(int id)
  * : constructor for really first created client
  */
-client::client(int id) : client_id(id), per_client_ino_offset(1) {
-
+client::client(int id) : client_id(id), per_client_ino_offset(0) {
+	this->increase_ino_offset();
 }
 
 client::~client() {
