@@ -59,6 +59,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 		d.sync();
 	}
 
+	config->nullpath_ok = 0;
 	return (void *)this_client;
 }
 
@@ -212,18 +213,33 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 
 int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "Called releasedir()");
-	global_logger.log(fuse_op, "path : " + std::string(path));
+	if(path != nullptr) {
+		global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<inode> i = make_unique<inode>(path);
+		unique_ptr<inode> i = make_unique<inode>(path);
 
-	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-	std::scoped_lock<std::mutex> lock(m);
-	it = fh_list.find(i->get_ino());
+		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+		std::scoped_lock<std::mutex> lock(m);
+		it = fh_list.find(i->get_ino());
 
-	if(it == fh_list.end())
-		return -EIO;
+		if (it == fh_list.end())
+			return -EIO;
 
-	fh_list.erase(it);
+		fh_list.erase(it);
+	} else {
+		global_logger.log(fuse_op, "path : nullpath");
+		file_handler *fh = reinterpret_cast<file_handler *>(file_info->fh);
+		ino_t ino = fh->get_ino();
+
+		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+		std::scoped_lock<std::mutex> lock(m);
+		it = fh_list.find(ino);
+
+		if (it == fh_list.end())
+			return -EIO;
+
+		fh_list.erase(it);
+	}
 
 	return 0;
 }
@@ -436,19 +452,33 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 
 int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	global_logger.log(fuse_op, "Called release()");
-	global_logger.log(fuse_op, "path : " + std::string(path));
+	if(path != nullptr) {
+		global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<inode> i = make_unique<inode>(path);
+		unique_ptr<inode> i = make_unique<inode>(path);
 
-	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-	std::scoped_lock<std::mutex> lock(m);
-	it = fh_list.find(i->get_ino());
+		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+		std::scoped_lock<std::mutex> lock(m);
+		it = fh_list.find(i->get_ino());
 
-	if(it == fh_list.end())
-		return -EIO;
+		if (it == fh_list.end())
+			return -EIO;
 
-	fh_list.erase(it);
+		fh_list.erase(it);
+	} else {
+		global_logger.log(fuse_op, "path : nullpath");
+		file_handler *fh = reinterpret_cast<file_handler *>(file_info->fh);
+		ino_t ino = fh->get_ino();
 
+		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+		std::scoped_lock<std::mutex> lock(m);
+		it = fh_list.find(ino);
+
+		if (it == fh_list.end())
+			return -EIO;
+
+		fh_list.erase(it);
+	}
 	return 0;
 }
 

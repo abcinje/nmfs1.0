@@ -12,6 +12,7 @@ public:
 	file_handler(ino_t ino);
 
 	void set_fhno(void *fhno);
+	ino_t get_ino();
 };
 
 
