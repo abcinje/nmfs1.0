@@ -563,7 +563,7 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 
 		off_t updated_size = 0;
 		if(offset >= i->get_size()) {
-			updated_size = i->get_size() + size;
+			updated_size = offset + size;
 		} else {
 			if(offset + size >= i->get_size()) {
 				updated_size = offset + size;
