@@ -1,6 +1,7 @@
 #include "rados_io.hpp"
 #include "../logger/logger.hpp"
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 static string get_prefix(enum obj_category category)
@@ -15,7 +16,7 @@ static string get_prefix(enum obj_category category)
 	case CLIENT:
 		return "c$";
 	default:
-		throw logic_error("get_prefix() failed (unknown category " + std::to_string(category));
+		throw logic_error("get_prefix() failed (unknown category " + std::to_string(category) + ")");
 	}
 }
 
@@ -64,6 +65,31 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	}
 
 	return len;
+}
+
+void rados_io::zerofill(enum obj_category category, const string &key, size_t len, off_t offset)
+{
+	char *zeros = new char[MAX(len, OBJ_SIZE)]();
+
+	string p_key = get_prefix(category) + key;
+
+	off_t cursor = offset;
+	off_t stop = offset + len;
+	size_t sum = 0;
+
+	while (cursor < stop) {
+		uint64_t obj_num = cursor >> OBJ_BITS;
+		string obj_key = p_key + get_postfix(obj_num);
+
+		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
+		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
+
+		write_obj(obj_key, zeros, sub_len, cursor & (~OBJ_MASK));
+
+		cursor = next_bound;
+	}
+
+	delete []zeros;
 }
 
 rados_io::no_such_object::no_such_object(const string &msg, size_t nb) : runtime_error(msg), num_bytes(nb)
@@ -136,7 +162,7 @@ size_t rados_io::read(enum obj_category category, const string &key, char *value
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
 		try {
-			sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
+			sum += read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 		} catch (no_such_object &e) {
 			throw no_such_object(e.what(), sum);
 		}
@@ -154,6 +180,36 @@ size_t rados_io::write(enum obj_category category, const string &key, const char
 
 	string p_key = get_prefix(category) + key;
 
+	/* Fill the "hole" with zeros if the given offset is greater than the file size.
+	   To do this, get the file size and do zerofill via zerofill(). */
+	int ret;
+	size_t inf_file_size;
+
+	for (int64_t prev_obj_num = offset >> OBJ_BITS; prev_obj_num >= 0; prev_obj_num--) {
+		uint64_t size;
+		time_t mtime;
+
+		string prev_obj_key = p_key + get_postfix(prev_obj_num);
+
+		int ret = ioctx.stat(prev_obj_key, &size, &mtime);
+		if (ret >= 0) {
+			inf_file_size = (prev_obj_num << OBJ_BITS) + size;
+			break;
+		} else if (ret != -ENOENT) {
+			throw runtime_error("rados_io::write() failed (stat() failed");
+		}
+	}
+
+	/* There are no such RADOS objects. */
+	if (ret == -ENOENT)
+		inf_file_size = 0;
+
+	/* Do zerofill */
+	/* If inf_file_size < offset, inf_file_size is equal to the file size */
+	if (inf_file_size < offset)
+		zerofill(category, key, offset - inf_file_size, inf_file_size);
+
+	/* Now it's time to write. */
 	off_t cursor = offset;
 	off_t stop = offset + len;
 	size_t sum = 0;
@@ -165,7 +221,7 @@ size_t rados_io::write(enum obj_category category, const string &key, const char
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		sum += this->write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
+		sum += write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 
 		cursor = next_bound;
 	}
