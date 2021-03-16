@@ -561,19 +561,10 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 
 		written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, offset);
 
-		off_t updated_size = 0;
-		if(offset >= i->get_size()) {
-			updated_size = offset + size;
-		} else {
-			if(offset + size >= i->get_size()) {
-				updated_size = offset + size;
-			} else {
-				updated_size = i->get_size();
-			}
+		if (i->get_size() < offset + size) {
+			i->set_size(offset + size);
+			i->sync();
 		}
-
-		i->set_size(updated_size);
-		i->sync();
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
