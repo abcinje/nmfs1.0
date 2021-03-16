@@ -84,7 +84,7 @@ void rados_io::zerofill(enum obj_category category, const string &key, size_t le
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		this->write_obj(obj_key, zeros, sub_len, cursor & (~OBJ_MASK));
+		write_obj(obj_key, zeros, sub_len, cursor & (~OBJ_MASK));
 
 		cursor = next_bound;
 	}
@@ -162,7 +162,7 @@ size_t rados_io::read(enum obj_category category, const string &key, char *value
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
 		try {
-			sum += this->read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
+			sum += read_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 		} catch (no_such_object &e) {
 			throw no_such_object(e.what(), sum);
 		}
@@ -221,7 +221,7 @@ size_t rados_io::write(enum obj_category category, const string &key, const char
 		off_t next_bound = (cursor & OBJ_MASK) + OBJ_SIZE;
 		size_t sub_len = MIN(next_bound - cursor, stop - cursor);
 
-		sum += this->write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
+		sum += write_obj(obj_key,value + sum, sub_len, cursor & (~OBJ_MASK));
 
 		cursor = next_bound;
 	}
