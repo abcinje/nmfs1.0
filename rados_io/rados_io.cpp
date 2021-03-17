@@ -196,7 +196,7 @@ size_t rados_io::write(enum obj_category category, const string &key, const char
 			inf_file_size = (prev_obj_num << OBJ_BITS) + size;
 			break;
 		} else if (ret != -ENOENT) {
-			throw runtime_error("rados_io::write() failed (stat() failed");
+			throw runtime_error("rados_io::write() failed (stat() failed)");
 		}
 	}
 
