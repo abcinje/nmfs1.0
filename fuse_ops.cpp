@@ -408,10 +408,6 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "Called open()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	if(file_info->flags & O_APPEND) {
-		throw std::runtime_error("O_APPEND is ON");
-	}
-
 	if(file_info->flags & O_NONBLOCK) {
 		throw std::runtime_error("O_NONBLOCK is ON");
 	}
@@ -589,11 +585,18 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 	try {
 		unique_ptr<inode> i = make_unique<inode>(path);
 
-		written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, offset);
+		if(file_info->flags & O_APPEND) {
+			written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, i->get_size());
 
-		if (i->get_size() < offset + size) {
-			i->set_size(offset + size);
+			i->set_size(i->get_size() + size);
 			i->sync();
+		} else {
+			written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, offset);
+
+			if (i->get_size() < offset + size) {
+				i->set_size(offset + size);
+				i->sync();
+			}
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
