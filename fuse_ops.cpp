@@ -408,6 +408,12 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "Called open()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	/* file creation flags */
+	/* O_CLOEXEC, O_CREAT, O_DIRECTORY, O_EXCL, O_NOCTTY, O_NOFOLLOW, O_TMPFILE, and O_TRUNC */
+
+	/* file status flags */
+	/* O_APPEND, O_ASYNC, O_DIRECT, O_DSYNC, O_LARGEFILE, O_NOATIME, O_NONBLOCK, O_PATH, and O_SYNC */
+
 	if(file_info->flags & O_SYNC) {
 		throw std::runtime_error("O_SYNC is ON");
 	}
