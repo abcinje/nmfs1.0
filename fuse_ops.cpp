@@ -416,6 +416,26 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 		throw std::runtime_error("O_ASYNC is ON");
 	}
 
+	if(file_info->flags & O_LARGEFILE) {
+		throw std::runtime_error("O_LARGEFILE is ON");
+	}
+
+	if(file_info->flags & O_NOFOLLOW) {
+		throw std::runtime_error("O_NOFOLLOW is ON");
+	}
+
+	if(file_info->flags & O_DIRECT) {
+		throw std::runtime_error("O_DIRECT is ON");
+	}
+
+	if(file_info->flags & O_NOATIME) {
+		throw std::runtime_error("O_NOATIME is ON");
+	}
+
+	if(file_info->flags & O_DSYNC) {
+		throw std::runtime_error("O_DSYNC is ON");
+	}
+
 	try {
 		unique_ptr<inode> i = make_unique<inode>(path);
 
