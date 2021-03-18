@@ -408,10 +408,6 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "Called open()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	if(file_info->flags & O_NONBLOCK) {
-		throw std::runtime_error("O_NONBLOCK is ON");
-	}
-
 	if(file_info->flags & O_SYNC) {
 		throw std::runtime_error("O_SYNC is ON");
 	}
