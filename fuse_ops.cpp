@@ -695,8 +695,18 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 		ino_t target_ino = parent_d->get_child_ino(file_name->data());
 		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
-		i->set_atime(tv[0]);
-		i->set_mtime(tv[1]);
+		for(int tv_i = 0; tv_i < 2; tv_i++) {
+			if (tv[tv_i].tv_nsec == UTIME_NOW) {
+				struct timespec ts;
+				if (!timespec_get(&ts, TIME_UTC))
+					runtime_error("timespec_get() failed");
+				i->set_atime(ts);
+			} else if (tv[tv_i].tv_nsec == UTIME_OMIT) {
+				;
+			} else {
+				i->set_mtime(tv[tv_i]);
+			}
+		}
 
 		i->sync();
 	} catch(inode::no_entry &e) {
