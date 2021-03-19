@@ -586,18 +586,16 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 		unique_ptr<inode> i = make_unique<inode>(path);
 
 		if(file_info->flags & O_APPEND) {
-			written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, i->get_size());
-
-			i->set_size(i->get_size() + size);
-			i->sync();
-		} else {
-			written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, offset);
-
-			if (i->get_size() < offset + size) {
-				i->set_size(offset + size);
-				i->sync();
-			}
+			offset = i->get_size();
 		}
+
+		written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, offset);
+
+		if (i->get_size() < offset + size) {
+			i->set_size(offset + size);
+			i->sync();
+		}
+
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -646,8 +644,11 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 		ino_t target_ino = parent_d->get_child_ino(file_name->data());
 		unique_ptr<inode> i = make_unique<inode>(target_ino);
 
-		i->set_uid(uid);
-		i->set_gid(gid);
+		if(((int32_t)uid) >= 0)
+			i->set_uid(uid);
+
+		if(((int32_t)gid) >= 0)
+			i->set_gid(gid);
 
 		i->sync();
 	} catch(inode::no_entry &e) {
