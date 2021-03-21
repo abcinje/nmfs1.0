@@ -410,39 +410,34 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 
 	/* file creation flags */
 
-	// O_CLOEXEC	- To be discussed
+	// O_CLOEXEC	- Unimplemented
 	// O_CREAT	- Handled by the kernel
 	// O_DIRECTORY	- Handled in this function
 	// O_EXCL	- Handled by the kernel
 	// O_NOCTTY	- Handled by the kernel
 	// O_NOFOLLOW	- Handled in this function
-	// O_TMPFILE	- To be discussed
-	// O_TRUNC	- To be discussed
+	// O_TMPFILE	- Ignored
+	// O_TRUNC	- Handled in this function
 
 	/* file status flags */
 
 	// O_APPEND	- Handled in write() (Assume that writeback caching is disabled)
-	// O_ASYNC	- To be discussed
-	// O_DIRECT	- To be discussed
-	// O_DSYNC	- To be discussed
-	// O_LARGEFILE	- Unimplemented
+	// O_ASYNC	- Ignored
+	// O_DIRECT	- Ignored
+	// O_DSYNC	- To be implemented
+	// O_LARGEFILE	- Ignored
 	// O_NOATIME	- Ignored
 	// O_NONBLOCK	- Ignored
-	// O_PATH	- To be discussed
-	// O_SYNC	- To be discussed
+	// O_PATH	- Unimplemented
+	// O_SYNC	- To be implemented
 
-	/* flags which are to be discussed or unimplemented */
+	/* flags which are unimplemented and to be implemented */
 
 	if (file_info->flags & O_CLOEXEC)	throw std::runtime_error("O_CLOEXEC is ON");
-	if (file_info->flags & O_TMPFILE)	throw std::runtime_error("O_TMPFILE is ON");
-	if (file_info->flags & O_TRUNC)		throw std::runtime_error("O_TRUNC is ON");
-
-	if (file_info->flags & O_ASYNC)		throw std::runtime_error("O_ASYNC is ON");
-	if (file_info->flags & O_DIRECT)	throw std::runtime_error("O_DIRECT is ON");
-	if (file_info->flags & O_DSYNC)		throw std::runtime_error("O_DSYNC is ON");
-	if (file_info->flags & O_LARGEFILE)	throw std::runtime_error("O_LARGEFILE is ON");
 	if (file_info->flags & O_PATH)		throw std::runtime_error("O_PATH is ON");
-	if (file_info->flags & O_SYNC)		throw std::runtime_error("O_SYNC is ON");
+
+	//if (file_info->flags & O_DSYNC)		throw std::runtime_error("O_DSYNC is ON");
+	//if (file_info->flags & O_SYNC)		throw std::runtime_error("O_SYNC is ON");
 
 
 
@@ -466,7 +461,7 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
-		if (file_info->flags & O_TRUNC) {
+		if ((file_info->flags & O_TRUNC) && !(file_info->flags & O_PATH)) {
 			i->set_size(0);
 			i->sync();
 		}
@@ -597,6 +592,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 	global_logger.log(fuse_op, "path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " + std::to_string(offset));
 
 	int read_len = 0;
+
 	try {
 		unique_ptr<inode> i = make_unique<inode>(path);
 
@@ -696,7 +692,7 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 	return 0;
 }
 
-int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi) {
+int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "Called utimens()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
