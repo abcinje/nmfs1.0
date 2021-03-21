@@ -96,7 +96,7 @@ void dentry::deserialize(char *raw)
 
 		this->child_list.insert(std::pair<std::string, ino_t>(name, ino));
 		this->total_name_length += name_length;
-		global_logger.log(dentry_ops, "name_length : " + std::to_string(name_length) + "child name : " + std::string(name) + " child ino : " + std::to_string(ino));
+		//global_logger.log(dentry_ops, "name_length : " + std::to_string(name_length) + "child name : " + std::string(name) + " child ino : " + std::to_string(ino));
 		free(name);
 	}
 

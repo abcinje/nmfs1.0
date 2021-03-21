@@ -77,7 +77,7 @@ inode::inode(std::string path)
 		// translate target name to target's inode number
 		ino_t target_ino = parent_dentry->get_child_ino(target_name);
 		if (target_ino == -1)
-			throw no_entry("No such file or Directory: inode number " + std::to_string(target_ino));
+			throw no_entry("No such file or Directory: in path traversal");
 
 		target_inode = std::make_unique<inode>(target_ino);
 
@@ -120,7 +120,7 @@ inode::inode(ino_t ino)
 		meta_pool->read(INODE, std::to_string(ino), raw_data.get(), REG_INODE_SIZE, 0);
 		this->deserialize(raw_data.get());
 	} catch(rados_io::no_such_object &e){
-		throw no_entry("No such file or Directory: inode number " + std::to_string(ino));
+		throw no_entry("No such file or Directory: in inode(ino) constructor");
 	}
 }
 
