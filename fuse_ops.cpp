@@ -410,75 +410,72 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 
 	/* file creation flags */
 
-	// O_CLOEXEC	-
+	// O_CLOEXEC	- To be discussed
 	// O_CREAT	- Handled by the kernel
-	// O_DIRECTORY	-
+	// O_DIRECTORY	- Handled in this function
 	// O_EXCL	- Handled by the kernel
 	// O_NOCTTY	- Handled by the kernel
-	// O_NOFOLLOW	-
-	// O_TMPFILE	-
-	// O_TRUNC	-
+	// O_NOFOLLOW	- Handled in this function
+	// O_TMPFILE	- To be discussed
+	// O_TRUNC	- To be discussed
 
 	/* file status flags */
 
 	// O_APPEND	- Handled in write() (Assume that writeback caching is disabled)
-	// O_ASYNC	-
-	// O_DIRECT	-
-	// O_DSYNC	-
-	// O_LARGEFILE	-
-	// O_NOATIME	-
+	// O_ASYNC	- To be discussed
+	// O_DIRECT	- To be discussed
+	// O_DSYNC	- To be discussed
+	// O_LARGEFILE	- Unimplemented
+	// O_NOATIME	- Ignored
 	// O_NONBLOCK	- Ignored
-	// O_PATH	-
-	// O_SYNC	-
+	// O_PATH	- To be discussed
+	// O_SYNC	- To be discussed
 
-	if(file_info->flags & O_SYNC) {
-		throw std::runtime_error("O_SYNC is ON");
-	}
+	/* flags which are to be discussed or unimplemented */
 
-	if(file_info->flags & O_ASYNC) {
-		throw std::runtime_error("O_ASYNC is ON");
-	}
+	if (file_info->flags & O_CLOEXEC)	throw std::runtime_error("O_CLOEXEC is ON");
+	if (file_info->flags & O_TMPFILE)	throw std::runtime_error("O_TMPFILE is ON");
+	if (file_info->flags & O_TRUNC)		throw std::runtime_error("O_TRUNC is ON");
 
-	if(file_info->flags & O_LARGEFILE) {
-		throw std::runtime_error("O_LARGEFILE is ON");
-	}
+	if (file_info->flags & O_ASYNC)		throw std::runtime_error("O_ASYNC is ON");
+	if (file_info->flags & O_DIRECT)	throw std::runtime_error("O_DIRECT is ON");
+	if (file_info->flags & O_DSYNC)		throw std::runtime_error("O_DSYNC is ON");
+	if (file_info->flags & O_LARGEFILE)	throw std::runtime_error("O_LARGEFILE is ON");
+	if (file_info->flags & O_PATH)		throw std::runtime_error("O_PATH is ON");
+	if (file_info->flags & O_SYNC)		throw std::runtime_error("O_SYNC is ON");
 
-	if(file_info->flags & O_NOFOLLOW) {
-		throw std::runtime_error("O_NOFOLLOW is ON");
-	}
 
-	if(file_info->flags & O_DIRECT) {
-		throw std::runtime_error("O_DIRECT is ON");
-	}
 
-	if(file_info->flags & O_NOATIME) {
-		throw std::runtime_error("O_NOATIME is ON");
-	}
-
-	if(file_info->flags & O_DSYNC) {
-		throw std::runtime_error("O_DSYNC is ON");
-	}
+	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
 	try {
-		unique_ptr<inode> i = make_unique<inode>(path);
+		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
+		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
 
-		if(S_ISDIR(i->get_mode()))
-			return -EISDIR;
+		ino_t target_ino = parent_d->get_child_ino(file_name->data());
+		unique_ptr<inode> i = make_unique<inode>(target_ino);
+
+		if ((file_info->flags & O_DIRECTORY) && !S_ISDIR(i->get_mode()))
+			return -ENOTDIR;
+
+		if ((file_info->flags & O_NOFOLLOW) && S_ISLNK(i->get_mode()))
+			return -ELOOP;
 
 		std::scoped_lock<std::mutex> lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
-		if(file_info->flags & O_TRUNC) {
+		if (file_info->flags & O_TRUNC) {
 			i->set_size(0);
 			i->sync();
 		}
 
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
-	} catch(inode::no_entry &e) {
+	} catch (inode::no_entry &e) {
 		return -ENOENT;
-	} catch(inode::permission_denied &e) {
+	} catch (inode::permission_denied &e) {
 		return -EACCES;
 	}
 
