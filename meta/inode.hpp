@@ -29,6 +29,8 @@ private:
 	struct timespec	i_mtime;
 	struct timespec	i_ctime;
 
+	uint64_t leader_client_id;
+
 	int link_target_len;
 	char *link_target_name;
 

@@ -33,6 +33,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
+	leader_client_id = 0;
 	i_ino = root ? 0 : alloc_new_ino();
 }
 
@@ -46,6 +47,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const c
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
+	leader_client_id = 0;
 	i_ino = alloc_new_ino();
 
 	this->set_link_target_len(link_target_len);
