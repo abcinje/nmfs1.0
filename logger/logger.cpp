@@ -22,6 +22,9 @@ void logger::log(enum code_location location, std::string message)
 		case inode_ops:
 			location_str = "inode_operations";
 			break;
+		case indexing_ops:
+			location_str = "indexing_operatinos";
+			break;
 		default:
 			location_str = "Unknown";
 	}

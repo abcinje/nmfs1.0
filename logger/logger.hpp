@@ -8,7 +8,8 @@ enum code_location {
 	fuse_op = 0,
 	rados_io_ops,
 	dentry_ops,
-	inode_ops
+	inode_ops,
+	indexing_ops
 };
 
 
