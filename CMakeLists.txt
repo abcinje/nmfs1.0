@@ -30,6 +30,11 @@ add_executable(
 
 	# client
 	client/client.cpp
+
+	lease/lease_util.cpp
+
+	in_memory/indirect_table.cpp
+	in_memory/dentry_table.cpp
 )
 
 target_link_libraries(nmfs0 ${FUSE3_LIBRARIES} rados)
