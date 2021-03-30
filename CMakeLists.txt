@@ -33,7 +33,7 @@ add_executable(
 
 	lease/lease_util.cpp
 
-	in_memory/indirect_table.cpp
+	in_memory/directory_table.cpp
 	in_memory/dentry_table.cpp
 )
 
