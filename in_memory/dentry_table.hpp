@@ -6,20 +6,36 @@
 #include <memory>
 #include "../meta/inode.hpp"
 
-using std::unique_ptr;
+enum meta_location {
+    LOCAL = 0,
+    REMOTE,
+    UNKNOWN,
+
+    /* temporaly status */
+    NOBODY
+};
+
+using std::shared_ptr;
 
 class dentry_table {
 private:
 	ino_t dir_ino;
-	unique_ptr<inode> dir_inode;
-	std::map<std::string, unique_ptr<inode>> child_inodes;
+	shared_ptr<inode> dir_inode;
+	std::map<std::string, shared_ptr<inode>> child_inodes;
+
+    	enum meta_location loc;
+    	uint64_t leader_client_id;
 
 public:
 	dentry_table(ino_t dir_ino);
 	~dentry_table();
 
-	unique_ptr<inode> get_target_inode(std::string filename);
-	int add_inode(std::string filename, unique_ptr<inode> inode);
+    	int add_inode(std::string filename, shared_ptr<inode> inode);
+    	int delete_inode(std::string filename);
+
+    	shared_ptr<inode> get_dir_inode();
+	shared_ptr<inode> get_child_inode(std::string filename);
+
 };
 
 int pull_child_metadata(ino_t dir_ino);

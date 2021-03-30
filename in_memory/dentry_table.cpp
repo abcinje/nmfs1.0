@@ -9,19 +9,32 @@ dentry_table::~dentry_table() {
 }
 
 
-unique_ptr<inode> dentry_table::get_target_inode(std::string filename){
-	std::map<std::string, unique_ptr<inode>>::iterator it;
-	it = this->child_inodes.find(filename);
-
-	if(it == this->child_inodes.end())
-		return nullptr;
-
-	this->child_inodes.erase(it);
-
-	return 0;
+shared_ptr<inode> dentry_table::get_dir_inode(){
+	if(this->loc == LOCAL) {
+		return this->dir_inode;
+	} else if (this->loc == REMOTE) {
+		/* TODO */
+	}
 }
 
-int dentry_table::add_inode(std::string filename, unique_ptr<inode> inode){
+shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
+	if(this->loc == LOCAL) {
+		std::map<std::string, shared_ptr<inode>>::iterator it;
+		it = this->child_inodes.find(filename);
+
+		if(it == this->child_inodes.end())
+			return nullptr;
+
+		this->child_inodes.erase(it);
+
+		return 0;
+	} else if (this->loc == REMOTE) {
+		/* TODO */
+	}
+
+}
+
+int dentry_table::add_inode(std::string filename, shared_ptr<inode> inode){
 
 }
 
