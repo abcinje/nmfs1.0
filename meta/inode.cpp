@@ -33,7 +33,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
-	leader_client_id = 0;
+	leader_id = 0;
 	i_ino = root ? 0 : alloc_new_ino();
 }
 
@@ -47,13 +47,14 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const c
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
-	leader_client_id = 0;
+	leader_id = 0;
 	i_ino = alloc_new_ino();
 
 	this->set_link_target_len(link_target_len);
 	this->set_link_target_name(link_target_name);
 }
 
+/* TODO : deprecate */
 inode::inode(std::string path)
 {
 	global_logger.log(inode_ops, "Called inode(" + path + ")");
@@ -197,6 +198,7 @@ struct timespec inode::get_atime(){return this->i_atime;}
 struct timespec inode::get_mtime(){return this->i_mtime;}
 struct timespec inode::get_ctime(){return this->i_ctime;}
 
+uint64_t inode::get_leader_id() {return this->leader_id;}
 int inode::get_link_target_len(){return this->link_target_len;}
 char *inode::get_link_target_name(){return this->link_target_name;}
 
@@ -210,6 +212,7 @@ void inode::set_size(off_t size){this->i_size = size;}
 void inode::set_atime(struct timespec atime){this->i_atime = atime;}
 void inode::set_mtime(struct timespec mtime){this->i_mtime = mtime;}
 
+void inode::set_leader_id(uint64_t client_id) {this->leader_id = client_id;}
 void inode::set_link_target_len(int len){this->link_target_len = len;}
 void inode::set_link_target_name(const char *name){
 	this->link_target_name = (char *)calloc(this->link_target_len + 1, sizeof(char));

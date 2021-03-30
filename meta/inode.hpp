@@ -29,7 +29,7 @@ private:
 	struct timespec	i_mtime;
 	struct timespec	i_ctime;
 
-	uint64_t leader_client_id;
+	uint64_t leader_id;
 
 	int link_target_len;
 	char *link_target_name;
@@ -75,6 +75,8 @@ public:
 	struct timespec get_mtime();
 	struct timespec get_ctime();
 
+	uint64_t get_leader_id();
+
 	int get_link_target_len();
 	ino_t get_link_target_ino();
 	char *get_link_target_name();
@@ -89,6 +91,7 @@ public:
 	void set_atime(struct timespec atime);
 	void set_mtime(struct timespec mtime);
 
+	void set_leader_id(uint64_t client_id);
 	void set_link_target_len(int len);
 	void set_link_target_name(const char *name);
 
