@@ -1,0 +1,5 @@
+#ifndef NMFS0_LOCAL_OPS_HPP
+#define NMFS0_LOCAL_OPS_HPP
+
+
+#endif //NMFS0_LOCAL_OPS_HPP
