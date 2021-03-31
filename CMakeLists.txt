@@ -14,7 +14,9 @@ add_executable(
 	nmfs0
 
 	main.cpp
-	fuse_ops.cpp
+	fs_ops/ops_core.cpp
+	fs_ops/fuse_ops.cpp
+	fs_ops/remote_ops.cpp
 	util.cpp
 
 	# logger
