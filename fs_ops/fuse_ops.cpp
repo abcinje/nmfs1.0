@@ -1,4 +1,10 @@
 #include "fuse_ops.hpp"
+#include "../in_memory/directory_table.hpp"
+#include "../meta/file_handler.hpp"
+#include "../util.hpp"
+#include <cstring>
+#include <map>
+#include <mutex>
 
 using std::unique_ptr;
 using std::make_unique;
