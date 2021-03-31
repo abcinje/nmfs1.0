@@ -45,6 +45,9 @@ public:
 	void set_loc(enum meta_location loc);
 	void set_leader_id(uint64_t leader_id);
 
+	/* wrapper of dentry class member functions */
+	uint64_t get_child_num();
+	uint64_t get_total_name_legth();
 };
 
 #endif //NMFS0_DENTRY_TABLE_HPP

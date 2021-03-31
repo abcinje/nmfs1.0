@@ -15,6 +15,9 @@ int dentry_table::add_inode(std::string filename, shared_ptr<inode> inode){
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
+
+		this->dentries->add_new_child(filename, inode->get_ino());
+		this->dentries->sync();
 	} else {
 		global_logger.log(indexing_ops, "Already added file is tried to inserted");
 		return -1;
@@ -80,6 +83,14 @@ uint64_t dentry_table::get_leader_id() {return this->leader_id;}
 void dentry_table::set_dir_inode(shared_ptr<inode> dir_inode) {this->dir_inode = dir_inode;}
 void dentry_table::set_loc(enum meta_location loc) {this->loc = loc;}
 void dentry_table::set_leader_id(uint64_t leader_id) {this->leader_id = leader_id;}
+
+uint64_t dentry_table::get_child_num() {
+	return this->dentries->get_child_num();
+}
+
+uint64_t dentry_table::get_total_name_legth() {
+	return this->dentries->get_total_name_legth();
+}
 
 
 
