@@ -8,6 +8,8 @@
 #include "../meta/inode.hpp"
 #include "../meta/dentry.hpp"
 #include "../logger/logger.hpp"
+#include "../client/client.hpp"
+#include "../lease/lease_util.hpp"
 
 using std::shared_ptr;
 
