@@ -10,6 +10,8 @@
 #define MAX_DENTRY_OBJ_SIZE (4 * 1024 * 1024)
 using std::unique_ptr;
 
+class dentry_table;
+
 /*TODO : when total dentries size exceed single object size */
 class dentry {
 private:
@@ -34,6 +36,8 @@ public:
 
 	uint64_t get_child_num();
 	uint64_t get_total_name_legth();
+
+	friend class dentry_table;
 };
 
 
