@@ -5,10 +5,11 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <string>
-#include "../fuse_ops.hpp"
+#include "../fs_ops/fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
 #include "../logger/logger.hpp"
 #include "dentry.hpp"
+#include "../client/client.hpp"
 
 #define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
 #define REG_INODE_SIZE (sizeof(inode) - sizeof(char *))

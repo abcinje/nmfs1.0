@@ -1,15 +1,4 @@
 #include "fuse_ops.hpp"
-#include "meta/inode.hpp"
-#include "meta/dentry.hpp"
-#include "logger/logger.hpp"
-#include "rados_io/rados_io.hpp"
-#include "client/client.hpp"
-#include "meta/file_handler.hpp"
-#include "util.hpp"
-#include <cstring>
-#include <map>
-#include <utility>
-#include <mutex>
 
 using std::unique_ptr;
 using std::make_unique;

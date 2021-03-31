@@ -1,4 +1,4 @@
-#include "fuse_ops.hpp"
+#include "fs_ops/fuse_ops.hpp"
 
 int main(int argc, char *argv[])
 {

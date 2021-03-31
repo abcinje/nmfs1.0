@@ -4,6 +4,18 @@
 #define FUSE_USE_VERSION 30
 
 #include <fuse.h>
+#include "../meta/inode.hpp"
+#include "../meta/dentry.hpp"
+#include "../logger/logger.hpp"
+#include "../rados_io/rados_io.hpp"
+#include "../client/client.hpp"
+#include "../meta/file_handler.hpp"
+#include "../util.hpp"
+#include <cstring>
+#include <map>
+#include <utility>
+#include <mutex>
+
 
 namespace fuse_ops {
 
