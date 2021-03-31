@@ -13,5 +13,6 @@ shared_ptr<dentry_table> become_leader(ino_t directory_ino, shared_ptr<inode> di
 }
 
 int retire_leader(ino_t directory_ino) {
-
+	/* TODO */
+	return 0;
 }

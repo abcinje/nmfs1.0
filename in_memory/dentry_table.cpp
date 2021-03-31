@@ -50,6 +50,7 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 		/* TODO */
 	}
 
+	return nullptr;
 }
 
 int dentry_table::pull_child_metadata() {
@@ -70,6 +71,7 @@ shared_ptr<inode> dentry_table::get_dir_inode(){
 	} else if (this->loc == REMOTE) {
 		/* TODO */
 	}
+	return nullptr;
 }
 
 enum meta_location dentry_table::get_loc() {return this->loc;}
