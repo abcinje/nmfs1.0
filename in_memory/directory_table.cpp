@@ -66,20 +66,29 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 			i->sync();
 
 			shared_ptr<dentry_table> new_dentry_table = become_leader(ino, i);
-			return new_dentry_table;
+			this->add_dentry_table(ino, new_dentry_table);
 
+			return new_dentry_table;
 		} else if(i->get_leader_id() > 0) { /* REMOTE */
 			/* TODO */
 		}
 	}
+
+	return nullptr;
 }
 
-int directory_table::create_table(ino_t ino){
-	shared_ptr<dentry_table> dtable = std::make_shared<dentry_table>(ino, std::make_shared<inode>(ino));
-	dentry_tables.insert(std::make_pair(ino, dtable));
+int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable){
+	auto ret = dentry_tables.insert(std::make_pair(ino, nullptr));
+	if(ret.second) {
+		ret.first->second = dtable;
+	} else {
+		global_logger.log(indexing_ops, "Already added file is tried to inserted");
+		return -1;
+	}
+	return 0;
 }
 
-int directory_table::delete_table(ino_t ino){
+int directory_table::delete_dentry_table(ino_t ino){
 	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 

@@ -18,8 +18,8 @@ private:
 	std::map<ino_t, shared_ptr<dentry_table>> dentry_tables;
 
 public:
-    	int create_table(ino_t ino);
-    	int delete_table(ino_t ino);
+    	int add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable);
+    	int delete_dentry_table(ino_t ino);
 
     	shared_ptr<inode> path_traversal(std::string path);
     	shared_ptr<dentry_table> get_dentry_table(ino_t ino);
