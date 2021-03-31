@@ -84,13 +84,16 @@ void dentry_table::set_dir_inode(shared_ptr<inode> dir_inode) {this->dir_inode =
 void dentry_table::set_loc(enum meta_location loc) {this->loc = loc;}
 void dentry_table::set_leader_id(uint64_t leader_id) {this->leader_id = leader_id;}
 
+void dentry_table::fill_filler(void *buffer, fuse_fill_dir_t filler) {
+	this->dentries->fill_filler(buffer, filler);
+}
 uint64_t dentry_table::get_child_num() {
 	return this->dentries->get_child_num();
 }
-
 uint64_t dentry_table::get_total_name_legth() {
 	return this->dentries->get_total_name_legth();
 }
+
 
 
 
