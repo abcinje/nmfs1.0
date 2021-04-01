@@ -1,6 +1,7 @@
 #include "lease_util.hpp"
 
 shared_ptr<dentry_table> become_leader(shared_ptr<inode> dir_inode) {
+	global_logger.log(lease_ops, "become_leader(" + std::to_string(dir_inode->get_ino()) + ")");
 	shared_ptr<dentry_table> new_dentry_table = std::make_shared<dentry_table>(dir_inode->get_ino(), dir_inode);
 	new_dentry_table->pull_child_metadata();
 
@@ -13,6 +14,7 @@ shared_ptr<dentry_table> become_leader(shared_ptr<inode> dir_inode) {
 }
 
 shared_ptr<dentry_table> become_leader_of_new_dir(shared_ptr<inode> parent_inode, shared_ptr<inode> dir_inode){
+	global_logger.log(lease_ops, "become_leader_of_new_dir(" + std::to_string(dir_inode->get_ino()) + ")");
 	shared_ptr<dentry_table> new_dentry_table = std::make_shared<dentry_table>(dir_inode->get_ino(), dir_inode);
 
 	shared_ptr<dentry> new_d = std::make_shared<dentry>(dir_inode->get_ino(), true);

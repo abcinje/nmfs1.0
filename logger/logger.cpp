@@ -28,6 +28,9 @@ void logger::log(enum code_location location, std::string message)
 		case dentry_table_ops:
 			location_str = "dentry_table";
 			break;
+		case lease_ops:
+			location_str = "lease_operation";
+			break;
 		default:
 			location_str = "Unknown";
 	}

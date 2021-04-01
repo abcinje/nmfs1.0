@@ -10,7 +10,8 @@ enum code_location {
 	dentry_ops,
 	inode_ops,
 	directory_table_ops,
-	dentry_table_ops
+	dentry_table_ops,
+	lease_ops
 };
 
 
