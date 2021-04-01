@@ -65,7 +65,7 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 			i->set_leader_id(c->get_client_id());
 			i->sync();
 
-			shared_ptr<dentry_table> new_dentry_table = become_leader(ino, i);
+			shared_ptr<dentry_table> new_dentry_table = become_leader(i);
 			this->add_dentry_table(ino, new_dentry_table);
 
 			return new_dentry_table;
