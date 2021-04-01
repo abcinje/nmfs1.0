@@ -6,9 +6,7 @@
 #include <map>
 #include <mutex>
 
-using std::unique_ptr;
-using std::make_unique;
-
+using namespace std;
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #define META_POOL "nmfs.meta"
@@ -16,6 +14,8 @@ using std::make_unique;
 
 rados_io *meta_pool;
 rados_io *data_pool;
+
+directory_table *indexing_table;
 
 std::mutex m;
 std::map<ino_t, unique_ptr<file_handler>> fh_list;
@@ -28,6 +28,8 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	rados_io::conn_info ci = {"client.admin", "ceph", 0};
 	meta_pool = new rados_io(ci, META_POOL);
 	data_pool = new rados_io(ci, DATA_POOL);
+
+	indexing_table = new directory_table();
 
 	/* client id allocation */
 	if (!meta_pool->exist(CLIENT, "client.list")) {
@@ -68,6 +70,7 @@ void fuse_ops::destroy(void *private_data)
 	delete meta_pool;
 	delete data_pool;
 
+	delete indexing_table;
 }
 
 int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info* file_info) {
@@ -79,14 +82,13 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 
 	try {
 		if(std::string(path) == "/") {
-			unique_ptr<inode> i = make_unique<inode>(0);
+			shared_ptr<inode> i = indexing_table->path_traversal(path);
 			i->fill_stat(stat);
 		} else {
-			unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
-			unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-			ino_t target_ino = parent_d->get_child_ino(file_name->data());
-			unique_ptr<inode> i = make_unique<inode>(target_ino);
+			shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 			i->fill_stat(stat);
 		}
 	} catch(inode::no_entry &e) {
@@ -103,7 +105,7 @@ int fuse_ops::access(const char* path, int mask) {
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		unique_ptr<inode> i = make_unique<inode>(path);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 		permission_check(i.get(), mask);
 
 	} catch(inode::no_entry &e) {
@@ -124,23 +126,21 @@ int fuse_ops::symlink(const char *src, const char *dst){
 
 	try {
 		unique_ptr<std::string> dst_parent_name = get_parent_dir_path(dst);
-		unique_ptr<inode> dst_parent_i = make_unique<inode>(dst_parent_name->data());
-		unique_ptr<dentry> dst_parent_d = make_unique<dentry>(dst_parent_i->get_ino());
+		shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(dst_parent_name->data());
+		shared_ptr<dentry_table> dst_parent_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
 		unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 
-		if (dst_parent_d->get_child_ino(symlink_name->data()) != -1)
+		if (dst_parent_dentry_table->get_child_inode(symlink_name->data()) != nullptr)
 			return -EEXIST;
 
-		unique_ptr<inode> symlink_i = make_unique<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
+		shared_ptr<inode> symlink_i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
 		symlink_i->set_size(std::string(src).length());
 
-		dst_parent_d->add_new_child(symlink_name->data(), symlink_i->get_ino());
-
-		dst_parent_d->sync();
+		dst_parent_dentry_table->add_child_inode(symlink_name->data(), symlink_i);
 		symlink_i->sync();
 
-		dst_parent_i->set_size(dst_parent_d->get_total_name_legth());
+		dst_parent_i->set_size(dst_parent_dentry_table->get_total_name_legth());
 		dst_parent_i->sync();
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -160,11 +160,10 @@ int fuse_ops::readlink(const char* path, char* buf, size_t size)
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		unique_ptr<inode> i = make_unique<inode>(target_ino);
+		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
 		if (!S_ISLNK(i->get_mode()))
 			return -EINVAL;
@@ -186,7 +185,7 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		unique_ptr<inode> i = make_unique<inode>(path);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if(!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
@@ -211,7 +210,7 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 	if(path != nullptr) {
 		global_logger.log(fuse_op, "path : " + std::string(path));
 
-		unique_ptr<inode> i = make_unique<inode>(path);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 		std::scoped_lock<std::mutex> lock(m);
@@ -243,13 +242,14 @@ int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, of
 	global_logger.log(fuse_op, "Called readdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<inode> i = make_unique<inode>(path);
-	unique_ptr<dentry> d = make_unique<dentry>(i->get_ino());
+	shared_ptr<inode> i = indexing_table->path_traversal(path);
+	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(i->get_ino());
 
-	d->fill_filler(buffer, filler);
+	parent_dentry_table->fill_filler(buffer, filler);
 
 	return 0;
 }
+
 int fuse_ops::mkdir(const char* path, mode_t mode){
 	global_logger.log(fuse_op, "Called mkdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
@@ -257,25 +257,19 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 	fuse_context *fuse_ctx = fuse_get_context();
 
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(*(get_parent_dir_path(path).get()));
-		uint64_t parent_ino = parent_i->get_ino();
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_ino);
+		shared_ptr<inode> i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
 
-		unique_ptr<inode> i = make_unique<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
+		parent_dentry_table->add_child_inode(*(get_filename_from_path(path).get()), i);
 
-		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
-		parent_d->sync();
+		shared_ptr<dentry_table> new_dentry_table = become_leader_of_new_dir(parent_i, i);
 
-		unique_ptr<dentry> new_d = make_unique<dentry>(i->get_ino(), true);
-		new_d->add_new_child(".", i->get_ino());
-		new_d->add_new_child("..", parent_i->get_ino());
-
-		i->set_size(new_d->get_total_name_legth());
+		i->set_size(new_dentry_table->get_total_name_legth());
 		i->sync();
-		new_d->sync();
 
-		parent_i->set_size(parent_d->get_total_name_legth());
+		parent_i->set_size(parent_dentry_table->get_total_name_legth());
 		parent_i->sync();
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -291,29 +285,32 @@ int fuse_ops::rmdir(const char* path) {
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(*(get_parent_dir_path(path).get()));
-		uint64_t parent_ino = parent_i->get_ino();
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_ino);
+		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(*(get_filename_from_path(path).get()));
 
-		ino_t target_ino = parent_d->get_child_ino(*(get_filename_from_path(path).get())); // perform target's permission check
-		unique_ptr<inode> i = make_unique<inode>(target_ino);
-
-		if(!S_ISDIR(i->get_mode()))
+		if(!S_ISDIR(target_i->get_mode()))
 			return -ENOTDIR;
 
-		unique_ptr<dentry> target_dentry = make_unique<dentry>(target_ino);
-		if(target_dentry->get_child_num() > 2)
+		shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_i->get_ino());
+		if(target_dentry_table == nullptr) {
+			throw std::runtime_error("directory table is corrupted : Can't find leaesd directory");
+		}
+
+		if(target_dentry_table->get_child_num() > 2)
 			return -ENOTEMPTY;
 
-		meta_pool->remove(DENTRY, std::to_string(i->get_ino()));
-		meta_pool->remove(INODE, std::to_string(i->get_ino()));
+		meta_pool->remove(DENTRY, std::to_string(target_i->get_ino()));
+		meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
 
-		parent_d->delete_child(*(get_filename_from_path(path).get()));
-		parent_d->sync();
+		parent_dentry_table->delete_child_inode(*(get_filename_from_path(path).get()));
 
-		parent_i->set_size(parent_d->get_total_name_legth());
+		parent_i->set_size(parent_dentry_table->get_total_name_legth());
 		parent_i->sync();
+
+		indexing_table->delete_dentry_table(target_i->get_ino());
+
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -341,53 +338,49 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 			return -EINVAL;
 
 		if (*src_parent_path == *dst_parent_path) {
-			unique_ptr<inode> parent_i = make_unique<inode>(src_parent_path->data());
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(src_parent_path->data());
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-			unique_ptr<dentry> d = make_unique<dentry>(parent_i->get_ino());
-
-			ino_t target_ino = d->get_child_ino(old_name->data());
-			ino_t check_dst_ino = d->get_child_ino(new_name->data());
+			shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(old_name->data());
+			ino_t check_dst_ino = parent_dentry_table->get_child_inode(new_name->data())->get_ino();
 
 			if (flags == 0) {
 				if(check_dst_ino != -1) {
-					d->delete_child(new_name->data());
+					parent_dentry_table->delete_child_inode(new_name->data());
 					meta_pool->remove(INODE, std::to_string(check_dst_ino));
 				}
-				d->delete_child(old_name->data());
-				d->add_new_child(new_name->data(), target_ino);
+				parent_dentry_table->delete_child_inode(old_name->data());
+				parent_dentry_table->add_child_inode(new_name->data(), target_i);
 
-				d->sync();
 			} else {
 				return -ENOSYS;
 			}
 
-			parent_i->set_size(d->get_total_name_legth());
+			parent_i->set_size(parent_dentry_table->get_total_name_legth());
 		} else {
-			unique_ptr<inode> src_parent_i = make_unique<inode>(src_parent_path->data());
-			unique_ptr<inode> dst_parent_i = make_unique<inode>(dst_parent_path->data());
+			shared_ptr<inode> src_parent_i = indexing_table->path_traversal(src_parent_path->data());
+			shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(dst_parent_path->data());
 
-			unique_ptr<dentry> src_d = make_unique<dentry>(src_parent_i->get_ino());
-			unique_ptr<dentry> dst_d = make_unique<dentry>(dst_parent_i->get_ino());
+			shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
+			shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
-			ino_t target_ino = src_d->get_child_ino(old_name->data());
-			ino_t check_dst_ino = dst_d->get_child_ino(new_name->data());
+			shared_ptr<inode> target_i = src_dentry_table->get_child_inode(old_name->data());
+			ino_t check_dst_ino = dst_dentry_table->get_child_inode(new_name->data())->get_ino();
 
 			if (flags == 0) {
 				if(check_dst_ino != -1) {
-					dst_d->delete_child(new_name->data());
+					dst_dentry_table->delete_child_inode(new_name->data());
 					meta_pool->remove(INODE, std::to_string(check_dst_ino));
 				}
-				src_d->delete_child(old_name->data());
-				dst_d->add_new_child(new_name->data(), target_ino);
+				src_dentry_table->delete_child_inode(old_name->data());
+				dst_dentry_table->add_child_inode(new_name->data(), target_i);
 
-				src_d->sync();
-				dst_d->sync();
 			} else {
 				return -ENOSYS;
 			}
 
-			src_parent_i->set_size(src_d->get_total_name_legth());
-			dst_parent_i->set_size(dst_d->get_total_name_legth());
+			src_parent_i->set_size(src_dentry_table->get_total_name_legth());
+			dst_parent_i->set_size(dst_dentry_table->get_total_name_legth());
 		}
 
 	} catch(inode::no_entry &e) {
@@ -440,11 +433,14 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
 
-		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		unique_ptr<inode> i = make_unique<inode>(target_ino);
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+
+		//unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
+		//unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
+
+		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
 		if ((file_info->flags & O_DIRECTORY) && !S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
@@ -477,7 +473,7 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 	if(path != nullptr) {
 		global_logger.log(fuse_op, "path : " + std::string(path));
 
-		unique_ptr<inode> i = make_unique<inode>(path);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 		std::scoped_lock<std::mutex> lock(m);
@@ -513,16 +509,13 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 
 	fuse_context *fuse_ctx = fuse_get_context();
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(*(get_parent_dir_path(path).get()));
-		uint64_t parent_ino = parent_i->get_ino();
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_ino);
-
-		unique_ptr<inode> i = make_unique<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
+		shared_ptr<inode> i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
 		i->sync();
 
-		parent_d->add_new_child(*(get_filename_from_path(path).get()), i->get_ino());
-		parent_d->sync();
+		parent_dentry_table->add_child_inode(*(get_filename_from_path(path).get()), i);
 
 		std::scoped_lock<std::mutex> lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
@@ -531,7 +524,7 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		fh->set_fhno((void *)file_info->fh);
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 
-		parent_i->set_size(parent_d->get_total_name_legth());
+		parent_i->set_size(parent_dentry_table->get_total_name_legth());
 		parent_i->sync();
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -549,30 +542,28 @@ int fuse_ops::unlink(const char* path){
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		unique_ptr<inode> i = make_unique<inode>(target_ino);
+		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(file_name->data());
 
-		nlink_t nlink = i->get_nlink() - 1;
+		nlink_t nlink = target_i->get_nlink() - 1;
 		if (nlink == 0) {
 			/* data */
-			data_pool->remove(DATA, std::to_string(i->get_ino()));
+			data_pool->remove(DATA, std::to_string(target_i->get_ino()));
 
 			/* inode */
-			meta_pool->remove(INODE, std::to_string(i->get_ino()));
+			meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
 
 			/* parent dentry */
-			parent_d->delete_child(file_name->data());
-			parent_d->sync();
+			parent_dentry_table->delete_child_inode(file_name->data());
 
 			/* parent inode */
-			parent_i->set_size(parent_d->get_total_name_legth());
+			parent_i->set_size(parent_dentry_table->get_total_name_legth());
 			parent_i->sync();
 		} else {
-			i->set_nlink(nlink);
-			i->sync();
+			target_i->set_nlink(nlink);
+			target_i->sync();
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -589,7 +580,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 	int read_len = 0;
 
 	try {
-		unique_ptr<inode> i = make_unique<inode>(path);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		read_len = data_pool->read(DATA, std::to_string(i->get_ino()), buffer, size, offset);
 	} catch(inode::no_entry &e) {
@@ -610,7 +601,7 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 	int written_len = 0;
 
 	try {
-		unique_ptr<inode> i = make_unique<inode>(path);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if(file_info->flags & O_APPEND) {
 			offset = i->get_size();
@@ -639,11 +630,10 @@ int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_i
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		unique_ptr<inode> i = make_unique<inode>(target_ino);
+		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
 		mode_t type = i->get_mode() & S_IFMT;
 		i->set_mode(mode | type);
@@ -665,11 +655,10 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		unique_ptr<inode> i = make_unique<inode>(target_ino);
+		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
 		if(((int32_t)uid) >= 0)
 			i->set_uid(uid);
@@ -694,11 +683,10 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		unique_ptr<inode> parent_i = make_unique<inode>(parent_name->data());
-		unique_ptr<dentry> parent_d = make_unique<dentry>(parent_i->get_ino());
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		ino_t target_ino = parent_d->get_child_ino(file_name->data());
-		unique_ptr<inode> i = make_unique<inode>(target_ino);
+		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
 		for(int tv_i = 0; tv_i < 2; tv_i++) {
 			if (tv[tv_i].tv_nsec == UTIME_NOW) {
