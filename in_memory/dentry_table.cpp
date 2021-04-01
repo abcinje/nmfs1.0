@@ -49,12 +49,11 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
 
-		if(it == this->child_inodes.end())
-			return nullptr;
+		if(it == this->child_inodes.end()) {
+			throw inode::no_entry("No such file or directory : get_child_inode");
+		}
 
-		this->child_inodes.erase(it);
-
-		return 0;
+		return it->second;
 	} else if (this->loc == REMOTE) {
 		/* TODO */
 	}
