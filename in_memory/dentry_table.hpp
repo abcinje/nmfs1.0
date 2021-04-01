@@ -31,10 +31,9 @@ public:
 	explicit dentry_table(ino_t dir_ino, shared_ptr<inode> dir_inode);
 	~dentry_table();
 
- 	int add_inode(std::string filename, shared_ptr<inode> inode);
-	int delete_inode(std::string filename);
+ 	int add_child_inode(std::string filename, shared_ptr<inode> inode);
+	int delete_child_inode(std::string filename);
 	shared_ptr<inode> get_child_inode(std::string filename);
-	int pull_dir_inode_itself();
 	int pull_child_metadata();
 
 	shared_ptr<inode> get_dir_inode();
@@ -44,6 +43,7 @@ public:
 	void set_dir_inode(shared_ptr<inode> dir_inode);
 	void set_loc(enum meta_location loc);
 	void set_leader_id(uint64_t leader_id);
+	void set_dentries(shared_ptr<dentry> dentries);
 
 	/* wrapper of dentry class member functions */
 	void fill_filler(void *buffer, fuse_fill_dir_t filler);

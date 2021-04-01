@@ -2,7 +2,7 @@
 
 dentry_table::dentry_table(ino_t dir_ino, shared_ptr<inode> dir_inode) : dir_ino(dir_ino), dir_inode(dir_inode){
 	/*
-	 * if LOCAL : pull_child_metadata() right after return to caller
+	 * if LOCAL : pull_child_metadata() right after return to caller if dentry object exist
 	 * if REMOTE : don't call pull_child_metadata(), just add REMOTE info
 	 */
 }
@@ -11,7 +11,7 @@ dentry_table::~dentry_table() {
 	this->child_inodes.clear();
 }
 
-int dentry_table::add_inode(std::string filename, shared_ptr<inode> inode){
+int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
@@ -25,7 +25,7 @@ int dentry_table::add_inode(std::string filename, shared_ptr<inode> inode){
 	return 0;
 }
 
-int dentry_table::delete_inode(std::string filename) {
+int dentry_table::delete_child_inode(std::string filename) {
 	std::map<std::string, shared_ptr<inode>>::iterator it;
 	it = this->child_inodes.find(filename);
 
@@ -35,6 +35,9 @@ int dentry_table::delete_inode(std::string filename) {
 	}
 
 	this->child_inodes.erase(it);
+
+	this->dentries->delete_child(filename);
+	this->dentries->sync();
 	return 0;
 }
 
@@ -61,7 +64,7 @@ int dentry_table::pull_child_metadata() {
 
 	std::map<std::string, ino_t>::iterator it;
 	for(it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
-		this->add_inode(it->first, std::make_shared<inode>(it->second));
+		this->add_child_inode(it->first, std::make_shared<inode>(it->second));
 	}
 
 	return 0;
@@ -83,6 +86,8 @@ uint64_t dentry_table::get_leader_id() {return this->leader_id;}
 void dentry_table::set_dir_inode(shared_ptr<inode> dir_inode) {this->dir_inode = dir_inode;}
 void dentry_table::set_loc(enum meta_location loc) {this->loc = loc;}
 void dentry_table::set_leader_id(uint64_t leader_id) {this->leader_id = leader_id;}
+void dentry_table::set_dentries(shared_ptr<dentry> dentries) {this->dentries = dentries;}
+
 
 void dentry_table::fill_filler(void *buffer, fuse_fill_dir_t filler) {
 	this->dentries->fill_filler(buffer, filler);
