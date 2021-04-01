@@ -9,7 +9,8 @@ enum code_location {
 	rados_io_ops,
 	dentry_ops,
 	inode_ops,
-	indexing_ops
+	directory_table_ops,
+	dentry_table_ops
 };
 
 

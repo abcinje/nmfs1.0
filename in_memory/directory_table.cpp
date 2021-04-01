@@ -1,7 +1,7 @@
 #include "directory_table.hpp"
 
 shared_ptr<inode> directory_table::path_traversal(std::string path) {
-	global_logger.log(indexing_ops, "Called path_traverse(" + path + ")");
+	global_logger.log(directory_table_ops, "Called path_traverse(" + path + ")");
 
 	shared_ptr<dentry_table> parent_dentry_table = get_dentry_table(0);
 	shared_ptr<inode> parent_inode = parent_dentry_table->get_dir_inode();
@@ -17,7 +17,7 @@ shared_ptr<inode> directory_table::path_traversal(std::string path) {
 			break;
 
 		std::string target_name = path.substr(start_name, end_name - start_name + 1);
-		global_logger.log(indexing_ops, "Check target: " + target_name);
+		global_logger.log(directory_table_ops, "Check target: " + target_name);
 
 		target_inode = parent_dentry_table->get_child_inode(target_name);
 		if (target_inode == nullptr)
@@ -51,6 +51,7 @@ shared_ptr<inode> directory_table::path_traversal(std::string path) {
 }
 
 shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
+	global_logger.log(directory_table_ops, "get_dentry_table(" + std::to_string(ino) + ")");
 	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 
@@ -78,22 +79,26 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 }
 
 int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable){
+	global_logger.log(directory_table_ops, "Called add_dentry_table(" + std::to_string(ino) + ")");
 	auto ret = dentry_tables.insert(std::make_pair(ino, nullptr));
 	if(ret.second) {
 		ret.first->second = dtable;
 	} else {
-		global_logger.log(indexing_ops, "Already added file is tried to inserted");
+		global_logger.log(directory_table_ops, "Already added dentry table is tried to inserted");
 		return -1;
 	}
 	return 0;
 }
 
 int directory_table::delete_dentry_table(ino_t ino){
+	global_logger.log(directory_table_ops, "Called delete_dentry_table(" + std::to_string(ino) + ")");
 	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 
-	if(it == this->dentry_tables.end())
+	if(it == this->dentry_tables.end()) {
+		global_logger.log(directory_table_ops, "Non-existed dentry table is tried to deleted");
 		return -1;
+	}
 
 	this->dentry_tables.erase(it);
 

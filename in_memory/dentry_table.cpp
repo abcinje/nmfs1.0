@@ -12,6 +12,7 @@ dentry_table::~dentry_table() {
 }
 
 int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
+	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
@@ -19,18 +20,19 @@ int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode)
 		this->dentries->add_new_child(filename, inode->get_ino());
 		this->dentries->sync();
 	} else {
-		global_logger.log(indexing_ops, "Already added file is tried to inserted");
+		global_logger.log(dentry_table_ops, "Already added file is tried to inserted");
 		return -1;
 	}
 	return 0;
 }
 
 int dentry_table::delete_child_inode(std::string filename) {
+	global_logger.log(dentry_table_ops, "Called delete_child_inode(" + filename + ")");
 	std::map<std::string, shared_ptr<inode>>::iterator it;
 	it = this->child_inodes.find(filename);
 
 	if(it == this->child_inodes.end()) {
-		global_logger.log(indexing_ops, "Non-existing file is tried to deleted");
+		global_logger.log(dentry_table_ops, "Non-existing file is tried to deleted");
 		return -1;
 	}
 
@@ -42,6 +44,7 @@ int dentry_table::delete_child_inode(std::string filename) {
 }
 
 shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
+	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ")");
 	if(this->loc == LOCAL) {
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
@@ -60,6 +63,7 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 }
 
 int dentry_table::pull_child_metadata() {
+	global_logger.log(dentry_table_ops, "Called pull_child_metadata()");
 	this->dentries = std::make_shared<dentry>(this->dir_ino);
 
 	std::map<std::string, ino_t>::iterator it;
@@ -72,6 +76,7 @@ int dentry_table::pull_child_metadata() {
 
 
 shared_ptr<inode> dentry_table::get_dir_inode(){
+	global_logger.log(dentry_table_ops, "Called get_dir_inode()");
 	if(this->loc == LOCAL) {
 		return this->dir_inode;
 	} else if (this->loc == REMOTE) {
