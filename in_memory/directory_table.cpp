@@ -1,4 +1,12 @@
 #include "directory_table.hpp"
+directory_table::~directory_table() {
+	global_logger.log(directory_table_ops, "Called ~directory_table()");
+
+	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
+	for(it = this->dentry_tables.begin(); it != this->dentry_tables.end(); it++) {
+		it->second = nullptr;
+	}
+}
 
 shared_ptr<inode> directory_table::path_traversal(std::string path) {
 	global_logger.log(directory_table_ops, "Called path_traverse(" + path + ")");
@@ -55,17 +63,14 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 
-	if(it != this->dentry_tables.end()) /* LOCAL, REMOTE */
+	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
+		global_logger.log(directory_table_ops, "dentry_table : HIT");
 		return it->second;
+	}
 	else { /* UNKNOWN */
+		global_logger.log(directory_table_ops, "dentry_table : MISS");
 		shared_ptr<inode> i = std::make_shared<inode>(ino);
 		if(i->get_leader_id() == 0) { /* NOBODY -> LOCAL */
-			fuse_context *fuse_ctx = fuse_get_context();
-			client *c = (client *) (fuse_ctx->private_data);
-
-			i->set_leader_id(c->get_client_id());
-			i->sync();
-
 			shared_ptr<dentry_table> new_dentry_table = become_leader(i);
 			this->add_dentry_table(ino, new_dentry_table);
 

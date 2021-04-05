@@ -8,7 +8,17 @@ dentry_table::dentry_table(ino_t dir_ino, shared_ptr<inode> dir_inode) : dir_ino
 }
 
 dentry_table::~dentry_table() {
+	global_logger.log(directory_table_ops, "Called ~directory_table(" + std::to_string(this->dir_ino)+")");
 	this->child_inodes.clear();
+
+	fuse_context *fuse_ctx = fuse_get_context();
+	client *myself = (client *)(fuse_ctx->private_data);
+	uint64_t client_id = myself->get_client_id();
+
+	if(this->dir_ino == client_id) {
+		this->dir_inode->set_leader_id(0);
+		this->dir_inode->sync();
+	}
 }
 
 int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){

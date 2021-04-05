@@ -18,6 +18,7 @@ private:
 	std::map<ino_t, shared_ptr<dentry_table>> dentry_tables;
 
 public:
+		~directory_table();
     	int add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable);
     	int delete_dentry_table(ino_t ino);
 
