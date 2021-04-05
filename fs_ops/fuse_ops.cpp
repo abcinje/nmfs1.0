@@ -132,7 +132,7 @@ int fuse_ops::symlink(const char *src, const char *dst){
 
 		unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 
-		if (dst_parent_dentry_table->get_child_inode(symlink_name->data()) != nullptr)
+		if (dst_parent_dentry_table->check_child_inode(symlink_name->data()) != -1)
 			return -EEXIST;
 
 		shared_ptr<inode> symlink_i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
