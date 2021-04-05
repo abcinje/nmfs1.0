@@ -31,8 +31,11 @@ public:
 	explicit dentry_table(ino_t dir_ino, shared_ptr<inode> dir_inode);
 	~dentry_table();
 
+	int create_child_inode(std::string filename, shared_ptr<inode> inode);
+	/* Just used in pull_child_metadata */
  	int add_child_inode(std::string filename, shared_ptr<inode> inode);
 	int delete_child_inode(std::string filename);
+
 	shared_ptr<inode> get_child_inode(std::string filename);
 	ino_t check_child_inode(std::string filename);
 	int pull_child_metadata();

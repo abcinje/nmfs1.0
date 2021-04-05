@@ -64,14 +64,14 @@ void fuse_ops::destroy(void *private_data)
 {
 	global_logger.log(fuse_op, "Called destroy()");
 
+	delete indexing_table;
+
 	fuse_context *fuse_ctx = fuse_get_context();
 	client *myself = (client *)(fuse_ctx->private_data);
 	delete myself;
 
 	delete meta_pool;
 	delete data_pool;
-
-	delete indexing_table;
 }
 
 int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info* file_info) {
@@ -138,7 +138,7 @@ int fuse_ops::symlink(const char *src, const char *dst){
 		shared_ptr<inode> symlink_i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
 		symlink_i->set_size(std::string(src).length());
 
-		dst_parent_dentry_table->add_child_inode(symlink_name->data(), symlink_i);
+		dst_parent_dentry_table->create_child_inode(symlink_name->data(), symlink_i);
 		symlink_i->sync();
 
 		dst_parent_i->set_size(dst_parent_dentry_table->get_total_name_legth());
@@ -263,7 +263,7 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 
 		shared_ptr<inode> i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
 
-		parent_dentry_table->add_child_inode(*(get_filename_from_path(path).get()), i);
+		parent_dentry_table->create_child_inode(*(get_filename_from_path(path).get()), i);
 
 		shared_ptr<dentry_table> new_dentry_table = become_leader_of_new_dir(parent_i, i);
 
@@ -353,7 +353,7 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 					meta_pool->remove(INODE, std::to_string(check_dst_ino));
 				}
 				parent_dentry_table->delete_child_inode(old_name->data());
-				parent_dentry_table->add_child_inode(new_name->data(), target_i);
+				parent_dentry_table->create_child_inode(new_name->data(), target_i);
 
 			} else {
 				return -ENOSYS;
@@ -376,7 +376,7 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 					meta_pool->remove(INODE, std::to_string(check_dst_ino));
 				}
 				src_dentry_table->delete_child_inode(old_name->data());
-				dst_dentry_table->add_child_inode(new_name->data(), target_i);
+				dst_dentry_table->create_child_inode(new_name->data(), target_i);
 
 			} else {
 				return -ENOSYS;
@@ -518,7 +518,7 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		shared_ptr<inode> i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
 		i->sync();
 
-		parent_dentry_table->add_child_inode(*(get_filename_from_path(path).get()), i);
+		parent_dentry_table->create_child_inode(*(get_filename_from_path(path).get()), i);
 
 		std::scoped_lock<std::mutex> lock(m);
 		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());

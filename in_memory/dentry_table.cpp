@@ -21,7 +21,7 @@ dentry_table::~dentry_table() {
 	}
 }
 
-int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
+int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
@@ -29,6 +29,18 @@ int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode)
 
 		this->dentries->add_new_child(filename, inode->get_ino());
 		this->dentries->sync();
+	} else {
+		global_logger.log(dentry_table_ops, "Already added file is tried to inserted");
+		return -1;
+	}
+	return 0;
+}
+
+int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
+	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
+	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
+	if(ret.second) {
+		ret.first->second = inode;
 	} else {
 		global_logger.log(dentry_table_ops, "Already added file is tried to inserted");
 		return -1;
@@ -95,7 +107,10 @@ int dentry_table::pull_child_metadata() {
 
 	std::map<std::string, ino_t>::iterator it;
 	for(it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
-		this->add_child_inode(it->first, std::make_shared<inode>(it->second));
+		if(it->first == ".")
+			this->add_child_inode(it->first, this->dir_inode);
+		else
+			this->add_child_inode(it->first, std::make_shared<inode>(it->second));
 	}
 
 	return 0;
