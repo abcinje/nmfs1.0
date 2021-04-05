@@ -345,12 +345,12 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 			shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(old_name->data());
-			shared_ptr<inode> check_dst_i = parent_dentry_table->get_child_inode(new_name->data());
+			ino_t check_dst_ino = parent_dentry_table->check_child_inode(new_name->data());
 
 			if (flags == 0) {
-				if(check_dst_i != nullptr) {
+				if(check_dst_ino != -1) {
 					parent_dentry_table->delete_child_inode(new_name->data());
-					meta_pool->remove(INODE, std::to_string(check_dst_i->get_ino()));
+					meta_pool->remove(INODE, std::to_string(check_dst_ino));
 				}
 				parent_dentry_table->delete_child_inode(old_name->data());
 				parent_dentry_table->add_child_inode(new_name->data(), target_i);
@@ -368,12 +368,12 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 			shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
 			shared_ptr<inode> target_i = src_dentry_table->get_child_inode(old_name->data());
-			shared_ptr<inode> check_dst_i = dst_dentry_table->get_child_inode(new_name->data());
+			ino_t check_dst_ino = dst_dentry_table->check_child_inode(new_name->data());
 
 			if (flags == 0) {
-				if(check_dst_i != nullptr) {
+				if(check_dst_ino != -1) {
 					dst_dentry_table->delete_child_inode(new_name->data());
-					meta_pool->remove(INODE, std::to_string(check_dst_i->get_ino()));
+					meta_pool->remove(INODE, std::to_string(check_dst_ino));
 				}
 				src_dentry_table->delete_child_inode(old_name->data());
 				dst_dentry_table->add_child_inode(new_name->data(), target_i);

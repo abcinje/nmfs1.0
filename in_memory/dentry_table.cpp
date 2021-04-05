@@ -71,6 +71,24 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 	return nullptr;
 }
 
+ino_t dentry_table::check_child_inode(std::string filename){
+	global_logger.log(dentry_table_ops, "Called check_child_inode(" + filename + ")");
+	if(this->loc == LOCAL) {
+		std::map<std::string, shared_ptr<inode>>::iterator it;
+		it = this->child_inodes.find(filename);
+
+		if(it == this->child_inodes.end()) {
+			return -1;
+		}
+
+		return it->second->get_ino();
+	} else if (this->loc == REMOTE) {
+		/* TODO */
+	}
+
+	return -1;
+}
+
 int dentry_table::pull_child_metadata() {
 	global_logger.log(dentry_table_ops, "Called pull_child_metadata()");
 	this->dentries = std::make_shared<dentry>(this->dir_ino);
