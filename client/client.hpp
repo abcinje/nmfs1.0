@@ -5,7 +5,7 @@
 
 class client {
 private:
-	/* client_id : natural numver */
+	/* client_id : natural number */
 	uint64_t client_id;
 	uint64_t per_client_ino_offset;
 
