@@ -9,7 +9,6 @@ private:
 	uint64_t client_id;
 	uint64_t per_client_ino_offset;
 
-
 public:
 	client();
 	client(int id);
