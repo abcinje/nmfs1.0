@@ -8,7 +8,7 @@ dentry_table::dentry_table(ino_t dir_ino, shared_ptr<inode> dir_inode) : dir_ino
 }
 
 dentry_table::~dentry_table() {
-	global_logger.log(directory_table_ops, "Called ~directory_table(" + std::to_string(this->dir_ino)+")");
+	global_logger.log(directory_table_ops, "Called ~dentry_table(" + std::to_string(this->dir_ino)+")");
 	this->child_inodes.clear();
 
 	fuse_context *fuse_ctx = fuse_get_context();
