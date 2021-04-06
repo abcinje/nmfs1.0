@@ -14,6 +14,7 @@ shared_ptr<inode> directory_table::path_traversal(std::string path) {
 	shared_ptr<dentry_table> parent_dentry_table = get_dentry_table(0);
 	shared_ptr<inode> parent_inode = parent_dentry_table->get_dir_inode();
 
+	ino_t check_target_ino;
 	shared_ptr<inode> target_inode;
 
 	int start_name, end_name = -1;
@@ -27,9 +28,11 @@ shared_ptr<inode> directory_table::path_traversal(std::string path) {
 		std::string target_name = path.substr(start_name, end_name - start_name + 1);
 		global_logger.log(directory_table_ops, "Check target: " + target_name);
 
-		target_inode = parent_dentry_table->get_child_inode(target_name);
-		if (target_inode == nullptr)
+		check_target_ino = parent_dentry_table->check_child_inode(target_name);
+		if (check_target_ino == -1)
 			throw inode::no_entry("No such file or Directory: in path traversal");
+		else
+			target_inode = parent_dentry_table->get_child_inode(target_name);
 
 		if(S_ISLNK(target_inode->get_mode())) {
 			path = std::string(target_inode->get_link_target_name());
