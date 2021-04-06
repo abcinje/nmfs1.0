@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <string>
+#include <shared_mutex>
 #include "../fs_ops/fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
 #include "../logger/logger.hpp"
@@ -12,7 +13,7 @@
 #include "../client/client.hpp"
 
 #define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
-#define REG_INODE_SIZE (sizeof(inode) - sizeof(char *))
+#define REG_INODE_SIZE (sizeof(inode) - sizeof(char *) - sizeof(std::shared_mutex))
 using std::unique_ptr;
 using std::runtime_error;
 using std::string;
@@ -35,6 +36,7 @@ private:
 	int link_target_len;
 	char *link_target_name;
 
+	std::shared_mutex inode_mutex;
 public:
 	class no_entry : public runtime_error {
 	public:
@@ -54,7 +56,6 @@ public:
 	inode(uid_t owner, gid_t group, mode_t mode, bool root = false);
 	/* for symlink */
 	inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const char *link_target_name);
-	inode(std::string path);
 
 	/* TODO : add permission check */
 	inode(ino_t ino);

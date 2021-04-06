@@ -4,6 +4,7 @@
 #include <map>
 #include <utility>
 #include <memory>
+#include <shared_mutex>
 #include "../meta/inode.hpp"
 #include "../meta/dentry.hpp"
 
@@ -27,6 +28,7 @@ private:
 	enum meta_location loc;
 	uint64_t leader_id;
 
+	std::shared_mutex dentry_table_mutex;
 public:
 	explicit dentry_table(ino_t dir_ino, shared_ptr<inode> dir_inode);
 	~dentry_table();
