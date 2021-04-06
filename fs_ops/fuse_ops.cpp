@@ -17,7 +17,7 @@ rados_io *data_pool;
 
 directory_table *indexing_table;
 
-std::mutex m;
+std::mutex file_handler_mutex;
 std::map<ino_t, unique_ptr<file_handler>> fh_list;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
@@ -190,13 +190,14 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 
 		if(!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
+		{
+			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
-		std::scoped_lock<std::mutex> lock(m);
-		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
-		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
-
-		fh->set_fhno((void *)file_info->fh);
-		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+			fh->set_fhno((void *) file_info->fh);
+			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -214,26 +215,30 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-		std::scoped_lock<std::mutex> lock(m);
-		it = fh_list.find(i->get_ino());
+		{
+			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			it = fh_list.find(i->get_ino());
 
-		if (it == fh_list.end())
-			return -EIO;
+			if (it == fh_list.end())
+				return -EIO;
 
-		fh_list.erase(it);
+			fh_list.erase(it);
+		}
 	} else {
 		global_logger.log(fuse_op, "path : nullpath");
 		file_handler *fh = reinterpret_cast<file_handler *>(file_info->fh);
 		ino_t ino = fh->get_ino();
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-		std::scoped_lock<std::mutex> lock(m);
-		it = fh_list.find(ino);
+		{
+			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			it = fh_list.find(ino);
 
-		if (it == fh_list.end())
-			return -EIO;
+			if (it == fh_list.end())
+				return -EIO;
 
-		fh_list.erase(it);
+			fh_list.erase(it);
+		}
 	}
 
 	return 0;
@@ -451,17 +456,18 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 		if ((file_info->flags & O_NOFOLLOW) && S_ISLNK(i->get_mode()))
 			return -ELOOP;
 
-		std::scoped_lock<std::mutex> lock(m);
-		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
-		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
-
 		if ((file_info->flags & O_TRUNC) && !(file_info->flags & O_PATH)) {
 			i->set_size(0);
 			i->sync();
 		}
+		{
+			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
-		fh->set_fhno((void *)file_info->fh);
-		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+			fh->set_fhno((void *) file_info->fh);
+			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+		}
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -479,26 +485,30 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-		std::scoped_lock<std::mutex> lock(m);
-		it = fh_list.find(i->get_ino());
+		{
+			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			it = fh_list.find(i->get_ino());
 
-		if (it == fh_list.end())
-			return -EIO;
+			if (it == fh_list.end())
+				return -EIO;
 
-		fh_list.erase(it);
+			fh_list.erase(it);
+		}
 	} else {
 		global_logger.log(fuse_op, "path : nullpath");
 		file_handler *fh = reinterpret_cast<file_handler *>(file_info->fh);
 		ino_t ino = fh->get_ino();
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-		std::scoped_lock<std::mutex> lock(m);
-		it = fh_list.find(ino);
+		{
+			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			it = fh_list.find(ino);
 
-		if (it == fh_list.end())
-			return -EIO;
+			if (it == fh_list.end())
+				return -EIO;
 
-		fh_list.erase(it);
+			fh_list.erase(it);
+		}
 	}
 	return 0;
 }
@@ -519,16 +529,17 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		i->sync();
 
 		parent_dentry_table->create_child_inode(*(get_filename_from_path(path).get()), i);
-
-		std::scoped_lock<std::mutex> lock(m);
-		unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
-		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
-
-		fh->set_fhno((void *)file_info->fh);
-		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
-
 		parent_i->set_size(parent_dentry_table->get_total_name_legth());
 		parent_i->sync();
+
+		{
+			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+
+			fh->set_fhno((void *) file_info->fh);
+			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
