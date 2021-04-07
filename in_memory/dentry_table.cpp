@@ -35,7 +35,6 @@ int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> ino
 
 int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
-	std::unique_lock ul(this->dentry_table_mutex);
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
@@ -78,10 +77,8 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 		fuse_context *fuse_ctx = fuse_get_context();
 		client *c = (client *) (fuse_ctx->private_data);
 
-		if(c->get_client_id() == it->second->get_leader_id())
-			return it->second;
-		else
-			return nullptr;
+		/* TODO : returned inode could be dummy remote inode, So should find real inode from remote */
+		return it->second;
 	} else if (this->loc == REMOTE) {
 		/* TODO */
 	}
