@@ -46,7 +46,6 @@ public:
 	enum meta_location get_loc();
 	uint64_t get_leader_id();
 
-	void set_dir_inode(shared_ptr<inode> dir_inode);
 	void set_loc(enum meta_location loc);
 	void set_leader_id(uint64_t leader_id);
 	void set_dentries(shared_ptr<dentry> dentries);

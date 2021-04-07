@@ -23,6 +23,7 @@ dentry_table::~dentry_table() {
 
 int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
+	std::unique_lock ul(this->dentry_table_mutex);
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
@@ -38,6 +39,7 @@ int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> ino
 
 int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
+	std::unique_lock ul(this->dentry_table_mutex);
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
@@ -50,6 +52,7 @@ int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode)
 
 int dentry_table::delete_child_inode(std::string filename) {
 	global_logger.log(dentry_table_ops, "Called delete_child_inode(" + filename + ")");
+	std::unique_lock ul(this->dentry_table_mutex);
 	std::map<std::string, shared_ptr<inode>>::iterator it;
 	it = this->child_inodes.find(filename);
 
@@ -68,6 +71,7 @@ int dentry_table::delete_child_inode(std::string filename) {
 shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ")");
 	if(this->loc == LOCAL) {
+		std::shared_lock sl(this->dentry_table_mutex);
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
 
@@ -86,6 +90,7 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 ino_t dentry_table::check_child_inode(std::string filename){
 	global_logger.log(dentry_table_ops, "Called check_child_inode(" + filename + ")");
 	if(this->loc == LOCAL) {
+		std::shared_lock sl(this->dentry_table_mutex);
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
 
@@ -103,6 +108,7 @@ ino_t dentry_table::check_child_inode(std::string filename){
 
 int dentry_table::pull_child_metadata() {
 	global_logger.log(dentry_table_ops, "Called pull_child_metadata()");
+	std::unique_lock ul(this->dentry_table_mutex);
 	this->dentries = std::make_shared<dentry>(this->dir_ino);
 
 	std::map<std::string, ino_t>::iterator it;
@@ -120,6 +126,7 @@ int dentry_table::pull_child_metadata() {
 shared_ptr<inode> dentry_table::get_dir_inode(){
 	global_logger.log(dentry_table_ops, "Called get_dir_inode()");
 	if(this->loc == LOCAL) {
+		std::shared_lock sl(this->dentry_table_mutex);
 		return this->dir_inode;
 	} else if (this->loc == REMOTE) {
 		/* TODO */
@@ -127,13 +134,27 @@ shared_ptr<inode> dentry_table::get_dir_inode(){
 	return nullptr;
 }
 
-enum meta_location dentry_table::get_loc() {return this->loc;}
-uint64_t dentry_table::get_leader_id() {return this->leader_id;}
+enum meta_location dentry_table::get_loc() {
+	std::shared_lock sl(this->dentry_table_mutex);
+	return this->loc;
+}
+uint64_t dentry_table::get_leader_id() {
+	std::shared_lock sl(this->dentry_table_mutex);
+	return this->leader_id;
+}
 
-void dentry_table::set_dir_inode(shared_ptr<inode> dir_inode) {this->dir_inode = dir_inode;}
-void dentry_table::set_loc(enum meta_location loc) {this->loc = loc;}
-void dentry_table::set_leader_id(uint64_t leader_id) {this->leader_id = leader_id;}
-void dentry_table::set_dentries(shared_ptr<dentry> dentries) {this->dentries = dentries;}
+void dentry_table::set_loc(enum meta_location loc) {
+	std::unique_lock ul(this->dentry_table_mutex);
+	this->loc = loc;
+}
+void dentry_table::set_leader_id(uint64_t leader_id) {
+	std::unique_lock ul(this->dentry_table_mutex);
+	this->leader_id = leader_id;
+}
+void dentry_table::set_dentries(shared_ptr<dentry> dentries) {
+	std::unique_lock ul(this->dentry_table_mutex);
+	this->dentries = dentries;
+}
 
 
 void dentry_table::fill_filler(void *buffer, fuse_fill_dir_t filler) {
