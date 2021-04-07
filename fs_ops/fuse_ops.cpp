@@ -29,7 +29,6 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	meta_pool = new rados_io(ci, META_POOL);
 	data_pool = new rados_io(ci, DATA_POOL);
 
-	indexing_table = new directory_table();
 
 	/* client id allocation */
 	if (!meta_pool->exist(CLIENT, "client.list")) {
@@ -48,13 +47,13 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 		inode i(0, fuse_ctx->gid, S_IFDIR | 0777, true);
 
 		dentry d(0, true);
-		d.add_new_child(".", 0);
-		d.add_new_child("..", 0);
 
 		i.set_size(d.get_total_name_legth());
 		i.sync();
 		d.sync();
 	}
+
+	indexing_table = new directory_table();
 
 	config->nullpath_ok = 0;
 	return (void *)this_client;
