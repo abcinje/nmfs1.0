@@ -53,66 +53,6 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const c
 	this->set_link_target_name(link_target_name);
 }
 
-/* TODO : deprecate */
-inode::inode(std::string path)
-{
-	global_logger.log(inode_ops, "Called inode(" + path + ")");
-	std::unique_ptr<inode> parent_inode;
-	std::unique_ptr<inode> target_inode;
-	std::unique_ptr<dentry> parent_dentry;
-
-	/* exception handle if path == "/" */
-	parent_inode = std::make_unique<inode>(0);
-	parent_dentry = std::make_unique<dentry>(0);
-
-	int start_name, end_name = -1;
-	int path_len = path.length();
-
-	while(true){
-		// get new target name
-		if(set_name_bound(start_name, end_name, path, path_len) == -1)
-			break;
-
-		std::string target_name = path.substr(start_name, end_name - start_name + 1);
-		global_logger.log(inode_ops, "Check target: " + target_name);
-
-		// translate target name to target's inode number
-		ino_t target_ino = parent_dentry->get_child_ino(target_name);
-		if (target_ino == -1)
-			throw no_entry("No such file or Directory: in path traversal");
-
-		target_inode = std::make_unique<inode>(target_ino);
-
-		/* resolve symlink to original file/directory */
-		if(S_ISLNK(target_inode->get_mode())) {
-			path = std::string(target_inode->get_link_target_name());
-			if(path.at(0) == '/')
-				end_name = -1;
-			else
-				end_name = -2;
-			path_len = path.length();
-
-			if(set_name_bound(start_name, end_name, path, path_len) == -1)
-				throw std::runtime_error("Link Resolution Error");
-
-			std::string origin_name = path.substr(start_name, end_name - start_name + 1);
-			target_ino = parent_dentry->get_child_ino(origin_name);
-
-			target_inode = std::make_unique<inode>(target_ino);
-		}
-
-		if(S_ISDIR(target_inode->get_mode()))
-			permission_check(target_inode.get(), X_OK);
-
-
-		parent_inode = std::move(target_inode);
-		if(S_ISDIR(parent_inode->get_mode()))
-			parent_dentry = std::make_unique<dentry>(parent_inode->get_ino());
-	}
-
-	this->copy(parent_inode.get());
-
-}
 
 inode::inode(ino_t ino)
 {
