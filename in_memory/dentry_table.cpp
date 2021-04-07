@@ -1,6 +1,6 @@
 #include "dentry_table.hpp"
 
-dentry_table::dentry_table(ino_t dir_ino, shared_ptr<inode> dir_inode) : dir_ino(dir_ino), dir_inode(dir_inode){
+dentry_table::dentry_table(ino_t dir_ino) : dir_ino(dir_ino){
 	/*
 	 * if LOCAL : pull_child_metadata() right after return to caller if dentry object exist
 	 * if REMOTE : don't call pull_child_metadata(), just add REMOTE info
@@ -15,10 +15,6 @@ dentry_table::~dentry_table() {
 	client *myself = (client *)(fuse_ctx->private_data);
 	uint64_t client_id = myself->get_client_id();
 
-	if(this->dir_inode->get_leader_id() == client_id) {
-		this->dir_inode->set_leader_id(0);
-		this->dir_inode->sync();
-	}
 }
 
 int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> inode){
@@ -79,7 +75,13 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 			throw inode::no_entry("No such file or directory : get_child_inode");
 		}
 
-		return it->second;
+		fuse_context *fuse_ctx = fuse_get_context();
+		client *c = (client *) (fuse_ctx->private_data);
+
+		if(c->get_client_id() == it->second->get_leader_id())
+			return it->second;
+		else
+			return nullptr;
 	} else if (this->loc == REMOTE) {
 		/* TODO */
 	}
@@ -113,26 +115,12 @@ int dentry_table::pull_child_metadata() {
 
 	std::map<std::string, ino_t>::iterator it;
 	for(it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
-		if(it->first == ".")
-			this->add_child_inode(it->first, this->dir_inode);
-		else
-			this->add_child_inode(it->first, std::make_shared<inode>(it->second));
+		this->add_child_inode(it->first, std::make_shared<inode>(it->second));
 	}
 
 	return 0;
 }
 
-
-shared_ptr<inode> dentry_table::get_dir_inode(){
-	global_logger.log(dentry_table_ops, "Called get_dir_inode()");
-	if(this->loc == LOCAL) {
-		std::shared_lock sl(this->dentry_table_mutex);
-		return this->dir_inode;
-	} else if (this->loc == REMOTE) {
-		/* TODO */
-	}
-	return nullptr;
-}
 
 enum meta_location dentry_table::get_loc() {
 	std::shared_lock sl(this->dentry_table_mutex);

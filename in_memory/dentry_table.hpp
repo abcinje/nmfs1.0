@@ -20,7 +20,6 @@ using std::shared_ptr;
 class dentry_table {
 private:
 	ino_t dir_ino;
-	shared_ptr<inode> dir_inode;
 
 	shared_ptr<dentry> dentries;
 	std::map<std::string, shared_ptr<inode>> child_inodes;
@@ -30,7 +29,7 @@ private:
 
 	std::shared_mutex dentry_table_mutex;
 public:
-	explicit dentry_table(ino_t dir_ino, shared_ptr<inode> dir_inode);
+	explicit dentry_table(ino_t dir_ino);
 	~dentry_table();
 
 	int create_child_inode(std::string filename, shared_ptr<inode> inode);
@@ -42,7 +41,6 @@ public:
 	ino_t check_child_inode(std::string filename);
 	int pull_child_metadata();
 
-	shared_ptr<inode> get_dir_inode();
 	enum meta_location get_loc();
 	uint64_t get_leader_id();
 
