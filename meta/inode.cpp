@@ -229,7 +229,6 @@ void inode::set_link_target_name(const char *name){
 	memcpy(this->link_target_name, name, this->link_target_len);
 }
 
-/* TODO : lock it */
 ino_t alloc_new_ino() {
 	global_logger.log(inode_ops, "Called alloc_new_ino()");
 	fuse_context *fuse_ctx = fuse_get_context();

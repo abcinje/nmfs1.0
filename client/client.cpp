@@ -56,9 +56,16 @@ client::~client() {
 	meta_pool->write(CLIENT, "client.list", client_list.get(), client_list_len, 0);
 }
 
-uint64_t client::get_client_id() {return this->client_id;}
-uint64_t client::get_per_client_ino_offset(){return this->per_client_ino_offset;}
+uint64_t client::get_client_id() {
+	std::shared_lock<std::shared_mutex> sl(this->client_mutex);
+	return this->client_id;
+}
+uint64_t client::get_per_client_ino_offset(){
+	std::shared_lock<std::shared_mutex> sl(this->client_mutex);
+	return this->per_client_ino_offset;
+}
 void client::increase_ino_offset() {
+	std::unique_lock<std::shared_mutex> sl(this->client_mutex);
 	this->per_client_ino_offset++;
 	meta_pool->write(CLIENT, std::to_string(this->get_client_id()), reinterpret_cast<const char *>(&(this->per_client_ino_offset)), sizeof(uint64_t), 0);
 }
