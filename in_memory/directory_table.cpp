@@ -63,17 +63,13 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 	else { /* UNKNOWN */
 		global_logger.log(directory_table_ops, "dentry_table : MISS");
 		shared_ptr<inode> i = std::make_shared<inode>(ino);
-		if(i->get_leader_id() == 0) { /* NOBODY -> LOCAL */
-			shared_ptr<dentry_table> new_dentry_table = become_leader(i->get_ino());
-			this->add_dentry_table(ino, new_dentry_table);
 
-			return new_dentry_table;
-		} else if(i->get_leader_id() > 0) { /* REMOTE */
-			/* TODO */
-		}
+		shared_ptr<dentry_table> new_dentry_table = become_leader(i->get_ino());
+		this->add_dentry_table(ino, new_dentry_table);
+
+		return new_dentry_table;
 	}
 
-	return nullptr;
 }
 
 int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable){
