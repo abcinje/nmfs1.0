@@ -74,6 +74,7 @@ void inode::copy(inode *src)
 
 void inode::fill_stat(struct stat *s)
 {
+	std::shared_lock sl(this->inode_mutex);
 	global_logger.log(inode_ops, "Called inode.fill_stat()");
 	s->st_mode	= i_mode;
 	s->st_uid	= i_uid;
@@ -93,6 +94,7 @@ void inode::fill_stat(struct stat *s)
 unique_ptr<char> inode::serialize(void)
 {
 	global_logger.log(inode_ops, "Called inode.serialize()");
+	std::shared_lock sl(this->inode_mutex);
 	unique_ptr<char> value(new char[REG_INODE_SIZE + this->link_target_len]);
 	memcpy(value.get(), this, REG_INODE_SIZE);
 
@@ -106,6 +108,7 @@ unique_ptr<char> inode::serialize(void)
 void inode::deserialize(const char *value)
 {
 	global_logger.log(inode_ops, "Called inode.deserialize()");
+	std::shared_lock sl(this->inode_mutex);
 	memcpy(this, value, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->get_mode())){
@@ -122,43 +125,111 @@ void inode::deserialize(const char *value)
 void inode::sync()
 {
 	global_logger.log(inode_ops, "Called inode.sync()");
+	/* use lock in serialize() */
 	unique_ptr<char> raw = this->serialize();
 	meta_pool->write(INODE, std::to_string(this->i_ino), raw.get(), REG_INODE_SIZE + this->link_target_len, 0);
 }
 
 // getter
-mode_t inode::get_mode(){return this->i_mode;}
-uid_t inode::get_uid(){return this->i_uid;}
-gid_t inode::get_gid(){return this->i_gid;}
-ino_t inode::get_ino() {return this->i_ino;}
-nlink_t inode::get_nlink() {return this->i_nlink;}
-off_t inode::get_size(){return this->i_size;}
-struct timespec inode::get_atime(){return this->i_atime;}
-struct timespec inode::get_mtime(){return this->i_mtime;}
-struct timespec inode::get_ctime(){return this->i_ctime;}
+mode_t inode::get_mode(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_mode;
+}
+uid_t inode::get_uid(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_uid;
+}
+gid_t inode::get_gid(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_gid;
+}
+ino_t inode::get_ino() {
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_ino;
+}
+nlink_t inode::get_nlink() {
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_nlink;
+}
+off_t inode::get_size(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_size;
+}
+struct timespec inode::get_atime(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_atime;
+}
+struct timespec inode::get_mtime(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_mtime;
+}
+struct timespec inode::get_ctime(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->i_ctime;
+}
 
-uint64_t inode::get_leader_id() {return this->leader_id;}
-int inode::get_link_target_len(){return this->link_target_len;}
-char *inode::get_link_target_name(){return this->link_target_name;}
+uint64_t inode::get_leader_id() {
+	std::shared_lock sl(this->inode_mutex);
+	return this->leader_id;
+}
+int inode::get_link_target_len(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->link_target_len;
+}
+char *inode::get_link_target_name(){
+	std::shared_lock sl(this->inode_mutex);
+	return this->link_target_name;
+}
 
 // setter
-void inode::set_mode(mode_t mode){this->i_mode = mode;}
-void inode::set_uid(uid_t uid){this->i_uid = uid;}
-void inode::set_gid(gid_t gid){this->i_gid = gid;}
-void inode::set_ino(ino_t ino){this->i_ino = ino;}
-void inode::set_nlink(nlink_t nlink){this->i_nlink = nlink;}
-void inode::set_size(off_t size){this->i_size = size;}
-void inode::set_atime(struct timespec atime){this->i_atime = atime;}
-void inode::set_mtime(struct timespec mtime){this->i_mtime = mtime;}
+void inode::set_mode(mode_t mode){
+	std::unique_lock ul(this->inode_mutex);
+	this->i_mode = mode;
+}
+void inode::set_uid(uid_t uid){
+	std::unique_lock ul(this->inode_mutex);
+	this->i_uid = uid;
+}
+void inode::set_gid(gid_t gid){
+	std::unique_lock ul(this->inode_mutex);
+	this->i_gid = gid;
+}
+void inode::set_ino(ino_t ino){
+	std::unique_lock ul(this->inode_mutex);
+	this->i_ino = ino;
+}
+void inode::set_nlink(nlink_t nlink){
+	std::unique_lock ul(this->inode_mutex);
+	this->i_nlink = nlink;
+}
+void inode::set_size(off_t size){
+	std::unique_lock ul(this->inode_mutex);
+	this->i_size = size;
+}
+void inode::set_atime(struct timespec atime){
+	std::unique_lock ul(this->inode_mutex);
+	this->i_atime = atime;
+}
+void inode::set_mtime(struct timespec mtime){
+	std::unique_lock ul(this->inode_mutex);
+	this->i_mtime = mtime;
+}
 
-void inode::set_leader_id(uint64_t client_id) {this->leader_id = client_id;}
-void inode::set_link_target_len(int len){this->link_target_len = len;}
+void inode::set_leader_id(uint64_t client_id) {
+	std::unique_lock ul(this->inode_mutex);
+	this->leader_id = client_id;
+}
+void inode::set_link_target_len(int len){
+	std::unique_lock ul(this->inode_mutex);
+	this->link_target_len = len;
+}
 void inode::set_link_target_name(const char *name){
+	std::unique_lock ul(this->inode_mutex);
 	this->link_target_name = (char *)calloc(this->link_target_len + 1, sizeof(char));
 	memcpy(this->link_target_name, name, this->link_target_len);
 }
 
-
+/* TODO : lock it */
 ino_t alloc_new_ino() {
 	global_logger.log(inode_ops, "Called alloc_new_ino()");
 	fuse_context *fuse_ctx = fuse_get_context();

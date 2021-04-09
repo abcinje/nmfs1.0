@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <shared_mutex>
+#include <mutex>
 #include "../fs_ops/fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
 #include "../logger/logger.hpp"
@@ -36,7 +37,7 @@ private:
 	int link_target_len;
 	char *link_target_name;
 
-	std::shared_mutex inode_mutex;
+	std::recursive_mutex inode_mutex;
 public:
 	class no_entry : public runtime_error {
 	public:
