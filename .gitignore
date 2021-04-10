@@ -37,3 +37,7 @@ cmake-build-*/
 
 # CLion
 .idea/
+
+# Protobuf
+*.pb.cc
+*.pb.h
