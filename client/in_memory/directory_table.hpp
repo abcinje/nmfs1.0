@@ -5,7 +5,6 @@
 #include <utility>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include "dentry_table.hpp"
 #include "../meta/inode.hpp"
 #include "../meta/dentry.hpp"

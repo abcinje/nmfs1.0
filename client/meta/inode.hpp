@@ -5,7 +5,6 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <string>
-#include <shared_mutex>
 #include <mutex>
 #include "../fs_ops/fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
@@ -14,7 +13,7 @@
 #include "../client/client.hpp"
 
 #define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
-#define REG_INODE_SIZE (sizeof(inode) - sizeof(char *) - sizeof(std::shared_mutex))
+#define REG_INODE_SIZE (sizeof(inode) - sizeof(char *) - sizeof(std::recursive_mutex))
 using std::unique_ptr;
 using std::runtime_error;
 using std::string;

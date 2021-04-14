@@ -4,7 +4,6 @@
 #include <map>
 #include <utility>
 #include <mutex>
-#include <shared_mutex>
 #include "../fs_ops/fuse_ops.hpp"
 #include "../rados_io/rados_io.hpp"
 #include "../logger/logger.hpp"
