@@ -108,10 +108,10 @@ unique_ptr<char> inode::serialize(void)
 void inode::deserialize(const char *value)
 {
 	global_logger.log(inode_ops, "Called inode.deserialize()");
-	std::shared_lock sl(this->inode_mutex);
 	memcpy(this, value, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->get_mode())){
+		std::shared_lock sl(this->inode_mutex);
 		char *raw = (char *)calloc(this->link_target_len + 1, sizeof(char));
 		meta_pool->read(INODE, std::to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);
 		this->link_target_name = raw;
