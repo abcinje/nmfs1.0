@@ -65,7 +65,7 @@ uint64_t client::get_per_client_ino_offset(){
 	return this->per_client_ino_offset;
 }
 void client::increase_ino_offset() {
-	std::unique_lock<std::shared_mutex>ul(this->client_mutex, std::defer_lock);
+	std::unique_lock<std::shared_mutex> ul(this->client_mutex, std::defer_lock);
 	ul.lock();
 	this->per_client_ino_offset++;
 	ul.unlock();
