@@ -13,30 +13,30 @@ add_definitions(-DDEBUG)
 add_executable(
 	nmfs0
 
-	main.cpp
-	fs_ops/local_ops.cpp
-	fs_ops/fuse_ops.cpp
-	fs_ops/remote_ops.cpp
-	util.cpp
+        client/main.cpp
+        client/fs_ops/local_ops.cpp
+        client/fs_ops/fuse_ops.cpp
+        client/fs_ops/remote_ops.cpp
+        client/util.cpp
 
 	# logger
-	logger/logger.cpp
+        client/logger/logger.cpp
 
 	# meta
-	meta/inode.cpp
-	meta/dentry.cpp
-	meta/file_handler.cpp
+        client/meta/inode.cpp
+        client/meta/dentry.cpp
+        client/meta/file_handler.cpp
 
 	# rados_io
-	rados_io/rados_io.cpp
+        client/rados_io/rados_io.cpp
 
 	# client
-	client/client.cpp
+        client/client/client.cpp
 
-	lease/lease_util.cpp
+        client/lease/lease_util.cpp
 
-	in_memory/directory_table.cpp
-	in_memory/dentry_table.cpp
+        client/in_memory/directory_table.cpp
+        client/in_memory/dentry_table.cpp
 )
 
 target_link_libraries(nmfs0 ${FUSE3_LIBRARIES} rados)
