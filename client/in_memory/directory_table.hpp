@@ -4,6 +4,7 @@
 #include <map>
 #include <utility>
 #include <memory>
+#include <shared_mutex>
 #include "dentry_table.hpp"
 #include "../meta/inode.hpp"
 #include "../meta/dentry.hpp"
@@ -18,6 +19,7 @@ private:
     	shared_ptr<inode> root_inode;
 	std::map<ino_t, shared_ptr<dentry_table>> dentry_tables;
 
+	std::shared_mutex directory_table_mutex;
 public:
     	directory_table();
 	~directory_table();
