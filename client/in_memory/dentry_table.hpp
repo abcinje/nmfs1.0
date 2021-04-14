@@ -27,7 +27,7 @@ private:
 	enum meta_location loc;
 	uint64_t leader_id;
 
-	std::shared_mutex dentry_table_mutex;
+	std::recursive_mutex dentry_table_mutex;
 public:
 	explicit dentry_table(ino_t dir_ino);
 	~dentry_table();

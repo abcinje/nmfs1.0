@@ -37,7 +37,7 @@ private:
 	int link_target_len;
 	char *link_target_name;
 
-	std::shared_mutex inode_mutex;
+	std::recursive_mutex inode_mutex;
 public:
 	class no_entry : public runtime_error {
 	public:
