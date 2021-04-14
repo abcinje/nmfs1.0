@@ -35,7 +35,7 @@ int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> ino
 
 int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
-	std::unique_lock ul(this->dentry_table_mutex);
+	
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
