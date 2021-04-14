@@ -1,7 +1,7 @@
 #ifndef NMFS0_CLIENT_HPP
 #define NMFS0_CLIENT_HPP
 
-#include <shared_mutex>
+#include <mutex>
 #include "../rados_io/rados_io.hpp"
 
 class client {
@@ -10,7 +10,7 @@ private:
 	uint64_t client_id;
 	uint64_t per_client_ino_offset;
 
-	std::shared_mutex client_mutex;
+	std::recursive_mutex client_mutex;
 public:
 	client();
 	client(int id);
