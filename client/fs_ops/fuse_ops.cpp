@@ -190,7 +190,7 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 		if(!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
 		{
-			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
@@ -215,7 +215,7 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 		{
-			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			it = fh_list.find(i->get_ino());
 
 			if (it == fh_list.end())
@@ -230,7 +230,7 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 		{
-			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			it = fh_list.find(ino);
 
 			if (it == fh_list.end())
@@ -462,7 +462,7 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 			i->sync();
 		}
 		{
-			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
@@ -487,7 +487,7 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 		{
-			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			it = fh_list.find(i->get_ino());
 
 			if (it == fh_list.end())
@@ -502,7 +502,7 @@ int fuse_ops::release(const char* path, struct fuse_file_info* file_info) {
 
 		std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 		{
-			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			it = fh_list.find(ino);
 
 			if (it == fh_list.end())
@@ -534,7 +534,7 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		parent_i->sync();
 
 		{
-			std::scoped_lock<std::mutex> lock(file_handler_mutex);
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 

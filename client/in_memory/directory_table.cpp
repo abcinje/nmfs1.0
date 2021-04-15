@@ -40,7 +40,7 @@ shared_ptr<inode> directory_table::path_traversal(std::string path) {
 			target_inode = parent_dentry_table->get_child_inode(target_name);
 
 		if(S_ISDIR(target_inode->get_mode()))
-			permission_check(target_inode.get(), X_OK);
+			permission_check(target_inode, X_OK);
 
 		parent_inode = target_inode;
 		if(S_ISDIR(parent_inode->get_mode()))
@@ -53,7 +53,7 @@ shared_ptr<inode> directory_table::path_traversal(std::string path) {
 
 shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 	global_logger.log(directory_table_ops, "get_dentry_table(" + std::to_string(ino) + ")");
-	std::scoped_lock scl(this->directory_table_mutex);
+	std::scoped_lock scl{this->directory_table_mutex};
 	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 
@@ -75,7 +75,7 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 
 int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable){
 	global_logger.log(directory_table_ops, "Called add_dentry_table(" + std::to_string(ino) + ")");
-	std::scoped_lock scl(this->directory_table_mutex);
+	std::scoped_lock scl{this->directory_table_mutex};
 	auto ret = dentry_tables.insert(std::make_pair(ino, nullptr));
 	if(ret.second) {
 		ret.first->second = dtable;
@@ -89,7 +89,7 @@ int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable
 int directory_table::delete_dentry_table(ino_t ino){
 	global_logger.log(directory_table_ops, "Called delete_dentry_table(" + std::to_string(ino) + ")");
 	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
-	std::scoped_lock scl(this->directory_table_mutex);
+	std::scoped_lock scl{this->directory_table_mutex};
 	it = this->dentry_tables.find(ino);
 
 	if(it == this->dentry_tables.end()) {
@@ -103,6 +103,6 @@ int directory_table::delete_dentry_table(ino_t ino){
 }
 
 shared_ptr<inode> directory_table::get_root_inode() {
-	std::scoped_lock scl(this->directory_table_mutex);
+	std::scoped_lock scl{this->directory_table_mutex};
 	return this->root_inode;
 }

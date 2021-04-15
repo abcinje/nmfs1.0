@@ -100,6 +100,6 @@ public:
 };
 
 ino_t alloc_new_ino();
-void permission_check(inode *i, int mask);
+void permission_check(std::shared_ptr<inode> i, int mask);
 int set_name_bound(int &start_name, int &end_name, std::string &path, int path_len);
 #endif /* _INODE_HPP_ */

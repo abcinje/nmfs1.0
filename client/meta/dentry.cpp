@@ -29,7 +29,7 @@ void dentry::add_new_child(const std::string &filename, ino_t ino){
 	global_logger.log(dentry_ops, "Called dentry.add_new_child()");
 	global_logger.log(dentry_ops, "file : " + filename + " inode number : " + std::to_string(ino));
 
-	std::scoped_lock scl(this->dentry_mutex);
+	std::scoped_lock scl{this->dentry_mutex};
 	this->child_list.insert(std::make_pair(filename, ino));
 	this->child_num++;
 	this->total_name_length += filename.length();
@@ -39,7 +39,7 @@ void dentry::delete_child(const std::string &filename) {
 	global_logger.log(dentry_ops, "Called dentry.delete_child()");
 	global_logger.log(dentry_ops, "file : " + filename);
 
-	std::scoped_lock scl(this->dentry_mutex);
+	std::scoped_lock scl{this->dentry_mutex};
 	this->child_list.erase(filename);
 	this->child_num--;
 	this->total_name_length -= filename.length();
@@ -48,8 +48,8 @@ void dentry::delete_child(const std::string &filename) {
 unique_ptr<char[]> dentry::serialize()
 {
 	global_logger.log(dentry_ops, "Called dentry.serialize()");
-	std::scoped_lock scl(this->dentry_mutex);
-	int raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
+	std::scoped_lock scl{this->dentry_mutex};
+	int raw_size = sizeof(uint64_t) + (this->get_child_num()) * sizeof(int) + (this->get_total_name_legth()) + (this->get_child_num())*sizeof(ino_t) + 1;
 	unique_ptr<char[]> raw = std::make_unique<char[]>(raw_size);
 	char *pointer = raw.get();
 
@@ -79,7 +79,7 @@ void dentry::deserialize(char *raw)
 {
 	global_logger.log(dentry_ops, "Called dentry.deserialize()");
 
-	std::scoped_lock scl(this->dentry_mutex);
+	std::scoped_lock scl{this->dentry_mutex};
 	char *pointer = raw;
 
 	memcpy(&(this->child_num), pointer, sizeof(uint64_t));
@@ -113,7 +113,7 @@ void dentry::sync()
 {
 	global_logger.log(dentry_ops,"Called dentry.sync()");
 
-	std::scoped_lock scl(this->dentry_mutex);
+	std::scoped_lock scl{this->dentry_mutex};
 	int raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
 	unique_ptr<char[]> raw = this->serialize();
 	meta_pool->write(DENTRY, std::to_string(this->this_ino), raw.get(), raw_size - 1, 0);
@@ -123,7 +123,7 @@ ino_t dentry::get_child_ino(std::string child_name)
 {
 	global_logger.log(dentry_ops, "Called dentry.get_child_ino(" + child_name + ")");
 
-	std::scoped_lock scl(this->dentry_mutex);
+	std::scoped_lock scl{this->dentry_mutex};
 	std::map<std::string, ino_t>::iterator ret = child_list.find(child_name);
 	if(ret == child_list.end())
 		return -1;
@@ -133,16 +133,16 @@ ino_t dentry::get_child_ino(std::string child_name)
 
 void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler)
 {
-	std::scoped_lock scl(this->dentry_mutex);
+	std::scoped_lock scl{this->dentry_mutex};
 	for (auto it = this->child_list.begin(); it != this->child_list.end(); it++)
 		filler(buffer, it->first.c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 }
 
 uint64_t dentry::get_child_num() {
-	std::scoped_lock scl(this->dentry_mutex);
+	std::scoped_lock scl{this->dentry_mutex};
 	return this->child_num;
 }
 uint64_t dentry::get_total_name_legth() {
-	std::scoped_lock scl(this->dentry_mutex);
+	std::scoped_lock scl{this->dentry_mutex};
 	return this->total_name_length;
 }

@@ -19,7 +19,7 @@ dentry_table::~dentry_table() {
 
 int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
@@ -36,7 +36,7 @@ int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> ino
 int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
 
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
@@ -49,7 +49,7 @@ int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode)
 
 int dentry_table::delete_child_inode(std::string filename) {
 	global_logger.log(dentry_table_ops, "Called delete_child_inode(" + filename + ")");
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	std::map<std::string, shared_ptr<inode>>::iterator it;
 	it = this->child_inodes.find(filename);
 
@@ -68,16 +68,13 @@ int dentry_table::delete_child_inode(std::string filename) {
 shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ")");
 	if(this->loc == LOCAL) {
-		std::scoped_lock scl(this->dentry_table_mutex);
+		std::scoped_lock scl{this->dentry_table_mutex};
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
 
 		if(it == this->child_inodes.end()) {
 			throw inode::no_entry("No such file or directory : get_child_inode");
 		}
-
-		fuse_context *fuse_ctx = fuse_get_context();
-		client *c = (client *) (fuse_ctx->private_data);
 
 		/* TODO : returned inode could be dummy remote inode, So should find real inode from remote */
 		return it->second;
@@ -91,7 +88,7 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 ino_t dentry_table::check_child_inode(std::string filename){
 	global_logger.log(dentry_table_ops, "Called check_child_inode(" + filename + ")");
 	if(this->loc == LOCAL) {
-		std::scoped_lock scl(this->dentry_table_mutex);
+		std::scoped_lock scl{this->dentry_table_mutex};
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
 
@@ -109,7 +106,7 @@ ino_t dentry_table::check_child_inode(std::string filename){
 
 int dentry_table::pull_child_metadata() {
 	global_logger.log(dentry_table_ops, "Called pull_child_metadata()");
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	this->dentries = std::make_shared<dentry>(this->dir_ino);
 
 	std::map<std::string, ino_t>::iterator it;
@@ -122,38 +119,38 @@ int dentry_table::pull_child_metadata() {
 
 
 enum meta_location dentry_table::get_loc() {
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	return this->loc;
 }
 uint64_t dentry_table::get_leader_id() {
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	return this->leader_id;
 }
 
 void dentry_table::set_loc(enum meta_location loc) {
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	this->loc = loc;
 }
 void dentry_table::set_leader_id(uint64_t leader_id) {
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	this->leader_id = leader_id;
 }
 void dentry_table::set_dentries(shared_ptr<dentry> dentries) {
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	this->dentries = dentries;
 }
 
 
 void dentry_table::fill_filler(void *buffer, fuse_fill_dir_t filler) {
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	this->dentries->fill_filler(buffer, filler);
 }
 uint64_t dentry_table::get_child_num() {
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	return this->dentries->get_child_num();
 }
 uint64_t dentry_table::get_total_name_legth() {
-	std::scoped_lock scl(this->dentry_table_mutex);
+	std::scoped_lock scl{this->dentry_table_mutex};
 	return this->dentries->get_total_name_legth();
 }
 
