@@ -4,18 +4,7 @@
 
 using std::string;
 
-#include <grpcpp/health_check_service_interface.h>
-#include <grpcpp/ext/proto_server_reflection_plugin.h>
-#include <grpcpp/grpcpp.h>
-
-using grpc::Server;
-using grpc::ServerBuilder;
-
-#include "lease.pb.h"
-#include "lease.grpc.pb.h"
-
-class lease_impl final : public lease::Service {
-};
+#include "lease_impl.hpp"
 
 int main(int argc, char *argv[])
 {
