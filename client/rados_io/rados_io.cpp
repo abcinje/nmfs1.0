@@ -32,10 +32,14 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 	uint64_t size;
 	time_t mtime;
 	int ret;
+	struct timeval tv = {5, 0};
 
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(value, len);
 
+	while(ioctx.lock_shared(key, key, key, key, key, &tv, 0) != 0);
 	ret = ioctx.read(key, bl, len, offset);
+	ioctx.unlock(key, key, key);
+
 	if (ret >= 0) {
 		global_logger.log(rados_io_ops,"Read an object. (key: \"" + key + "\")");
 	} else if (ret == -ENOENT) {
@@ -54,9 +58,13 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	global_logger.log(rados_io_ops,"Called rados_io::write_obj()");
 	global_logger.log(rados_io_ops,"key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret;
+	struct timeval tv = {5, 0};
 
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(const_cast<char *>(value), len);
+
+	while(ioctx.lock_exclusive(key, key, key, key, &tv, 0) != 0);
 	ret = ioctx.write(key, bl, len, offset);
+	ioctx.unlock(key, key, key);
 
 	if (ret >= 0) {
 		global_logger.log(rados_io_ops, "Wrote an object. (key: \"" + key + "\")");
