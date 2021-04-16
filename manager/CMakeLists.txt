@@ -18,7 +18,7 @@ add_custom_command(
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 set(_target "manager")
-set(_source "manager.cpp" "lease_impl.cpp")
+set(_source "manager.cpp" "lease_impl.cpp" "lease_table.cpp")
 
 # Generate binary files
 add_executable(
