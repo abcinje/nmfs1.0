@@ -2,7 +2,11 @@
 
 Status lease_impl::acquire(ServerContext *context, const lease_request *request, lease_response *response)
 {
-	response->set_ret(-1);
-	response->set_due(0);
+	int64_t due;
+	int ret = table.acquire(request->ino(), &due);
+
+	response->set_ret(ret);
+	response->set_due(ret == -1 ? 0 : due);
+
 	return Status::OK;
 }

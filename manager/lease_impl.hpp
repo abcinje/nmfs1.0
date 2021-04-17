@@ -13,8 +13,12 @@ using grpc::Status;
 #include "lease.pb.h"
 #include "lease.grpc.pb.h"
 
+#include "lease_table.hpp"
+
 class lease_impl final : public lease::Service {
 private:
+	lease_table table;
+
 	Status acquire(ServerContext *context, const lease_request *request, lease_response *response) override;
 };
 
