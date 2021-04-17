@@ -2,20 +2,20 @@
 
 #include <iostream>
 
-lease_table::lease_entry::lease_entry(system_clock::time_point due) : _due(due)
+lease_table::lease_entry::lease_entry(void) : _due(system_clock::now() + milliseconds(LEASE_PERIOD_MS))
 {
 }
 
-system_clock::time_point lease_table::lease_entry::get_time(void) const
+bool lease_table::lease_entry::cas(void)
 {
-	std::scoped_lock(_m);
-	return _due;
-}
+	std::unique_lock<std::mutex>(_m);
 
-void lease_table::lease_entry::set_time(system_clock::time_point due)
-{
-	std::scoped_lock(_m);
-	_due = due;
+	if (system_clock::now() >= _due) {
+		_due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
+		return true;
+	}
+
+	return false;
 }
 
 lease_table::~lease_table(void)
@@ -28,24 +28,28 @@ lease_table::~lease_table(void)
 int lease_table::acquire(ino_t ino)
 {
 	lease_entry *e;
+	bool found = false;
 
 	{
-		std::scoped_lock(m);
+		std::shared_lock<std::shared_mutex>(m);
 		auto it = umap.find(ino);
 		if (it != umap.end()) {
+			found = true;
 			e = it->second;
-		} else {
-			auto due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
-			umap[ino] = new lease_entry(due);
-			return 0;
 		}
 	}
 
-	if (e->get_time() <= system_clock::now()) {
-		auto due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
-		e->set_time(due);
-		return 0;
-	}
+	if (found)
+		return e->cas() ? 0 : -1;
 
-	return -1;
+	{
+		std::unique_lock<std::shared_mutex>(m);
+		auto it = umap.find(ino);
+		if (it != umap.end()) {
+			return -1;
+		} else {
+			umap[ino] = new lease_entry();
+			return 0;
+		}
+	}
 }

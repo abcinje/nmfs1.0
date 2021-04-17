@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <mutex>
+#include <shared_mutex>
 #include <unordered_map>
 
 using namespace std::chrono;
@@ -17,14 +18,13 @@ private:
 		system_clock::time_point _due;
 
 	public:
-		lease_entry(system_clock::time_point due);
+		lease_entry(void);
 		~lease_entry(void) = default;
 
-		system_clock::time_point get_time(void) const;
-		void set_time(system_clock::time_point due);
+		bool cas(void);
 	};
 
-	std::mutex m;
+	std::shared_mutex m;
 	std::unordered_map<ino_t, lease_entry *> umap;
 
 public:
