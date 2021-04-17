@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(nmfs0)
+project(nmfs)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_BUILD_TYPE Release)
