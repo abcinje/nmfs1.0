@@ -6,6 +6,9 @@ set(CMAKE_BUILD_TYPE Release)
 
 find_package(Threads REQUIRED)
 
+# Import robin-map
+include_directories("robin-map/include/")
+
 # Find Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG REQUIRED)

@@ -4,7 +4,7 @@
 #include <chrono>
 #include <mutex>
 #include <shared_mutex>
-#include <unordered_map>
+#include <tsl/robin_map.h>
 
 using namespace std::chrono;
 
@@ -25,7 +25,7 @@ private:
 	};
 
 	std::shared_mutex m;
-	std::unordered_map<ino_t, lease_entry *> umap;
+	tsl::robin_map<ino_t, lease_entry *> map;
 
 public:
 	lease_table(void) = default;

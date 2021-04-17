@@ -33,8 +33,8 @@ int lease_table::acquire(ino_t ino, int64_t *new_due)
 
 	{
 		std::shared_lock<std::shared_mutex>(m);
-		auto it = umap.find(ino);
-		if (it != umap.end()) {
+		auto it = map.find(ino);
+		if (it != map.end()) {
 			found = true;
 			e = it->second;
 		}
@@ -45,11 +45,11 @@ int lease_table::acquire(ino_t ino, int64_t *new_due)
 
 	{
 		std::unique_lock<std::shared_mutex>(m);
-		auto it = umap.find(ino);
-		if (it != umap.end()) {
+		auto it = map.find(ino);
+		if (it != map.end()) {
 			return -1;
 		} else {
-			umap[ino] = new lease_entry();
+			map[ino] = new lease_entry();
 			return 0;
 		}
 	}
