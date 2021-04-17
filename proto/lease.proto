@@ -2,10 +2,7 @@ syntax = "proto3";
 
 service lease {
   rpc acquire(lease_request) returns (lease_response) {}
-  rpc release(lease_request) returns (empty) {}
 }
-
-message empty {}
 
 message lease_request {
   int64 ino = 1;

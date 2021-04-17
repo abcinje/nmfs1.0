@@ -16,7 +16,6 @@ using grpc::Status;
 class lease_impl final : public lease::Service {
 private:
 	Status acquire(ServerContext *context, const lease_request *request, lease_response *response) override;
-	Status release(ServerContext *context, const lease_request *request, empty *empty) override;
 };
 
 #endif /* _LEASE_IMPL_H_ */
