@@ -18,6 +18,7 @@ rados_io *data_pool;
 directory_table *indexing_table;
 
 std::mutex file_handler_mutex;
+std::mutex atomic_mutex;
 std::map<ino_t, unique_ptr<file_handler>> fh_list;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
@@ -135,13 +136,16 @@ int fuse_ops::symlink(const char *src, const char *dst){
 			return -EEXIST;
 
 		shared_ptr<inode> symlink_i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
-		symlink_i->set_size(std::string(src).length());
+		{
+			std::scoped_lock scl{atomic_mutex};
+			symlink_i->set_size(std::string(src).length());
 
-		dst_parent_dentry_table->create_child_inode(symlink_name->data(), symlink_i);
-		symlink_i->sync();
+			dst_parent_dentry_table->create_child_inode(symlink_name->data(), symlink_i);
+			symlink_i->sync();
 
-		dst_parent_i->set_size(dst_parent_dentry_table->get_total_name_legth());
-		dst_parent_i->sync();
+			dst_parent_i->set_size(dst_parent_dentry_table->get_total_name_legth());
+			dst_parent_i->sync();
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -271,15 +275,18 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 
 		shared_ptr<dentry_table> new_dentry_table = become_leader_of_new_dir(parent_i->get_ino(), i->get_ino());
 
-		client *c = (client *) (fuse_ctx->private_data);
-		i->set_leader_id(c->get_client_id());
-		i->set_size(new_dentry_table->get_total_name_legth());
-		i->sync();
+		{
+			std::scoped_lock scl{atomic_mutex};
+			client *c = (client *) (fuse_ctx->private_data);
+			i->set_leader_id(c->get_client_id());
+			i->set_size(new_dentry_table->get_total_name_legth());
+			i->sync();
 
-		parent_i->set_size(parent_dentry_table->get_total_name_legth());
-		parent_i->sync();
+			parent_i->set_size(parent_dentry_table->get_total_name_legth());
+			parent_i->sync();
 
-		indexing_table->add_dentry_table(i->get_ino(), new_dentry_table);
+			indexing_table->add_dentry_table(i->get_ino(), new_dentry_table);
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -303,22 +310,27 @@ int fuse_ops::rmdir(const char* path) {
 			return -ENOTDIR;
 
 		shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_i->get_ino());
+
 		if(target_dentry_table == nullptr) {
 			throw std::runtime_error("directory table is corrupted : Can't find leaesd directory");
 		}
 
-		if(target_dentry_table->get_child_num() > 2)
-			return -ENOTEMPTY;
+		{
+			std::scoped_lock scl{atomic_mutex};
+			if(target_dentry_table->get_child_num() > 2)
+				return -ENOTEMPTY;
 
-		meta_pool->remove(DENTRY, std::to_string(target_i->get_ino()));
-		meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
+			meta_pool->remove(DENTRY, std::to_string(target_i->get_ino()));
+			meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
 
-		parent_dentry_table->delete_child_inode(*(get_filename_from_path(path).get()));
 
-		parent_i->set_size(parent_dentry_table->get_total_name_legth());
-		parent_i->sync();
+			parent_dentry_table->delete_child_inode(*(get_filename_from_path(path).get()));
 
-		indexing_table->delete_dentry_table(target_i->get_ino());
+			parent_i->set_size(parent_dentry_table->get_total_name_legth());
+			parent_i->sync();
+
+			indexing_table->delete_dentry_table(target_i->get_ino());
+		}
 
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -334,6 +346,8 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 
 	if(std::string(old_path) == std::string(new_path))
 		return -EEXIST;
+
+	std::scoped_lock scl{atomic_mutex};
 
 	try {
 		unique_ptr<std::string> src_parent_path = get_parent_dir_path(old_path);
@@ -458,9 +472,11 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 			return -ELOOP;
 
 		if ((file_info->flags & O_TRUNC) && !(file_info->flags & O_PATH)) {
+			std::scoped_lock scl{atomic_mutex};
 			i->set_size(0);
 			i->sync();
 		}
+
 		{
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
@@ -527,12 +543,14 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		shared_ptr<inode> i = make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
-		i->sync();
+		{
+			std::scoped_lock scl{atomic_mutex};
+			i->sync();
 
-		parent_dentry_table->create_child_inode(*(get_filename_from_path(path).get()), i);
-		parent_i->set_size(parent_dentry_table->get_total_name_legth());
-		parent_i->sync();
-
+			parent_dentry_table->create_child_inode(*(get_filename_from_path(path).get()), i);
+			parent_i->set_size(parent_dentry_table->get_total_name_legth());
+			parent_i->sync();
+		}
 		{
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
@@ -561,24 +579,26 @@ int fuse_ops::unlink(const char* path){
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(file_name->data());
+		{
+			std::scoped_lock scl{atomic_mutex};
+			nlink_t nlink = target_i->get_nlink() - 1;
+			if (nlink == 0) {
+				/* data */
+				data_pool->remove(DATA, std::to_string(target_i->get_ino()));
 
-		nlink_t nlink = target_i->get_nlink() - 1;
-		if (nlink == 0) {
-			/* data */
-			data_pool->remove(DATA, std::to_string(target_i->get_ino()));
+				/* inode */
+				meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
 
-			/* inode */
-			meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
+				/* parent dentry */
+				parent_dentry_table->delete_child_inode(file_name->data());
 
-			/* parent dentry */
-			parent_dentry_table->delete_child_inode(file_name->data());
-
-			/* parent inode */
-			parent_i->set_size(parent_dentry_table->get_total_name_legth());
-			parent_i->sync();
-		} else {
-			target_i->set_nlink(nlink);
-			target_i->sync();
+				/* parent inode */
+				parent_i->set_size(parent_dentry_table->get_total_name_legth());
+				parent_i->sync();
+			} else {
+				target_i->set_nlink(nlink);
+				target_i->sync();
+			}
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -624,9 +644,12 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 
 		written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, offset);
 
-		if (i->get_size() < offset + size) {
-			i->set_size(offset + size);
-			i->sync();
+		{
+			std::scoped_lock scl{atomic_mutex};
+			if (i->get_size() < offset + size) {
+				i->set_size(offset + size);
+				i->sync();
+			}
 		}
 
 	} catch(inode::no_entry &e) {
@@ -651,9 +674,11 @@ int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_i
 		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
 		mode_t type = i->get_mode() & S_IFMT;
-		i->set_mode(mode | type);
-
-		i->sync();
+		{
+			std::scoped_lock scl{atomic_mutex};
+			i->set_mode(mode | type);
+			i->sync();
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -674,14 +699,16 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
+		{
+			std::scoped_lock scl{atomic_mutex};
+			if (((int32_t) uid) >= 0)
+				i->set_uid(uid);
 
-		if(((int32_t)uid) >= 0)
-			i->set_uid(uid);
+			if (((int32_t) gid) >= 0)
+				i->set_gid(gid);
 
-		if(((int32_t)gid) >= 0)
-			i->set_gid(gid);
-
-		i->sync();
+			i->sync();
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
@@ -702,21 +729,22 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
-
-		for(int tv_i = 0; tv_i < 2; tv_i++) {
-			if (tv[tv_i].tv_nsec == UTIME_NOW) {
-				struct timespec ts;
-				if (!timespec_get(&ts, TIME_UTC))
-					runtime_error("timespec_get() failed");
-				i->set_atime(ts);
-			} else if (tv[tv_i].tv_nsec == UTIME_OMIT) {
-				;
-			} else {
-				i->set_mtime(tv[tv_i]);
+		{
+			std::scoped_lock scl{atomic_mutex};
+			for (int tv_i = 0; tv_i < 2; tv_i++) {
+				if (tv[tv_i].tv_nsec == UTIME_NOW) {
+					struct timespec ts;
+					if (!timespec_get(&ts, TIME_UTC))
+						runtime_error("timespec_get() failed");
+					i->set_atime(ts);
+				} else if (tv[tv_i].tv_nsec == UTIME_OMIT) { ;
+				} else {
+					i->set_mtime(tv[tv_i]);
+				}
 			}
-		}
 
-		i->sync();
+			i->sync();
+		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
 	} catch(inode::permission_denied &e) {
