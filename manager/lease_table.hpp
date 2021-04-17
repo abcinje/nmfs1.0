@@ -32,7 +32,6 @@ public:
 	~lease_table(void);
 
 	int acquire(ino_t ino);
-	void release(ino_t ino);
 };
 
 #endif /* _LEASE_TABLE_H_ */

@@ -49,19 +49,3 @@ int lease_table::acquire(ino_t ino)
 
 	return -1;
 }
-
-void lease_table::release(ino_t ino)
-{
-	lease_entry *e;
-
-	{
-		std::scoped_lock(m);
-		auto it = umap.find(ino);
-		if (it != umap.end())
-			e = it->second;
-		else
-			return;
-	}
-
-	e->set_time(system_clock::now());
-}
