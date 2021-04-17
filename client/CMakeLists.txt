@@ -27,7 +27,7 @@ add_executable(
 	# client
 	client/client.cpp
 
-	lease/lease_util.cpp
+	temp/lease_util.cpp
 
 	in_memory/directory_table.cpp
 	in_memory/dentry_table.cpp
