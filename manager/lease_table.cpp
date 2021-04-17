@@ -1,5 +1,7 @@
 #include "lease_table.hpp"
 
+#include <iostream>
+
 lease_table::lease_entry::lease_entry(system_clock::time_point due) : _due(due)
 {
 }
@@ -18,9 +20,9 @@ void lease_table::lease_entry::set_time(system_clock::time_point due)
 
 lease_table::~lease_table(void)
 {
-	std::scoped_lock(m);
-	for (const auto &e : umap)
-		delete e.second;
+	std::cerr << "Some thread has called ~lease_table()." << std::endl;
+	std::cerr << "Aborted." << std::endl;
+	exit(1);
 }
 
 int lease_table::acquire(ino_t ino)
