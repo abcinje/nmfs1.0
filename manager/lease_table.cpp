@@ -2,17 +2,17 @@
 
 #include <iostream>
 
-lease_table::lease_entry::lease_entry(void) : _due(system_clock::now() + milliseconds(LEASE_PERIOD_MS))
+lease_table::lease_entry::lease_entry(void) : due(system_clock::now() + milliseconds(LEASE_PERIOD_MS))
 {
 }
 
 bool lease_table::lease_entry::cas(int64_t *new_due)
 {
-	std::unique_lock<std::mutex>(_m);
+	std::unique_lock<std::mutex>(m);
 
-	if (system_clock::now() >= _due) {
-		_due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
-		*new_due = _due.time_since_epoch().count();
+	if (system_clock::now() >= due) {
+		due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
+		*new_due = due.time_since_epoch().count();
 		return true;
 	}
 
@@ -32,7 +32,7 @@ int lease_table::acquire(ino_t ino, int64_t *new_due)
 	bool found = false;
 
 	{
-		std::shared_lock<std::shared_mutex>(m);
+		std::shared_lock<std::shared_mutex>(sm);
 		auto it = map.find(ino);
 		if (it != map.end()) {
 			found = true;
@@ -44,7 +44,7 @@ int lease_table::acquire(ino_t ino, int64_t *new_due)
 		return e->cas(new_due) ? 0 : -1;
 
 	{
-		std::unique_lock<std::shared_mutex>(m);
+		std::unique_lock<std::shared_mutex>(sm);
 		auto it = map.find(ino);
 		if (it != map.end()) {
 			return -1;

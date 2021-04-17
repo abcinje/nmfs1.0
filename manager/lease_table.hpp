@@ -14,8 +14,8 @@ class lease_table {
 private:
 	class lease_entry {
 	private:
-		std::mutex _m;
-		system_clock::time_point _due;
+		std::mutex m;
+		system_clock::time_point due;
 
 	public:
 		lease_entry(void);
@@ -24,7 +24,7 @@ private:
 		bool cas(int64_t *new_due);
 	};
 
-	std::shared_mutex m;
+	std::shared_mutex sm;
 	tsl::robin_map<ino_t, lease_entry *> map;
 
 public:
