@@ -16,6 +16,7 @@ directory_table::~directory_table() {
 shared_ptr<inode> directory_table::path_traversal(std::string path) {
 	global_logger.log(directory_table_ops, "Called path_traverse(" + path + ")");
 
+	std::scoped_lock scl{this->directory_table_mutex};
 	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(0);
 	shared_ptr<inode> parent_inode = this->get_root_inode();
 

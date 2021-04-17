@@ -9,8 +9,8 @@
 using namespace std;
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-#define META_POOL "nmfs.meta"
-#define DATA_POOL "nmfs.data"
+#define META_POOL "nmfs.meta2"
+#define DATA_POOL "nmfs.data2"
 
 rados_io *meta_pool;
 rados_io *data_pool;
@@ -348,7 +348,6 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 		return -EEXIST;
 
 	std::scoped_lock scl{atomic_mutex};
-
 	try {
 		unique_ptr<std::string> src_parent_path = get_parent_dir_path(old_path);
 		unique_ptr<std::string> dst_parent_path = get_parent_dir_path(new_path);

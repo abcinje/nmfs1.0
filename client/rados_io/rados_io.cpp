@@ -36,7 +36,7 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(value, len);
 
-	while(ioctx.lock_shared(key, key, key, key, key, &tv, 0) != 0);
+	while(ioctx.lock_shared(key, key, key, key, key, NULL, 0) != 0);
 	ret = ioctx.read(key, bl, len, offset);
 	ioctx.unlock(key, key, key);
 
@@ -62,7 +62,7 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(const_cast<char *>(value), len);
 
-	while(ioctx.lock_exclusive(key, key, key, key, &tv, 0) != 0);
+	while(ioctx.lock_exclusive(key, key, key, key, NULL, 0) != 0);
 	ret = ioctx.write(key, bl, len, offset);
 	ioctx.unlock(key, key, key);
 
