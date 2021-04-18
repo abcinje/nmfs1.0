@@ -1,5 +1,5 @@
-#ifndef _LEASE_TABLE_H_
-#define _LEASE_TABLE_H_
+#ifndef _LEASE_TABLE_HPP_
+#define _LEASE_TABLE_HPP_
 
 #include <chrono>
 #include <mutex>
@@ -34,4 +34,4 @@ public:
 	int acquire(ino_t ino, system_clock::time_point &new_due);
 };
 
-#endif /* _LEASE_TABLE_H_ */
+#endif /* _LEASE_TABLE_HPP_ */
