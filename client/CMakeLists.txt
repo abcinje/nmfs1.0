@@ -56,9 +56,13 @@ add_executable(
   in_memory/directory_table.cpp
   in_memory/dentry_table.cpp
 
-  # lease
+  # lease protobuf
   "${CMAKE_CURRENT_BINARY_DIR}/lease.pb.cc"
   "${CMAKE_CURRENT_BINARY_DIR}/lease.grpc.pb.cc"
+
+  # lease
+  lease/lease_client.cpp
+  lease/lease_table.cpp
 )
 
 target_link_libraries(
