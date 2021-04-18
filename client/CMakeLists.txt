@@ -22,44 +22,52 @@ find_library(rados librados.so)
 pkg_check_modules(FUSE3 REQUIRED fuse3)
 
 add_executable(
-	nmfs0
+  nmfs
 
-	main.cpp
-	fs_ops/local_ops.cpp
-	fs_ops/fuse_ops.cpp
-	fs_ops/remote_ops.cpp
-	util.cpp
+  # main
+  main.cpp
 
-	# logger
-	logger/logger.cpp
+  # fs_ops
+  fs_ops/local_ops.cpp
+  fs_ops/fuse_ops.cpp
+  fs_ops/remote_ops.cpp
 
-	# meta
-	meta/inode.cpp
-	meta/dentry.cpp
-	meta/file_handler.cpp
+  # util
+  util.cpp
 
-	# rados_io
-	rados_io/rados_io.cpp
+  # logger
+  logger/logger.cpp
 
-	# client
-	client/client.cpp
+  # meta
+  meta/inode.cpp
+  meta/dentry.cpp
+  meta/file_handler.cpp
 
-	temp/lease_util.cpp
+  # rados_io
+  rados_io/rados_io.cpp
 
-	in_memory/directory_table.cpp
-	in_memory/dentry_table.cpp
+  # client
+  client/client.cpp
 
-	"${CMAKE_CURRENT_BINARY_DIR}/lease.pb.cc"
-	"${CMAKE_CURRENT_BINARY_DIR}/lease.grpc.pb.cc"
+  # temp
+  temp/lease_util.cpp
+
+  # in_memory
+  in_memory/directory_table.cpp
+  in_memory/dentry_table.cpp
+
+  # lease
+  "${CMAKE_CURRENT_BINARY_DIR}/lease.pb.cc"
+  "${CMAKE_CURRENT_BINARY_DIR}/lease.grpc.pb.cc"
 )
 
 target_link_libraries(
-  nmfs0
+  nmfs
   ${REFLECTION}
   ${GRPC_GRPCPP}
   ${PROTOBUF_LIBPROTOBUF}
   ${FUSE3_LIBRARIES}
   rados
 )
-target_include_directories(nmfs0 PUBLIC ${FUSE3_INCLUDE_DIRS})
-target_compile_options(nmfs0 PUBLIC ${FUSE3_CFLAGS_OTHER})
+target_include_directories(nmfs PUBLIC ${FUSE3_INCLUDE_DIRS})
+target_compile_options(nmfs PUBLIC ${FUSE3_CFLAGS_OTHER})
