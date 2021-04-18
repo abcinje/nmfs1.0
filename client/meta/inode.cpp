@@ -281,21 +281,3 @@ ino_t alloc_new_ino() {
 	c->increase_ino_offset();
 	return new_ino;
 }
-
-int set_name_bound(int &start_name, int &end_name, std::string &path, int path_len){
-	start_name = end_name + 2;
-	if(start_name >= path_len)
-		return -1;
-
-	int i;
-	for(i = start_name; i < path_len; i++){
-		if(path.at(i) == '/'){
-			end_name = i - 1;
-			break;
-		}
-	}
-	if(i == path_len)
-		end_name = i - 1;
-
-	return 0;
-}

@@ -98,5 +98,5 @@ public:
 };
 
 ino_t alloc_new_ino();
-int set_name_bound(int &start_name, int &end_name, std::string &path, int path_len);
+
 #endif /* _INODE_HPP_ */

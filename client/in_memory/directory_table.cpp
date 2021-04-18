@@ -1,5 +1,23 @@
 #include "directory_table.hpp"
 
+static int set_name_bound(int &start_name, int &end_name, const std::string &path, int path_len){
+	start_name = end_name + 2;
+	if(start_name >= path_len)
+		return -1;
+
+	int i;
+	for(i = start_name; i < path_len; i++){
+		if(path.at(i) == '/'){
+			end_name = i - 1;
+			break;
+		}
+	}
+	if(i == path_len)
+		end_name = i - 1;
+
+	return 0;
+}
+
 directory_table::directory_table() {
 	this->root_inode  = std::make_shared<inode>(0);
 }
