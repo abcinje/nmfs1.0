@@ -125,7 +125,8 @@ void inode::deserialize(const char *value)
 void inode::sync()
 {
 	global_logger.log(inode_ops, "Called inode.sync()");
-	/* use lock in serialize() */
+
+	std::scoped_lock scl{this->inode_mutex};
 	unique_ptr<char> raw = this->serialize();
 	meta_pool->write(INODE, std::to_string(this->i_ino), raw.get(), REG_INODE_SIZE + this->link_target_len, 0);
 }
@@ -140,6 +141,7 @@ void inode::permission_check(int mask){
 	mode_t target_mode;
 	fuse_context *fuse_ctx = fuse_get_context();
 
+	std::scoped_lock scl{this->inode_mutex};
 	if(fuse_ctx->uid == get_uid()){
 		target_mode = (get_mode() & S_IRWXU) >> 6;
 	} else if (fuse_ctx->gid == get_gid()){
