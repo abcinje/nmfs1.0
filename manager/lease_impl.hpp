@@ -10,8 +10,8 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
 
-#include "lease.pb.h"
-#include "lease.grpc.pb.h"
+#include <lease.pb.h>
+#include <lease.grpc.pb.h>
 
 #include "lease_table.hpp"
 
