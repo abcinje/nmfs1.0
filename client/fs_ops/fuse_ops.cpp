@@ -81,6 +81,7 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
+	std::scoped_lock scl{atomic_mutex};
 	try {
 		if(std::string(path) == "/") {
 			shared_ptr<inode> i = indexing_table->path_traversal(path);
@@ -753,6 +754,13 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	return 0;
 }
 
+int fuse_ops::truncate (const char *path, off_t offset, struct fuse_file_info *fi){
+	global_logger.log(fuse_op, "Called truncate()");
+	global_logger.log(fuse_op, "path : " + std::string(path) + " offset : " + std::to_string(offset));
+
+	return -E2BIG;
+}
+
 fuse_operations fuse_ops::get_fuse_ops(void)
 {
 	fuse_operations fops;
@@ -786,5 +794,6 @@ fuse_operations fuse_ops::get_fuse_ops(void)
 	fops.chown = chown;
 	fops.utimens = utimens;
 
+	fops.truncate = truncate;
 	return fops;
 }

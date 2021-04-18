@@ -27,7 +27,8 @@ int read(const char* path, char* buffer, size_t size, off_t offset, struct fuse_
 int write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info);
 int chmod(const char* path, mode_t mode, struct fuse_file_info* file_info);
 int chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_info* file_info);
-int utimens(const char *, const struct timespec tv[2], struct fuse_file_info *fi);
+int utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi);
+int truncate (const char *path, off_t, struct fuse_file_info *fi);
 
 fuse_operations get_fuse_ops(void);
 
