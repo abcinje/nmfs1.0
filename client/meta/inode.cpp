@@ -130,6 +130,38 @@ void inode::sync()
 	meta_pool->write(INODE, std::to_string(this->i_ino), raw.get(), REG_INODE_SIZE + this->link_target_len, 0);
 }
 
+void inode::permission_check(int mask){
+	global_logger.log(inode_ops, "Called permission_check");
+	bool check_read = (mask & R_OK) ? true : false;
+	bool check_write = (mask & W_OK) ? true : false;
+	bool check_exec = (mask & X_OK) ? true : false;
+	bool ret = true;
+
+	mode_t target_mode;
+	fuse_context *fuse_ctx = fuse_get_context();
+
+	if(fuse_ctx->uid == get_uid()){
+		target_mode = (get_mode() & S_IRWXU) >> 6;
+	} else if (fuse_ctx->gid == get_gid()){
+		target_mode = (get_mode() & S_IRWXG) >> 3;
+	} else {
+		target_mode = get_mode() & S_IRWXO;
+	}
+
+	if(check_read){
+		ret = ret && (target_mode & R_OK);
+	}
+	if(check_write){
+		ret = ret && (target_mode & W_OK);
+	}
+	if(check_exec){
+		ret = ret && (target_mode & X_OK);
+	}
+
+	if(!ret)
+		throw permission_denied("Permission Denied: ");
+}
+
 // getter
 mode_t inode::get_mode(){
 	std::scoped_lock scl{this->inode_mutex};
@@ -248,41 +280,6 @@ ino_t alloc_new_ino() {
 
 	c->increase_ino_offset();
 	return new_ino;
-}
-
-void permission_check(std::shared_ptr<inode> i, int mask){
-	global_logger.log(inode_ops, "Called permission_check");
-	bool check_read = (mask & R_OK) ? true : false;
-	bool check_write = (mask & W_OK) ? true : false;
-	bool check_exec = (mask & X_OK) ? true : false;
-	bool ret = true;
-
-	mode_t target_mode;
-	fuse_context *fuse_ctx = fuse_get_context();
-
-	if(fuse_ctx->uid == i->get_uid()){
-		target_mode = (i->get_mode() & S_IRWXU) >> 6;
-	} else if (fuse_ctx->gid == i->get_gid()){
-		target_mode = (i->get_mode() & S_IRWXG) >> 3;
-	} else {
-		target_mode = i->get_mode() & S_IRWXO;
-	}
-
-	if(check_read){
-		ret = ret && (target_mode & R_OK);
-	}
-	if(check_write){
-		ret = ret && (target_mode & W_OK);
-	}
-	if(check_exec){
-		ret = ret && (target_mode & X_OK);
-	}
-
-	if(!ret)
-        throw inode::permission_denied("Permission Denied: ");
-	else
-	    return;
-
 }
 
 int set_name_bound(int &start_name, int &end_name, std::string &path, int path_len){

@@ -41,7 +41,7 @@ shared_ptr<inode> directory_table::path_traversal(std::string path) {
 			target_inode = parent_dentry_table->get_child_inode(target_name);
 
 		if(S_ISDIR(target_inode->get_mode()))
-			permission_check(target_inode, X_OK);
+			target_inode->permission_check(X_OK);
 
 		parent_inode = target_inode;
 		if(S_ISDIR(parent_inode->get_mode()))

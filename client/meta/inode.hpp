@@ -63,6 +63,7 @@ public:
 	unique_ptr<char> serialize(void);
 	void deserialize(const char *value);
 	void sync();
+	void permission_check(int mask);
 
 	// getter
 	mode_t get_mode();
@@ -94,10 +95,8 @@ public:
 	void set_leader_id(uint64_t client_id);
 	void set_link_target_len(int len);
 	void set_link_target_name(const char *name);
-
 };
 
 ino_t alloc_new_ino();
-void permission_check(std::shared_ptr<inode> i, int mask);
 int set_name_bound(int &start_name, int &end_name, std::string &path, int path_len);
 #endif /* _INODE_HPP_ */

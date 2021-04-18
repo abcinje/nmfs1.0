@@ -107,7 +107,7 @@ int fuse_ops::access(const char* path, int mask) {
 
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
-		permission_check(i, mask);
+		i->permission_check(mask);
 
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
