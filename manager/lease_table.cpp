@@ -6,13 +6,12 @@ lease_table::lease_entry::lease_entry(void) : due(system_clock::now() + millisec
 {
 }
 
-bool lease_table::lease_entry::cas(int64_t *new_due)
+bool lease_table::lease_entry::cas(system_clock::time_point &new_due)
 {
 	std::unique_lock<std::mutex>(m);
 
 	if (system_clock::now() >= due) {
-		due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
-		*new_due = due.time_since_epoch().count();
+		new_due = due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
 		return true;
 	}
 
@@ -26,7 +25,7 @@ lease_table::~lease_table(void)
 	exit(1);
 }
 
-int lease_table::acquire(ino_t ino, int64_t *new_due)
+int lease_table::acquire(ino_t ino, system_clock::time_point &new_due)
 {
 	lease_entry *e;
 	bool found = false;

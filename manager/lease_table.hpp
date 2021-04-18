@@ -21,7 +21,7 @@ private:
 		lease_entry(void);
 		~lease_entry(void) = default;
 
-		bool cas(int64_t *new_due);
+		bool cas(system_clock::time_point &new_due);
 	};
 
 	std::shared_mutex sm;
@@ -31,7 +31,7 @@ public:
 	lease_table(void) = default;
 	~lease_table(void);
 
-	int acquire(ino_t ino, int64_t *new_due);
+	int acquire(ino_t ino, system_clock::time_point &new_due);
 };
 
 #endif /* _LEASE_TABLE_H_ */

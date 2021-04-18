@@ -1,12 +1,16 @@
 #include "lease_impl.hpp"
 
+#include <chrono>
+
+using namespace std::chrono;
+
 Status lease_impl::acquire(ServerContext *context, const lease_request *request, lease_response *response)
 {
-	int64_t due;
-	int ret = table.acquire(request->ino(), &due);
+	system_clock::time_point due;
+	int ret = table.acquire(request->ino(), due);
 
 	response->set_ret(ret);
-	response->set_due(ret == -1 ? 0 : due);
+	response->set_due(ret == -1 ? 0 : due.time_since_epoch().count());
 
 	return Status::OK;
 }
