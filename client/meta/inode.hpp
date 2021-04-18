@@ -40,14 +40,12 @@ private:
 public:
 	class no_entry : public runtime_error {
 	public:
-		no_entry(const char *msg);
 		no_entry(const string &msg);
 		const char *what(void);
 	};
 
 	class permission_denied : public runtime_error {
 	public:
-		permission_denied(const char *msg);
 		permission_denied(const string &msg);
 		const char *what(void);
 	};

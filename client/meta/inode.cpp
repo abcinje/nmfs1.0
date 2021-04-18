@@ -5,22 +5,19 @@ using std::runtime_error;
 extern rados_io *meta_pool;
 std::recursive_mutex alloc_mutex;
 
-inode::no_entry::no_entry(const char *msg) : runtime_error(msg){
+inode::no_entry::no_entry(const string &msg) : runtime_error(msg)
+{
 }
-inode::no_entry::no_entry(const string &msg) : runtime_error(msg.c_str()){
 
-}
 const char *inode::no_entry::what(void)
 {
 	return runtime_error::what();
 }
 
-inode:: permission_denied::permission_denied(const char *msg) : runtime_error(msg){
-
+inode::permission_denied::permission_denied(const string &msg) : runtime_error(msg)
+{
 }
-inode:: permission_denied::permission_denied(const string &msg) : runtime_error(msg.c_str()){
 
-}
 const char *inode::permission_denied::what(void)
 {
 	return runtime_error::what();
