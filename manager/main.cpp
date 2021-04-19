@@ -4,7 +4,7 @@
 
 using std::string;
 
-#include "lease_impl.hpp"
+#include "manager_impl.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 	}
 
 	string server_address(string(argv[1]) + ":" + string(argv[2]));
-	lease_impl service;
+	manager_impl service;
 
 	ServerBuilder builder;
 	builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
