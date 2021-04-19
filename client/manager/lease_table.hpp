@@ -29,8 +29,8 @@ public:
 	lease_table(void) = default;
 	~lease_table(void);
 
-	bool within_due(ino_t ino) const;
-	void update_due(ino_t ino, const system_clock::time_point &new_due);
+	bool check(ino_t ino) const;
+	void update(ino_t ino, const system_clock::time_point &new_due);
 };
 
 #endif /* _LEASE_TABLE_HPP_ */

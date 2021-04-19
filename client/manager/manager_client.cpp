@@ -9,7 +9,7 @@ manager_client::manager_client(std::shared_ptr<Channel> channel) : stub(manager:
 
 bool manager_client::lease_access(ino_t ino)
 {
-	return table.within_due(ino);
+	return table.check(ino);
 }
 
 int manager_client::lease_acquire(ino_t ino)
@@ -25,7 +25,7 @@ int manager_client::lease_acquire(ino_t ino)
 
 	if (status.ok()) {
 		system_clock::time_point due{system_clock::duration{response.due()}};
-		table.update_due(ino, due);
+		table.update(ino, due);
 		return response.ret();
 	} else {
 		std::cerr << "[" << status.error_code() << "] " << status.error_message() << std::endl;
