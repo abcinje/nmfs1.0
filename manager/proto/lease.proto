@@ -1,1 +1,14 @@
-../../proto/lease.proto
+syntax = "proto3";
+
+service lease {
+  rpc acquire(lease_request) returns (lease_response) {}
+}
+
+message lease_request {
+  int64 ino = 1;
+}
+
+message lease_response {
+  int32 ret = 1;
+  int64 due = 2;
+}
