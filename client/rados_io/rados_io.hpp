@@ -28,6 +28,7 @@ private:
 	size_t read_obj(const string &key, char *value, size_t len, off_t offset);
 	size_t write_obj(const string &key, const char *value, size_t len, off_t offset);
 	void zerofill(enum obj_category category, const string &key, size_t len, off_t offset);
+	void truncate_obj(const string &key, uint64_t cut_size);
 
 public:
 	class no_such_object : public runtime_error {
@@ -51,6 +52,7 @@ public:
 	size_t write(enum obj_category category, const string &key, const char *value, size_t len, off_t offset);
 	bool exist(enum obj_category category, const string &key);
 	void remove(enum obj_category category, const string &key);
+	int truncate(enum obj_category, const string &key, size_t offset);
 };
 
 #endif /* _RADOS_IO_HPP_ */

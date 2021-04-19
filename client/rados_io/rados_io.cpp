@@ -32,7 +32,6 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 	uint64_t size;
 	time_t mtime;
 	int ret;
-	struct timeval tv = {5, 0};
 
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(value, len);
 
@@ -58,7 +57,6 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	global_logger.log(rados_io_ops,"Called rados_io::write_obj()");
 	global_logger.log(rados_io_ops,"key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
 	int ret;
-	struct timeval tv = {5, 0};
 
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(const_cast<char *>(value), len);
 
@@ -98,6 +96,22 @@ void rados_io::zerofill(enum obj_category category, const string &key, size_t le
 	}
 
 	delete []zeros;
+}
+
+void rados_io::truncate_obj(const string &key, uint64_t cut_size) {
+	global_logger.log(rados_io_ops,"Called rados_io::write_obj()");
+	global_logger.log(rados_io_ops,"key : " + key + " cut_size : " + std::to_string(cut_size));
+	int ret;
+
+	while(ioctx.lock_exclusive(key, key, key, key, NULL, 0) != 0);
+	ret = ioctx.trunc(key, cut_size);
+	ioctx.unlock(key, key, key);
+
+	if (ret == 0) {
+		global_logger.log(rados_io_ops, "Truncate an object. (key: \"" + key + "\")");
+	} else {
+		throw runtime_error("rados_io::truncate_obj() failed");
+	}
 }
 
 rados_io::no_such_object::no_such_object(const string &msg, size_t nb) : runtime_error(msg), num_bytes(nb)
@@ -199,7 +213,7 @@ size_t rados_io::write(enum obj_category category, const string &key, const char
 
 		string prev_obj_key = p_key + get_postfix(prev_obj_num);
 
-		int ret = ioctx.stat(prev_obj_key, &size, &mtime);
+		ret = ioctx.stat(prev_obj_key, &size, &mtime);
 		if (ret >= 0) {
 			inf_file_size = (prev_obj_num << OBJ_BITS) + size;
 			break;
@@ -283,4 +297,65 @@ void rados_io::remove(enum obj_category category, const string &key)
 			throw runtime_error("rados_io::remove() failed");
 		}
 	}
+}
+
+int rados_io::truncate(enum obj_category category, const string &key, size_t offset){
+	global_logger.log(rados_io_ops, "Called rados_io::truncate()");
+	global_logger.log(rados_io_ops, "key : " + key);
+
+	string p_key = get_prefix(category) + key;
+
+	int ret;
+	size_t inf_file_size;
+
+	for (int64_t prev_obj_num = offset >> OBJ_BITS; prev_obj_num >= 0; prev_obj_num--) {
+		uint64_t size;
+		time_t mtime;
+
+		string prev_obj_key = p_key + get_postfix(prev_obj_num);
+
+		ret = ioctx.stat(prev_obj_key, &size, &mtime);
+		if (ret >= 0) {
+			inf_file_size = (prev_obj_num << OBJ_BITS) + size;
+			break;
+		} else if (ret != -ENOENT) {
+			throw runtime_error("rados_io::truncate() failed (stat() failed)");
+		}
+	}
+
+	/* There are no such RADOS objects. */
+	if (ret == -ENOENT) {
+		throw runtime_error("rados_io::truncate() failed (target dosen't have any object)");
+	}
+
+	/* Do zerofill */
+	/* If inf_file_size < offset, inf_file_size is equal to the file size */
+	if (inf_file_size < offset) {
+		zerofill(category, key, offset - inf_file_size, inf_file_size);
+		return 0;
+	}
+
+	/* Now it's time to truncate. */
+	uint64_t obj_num = offset >> OBJ_BITS;
+	string obj_key = p_key + get_postfix(obj_num);
+	size_t cut_size = (offset - (obj_num * OBJ_SIZE));
+	truncate_obj(obj_key, cut_size);
+
+	/* if there is remained object, remove them */
+	while(1){
+		uint64_t size;
+		time_t mtime;
+
+		obj_num = obj_num + 1;
+		string removed_obj_key = p_key + get_postfix(obj_num);
+
+		ret = ioctx.stat(removed_obj_key, &size, &mtime);
+		if (ret >= 0) {
+			ioctx.remove(removed_obj_key);
+		} else if (ret == -ENOENT) {
+			break;
+		}
+	}
+
+	return 0;
 }

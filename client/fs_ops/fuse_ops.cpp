@@ -20,6 +20,7 @@ directory_table *indexing_table;
 std::mutex file_handler_mutex;
 std::mutex atomic_mutex;
 std::map<ino_t, unique_ptr<file_handler>> fh_list;
+unsigned int fuse_capable;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 {
@@ -57,6 +58,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	indexing_table = new directory_table();
 
 	config->nullpath_ok = 0;
+	fuse_capable = info->capable;
 	return (void *)this_client;
 }
 
@@ -758,7 +760,38 @@ int fuse_ops::truncate (const char *path, off_t offset, struct fuse_file_info *f
 	global_logger.log(fuse_op, "Called truncate()");
 	global_logger.log(fuse_op, "path : " + std::string(path) + " offset : " + std::to_string(offset));
 
-	return -E2BIG;
+	int ret;
+	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+	unique_ptr<std::string> file_name = get_filename_from_path(path);
+	try {
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+
+		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
+
+		if(S_ISDIR(i->get_mode()))
+			return -EISDIR;
+
+		{
+			std::scoped_lock scl{atomic_mutex};
+
+			if((fuse_capable & FUSE_CAP_HANDLE_KILLPRIV)) {
+				mode_t mask = (!S_ISUID) & (!S_ISGID);
+				i->set_mode( mask & i->get_mode());
+			}
+
+			ret = data_pool->truncate(DATA, std::to_string(i->get_ino()), offset);
+
+			i->set_size(offset);
+			i->sync();
+		}
+	} catch(inode::no_entry &e) {
+		return -ENOENT;
+	} catch(inode::permission_denied &e) {
+		return -EACCES;
+	}
+
+	return ret;
 }
 
 fuse_operations fuse_ops::get_fuse_ops(void)
