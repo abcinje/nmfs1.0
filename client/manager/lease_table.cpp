@@ -25,7 +25,7 @@ lease_table::~lease_table(void)
 	exit(1);
 }
 
-bool lease_table::within_due(ino_t ino) const
+bool lease_table::check(ino_t ino) const
 {
 	lease_entry *e;
 
@@ -42,7 +42,7 @@ bool lease_table::within_due(ino_t ino) const
 	return system_clock::now() < e->get_due();
 }
 
-void lease_table::update_due(ino_t ino, const system_clock::time_point &new_due)
+void lease_table::update(ino_t ino, const system_clock::time_point &new_due)
 {
 	lease_entry *e;
 	bool found = false;
