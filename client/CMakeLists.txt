@@ -18,7 +18,6 @@ add_custom_command(
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 find_package(PkgConfig REQUIRED)
-find_library(rados librados.so)
 pkg_check_modules(FUSE3 REQUIRED fuse3)
 
 add_executable(
@@ -35,16 +34,10 @@ add_executable(
   # util
   util.cpp
 
-  # logger
-  logger/logger.cpp
-
   # meta
   meta/inode.cpp
   meta/dentry.cpp
   meta/file_handler.cpp
-
-  # rados_io
-  rados_io/rados_io.cpp
 
   # client
   client/client.cpp
@@ -67,11 +60,12 @@ add_executable(
 
 target_link_libraries(
   nmfs
+  log
+  rio
   ${REFLECTION}
   ${GRPC_GRPCPP}
   ${PROTOBUF_LIBPROTOBUF}
   ${FUSE3_LIBRARIES}
-  rados
 )
 target_include_directories(nmfs PUBLIC ${FUSE3_INCLUDE_DIRS})
 target_compile_options(nmfs PUBLIC ${FUSE3_CFLAGS_OTHER})
