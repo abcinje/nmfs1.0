@@ -325,7 +325,8 @@ int rados_io::truncate(enum obj_category category, const string &key, size_t off
 
 	/* There are no such RADOS objects. */
 	if (ret == -ENOENT) {
-		throw runtime_error("rados_io::truncate() failed (target dosen't have any object)");
+		zerofill(category, key, offset, 0);
+		return 0;
 	}
 
 	/* Do zerofill */
