@@ -339,11 +339,12 @@ int rados_io::truncate(enum obj_category category, const string &key, size_t off
 	/* Now it's time to truncate. */
 	uint64_t obj_num = offset >> OBJ_BITS;
 	string obj_key = p_key + get_postfix(obj_num);
-	size_t cut_size = (offset - (obj_num * OBJ_SIZE));
+
+	size_t cut_size = (offset - (obj_num << OBJ_BITS));
 	truncate_obj(obj_key, cut_size);
 
-	/* if there is remained object, remove them */
-	while(1){
+	/* if there is remaining object, remove them */
+	while(1) {
 		uint64_t size;
 		time_t mtime;
 
