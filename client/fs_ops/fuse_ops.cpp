@@ -775,10 +775,7 @@ int fuse_ops::truncate (const char *path, off_t offset, struct fuse_file_info *f
 		{
 			std::scoped_lock scl{atomic_mutex};
 
-			if((fuse_capable & FUSE_CAP_HANDLE_KILLPRIV)) {
-				mode_t mask = (!S_ISUID) & (!S_ISGID);
-				i->set_mode( mask & i->get_mode());
-			}
+			/*TODO : clear setuid, setgid*/
 
 			ret = data_pool->truncate(DATA, std::to_string(i->get_ino()), offset);
 
