@@ -1,7 +1,7 @@
 syntax = "proto3";
 
-service manager {
-  rpc lease_acquire(lease_request) returns (lease_response) {}
+service lease {
+  rpc acquire(lease_request) returns (lease_response) {}
 }
 
 message lease_request {
