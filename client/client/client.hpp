@@ -2,7 +2,7 @@
 #define NMFS0_CLIENT_HPP
 
 #include <mutex>
-#include "../rados_io/rados_io.hpp"
+#include "../../lib/rados_io/rados_io.hpp"
 
 class client {
 private:

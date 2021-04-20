@@ -5,8 +5,8 @@
 #include <utility>
 #include <mutex>
 #include "../fs_ops/fuse_ops.hpp"
-#include "../rados_io/rados_io.hpp"
-#include "../logger/logger.hpp"
+#include "../../lib/rados_io/rados_io.hpp"
+#include "../../lib/logger/logger.hpp"
 
 #define MAX_DENTRY_OBJ_SIZE (4 * 1024 * 1024)
 using std::unique_ptr;

@@ -7,8 +7,8 @@
 #include <string>
 #include <mutex>
 #include "../fs_ops/fuse_ops.hpp"
-#include "../rados_io/rados_io.hpp"
-#include "../logger/logger.hpp"
+#include "../../lib/rados_io/rados_io.hpp"
+#include "../../lib/logger/logger.hpp"
 #include "dentry.hpp"
 #include "../client/client.hpp"
 
