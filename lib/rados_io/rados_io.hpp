@@ -52,7 +52,7 @@ public:
 	size_t write(enum obj_category category, const string &key, const char *value, size_t len, off_t offset);
 	bool exist(enum obj_category category, const string &key);
 	void remove(enum obj_category category, const string &key);
-	int truncate(enum obj_category, const string &key, size_t offset);
+	int truncate(enum obj_category category, const string &key, size_t offset);
 };
 
 #endif /* _RADOS_IO_HPP_ */
