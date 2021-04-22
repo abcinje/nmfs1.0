@@ -58,6 +58,9 @@ public:
 	/* TODO : add permission check */
 	inode(ino_t ino);
 
+	/* parent constructor for remote_inode */
+	inode();
+
 	void copy(inode *src);
 	void fill_stat(struct stat *s);
 	unique_ptr<char> serialize(void);

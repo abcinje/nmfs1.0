@@ -63,7 +63,9 @@ inode::inode(ino_t ino)
 		throw no_entry("No such file or Directory: in inode(ino) constructor");
 	}
 }
+inode::inode(){
 
+}
 void inode::copy(inode *src)
 {
 	global_logger.log(inode_ops, "Called inode.copy()");

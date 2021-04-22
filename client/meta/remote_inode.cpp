@@ -3,6 +3,5 @@
 //
 
 #include "remote_inode.hpp"
-remote_inode::remote_inode(std::string address){
-
+remote_inode::remote_inode(std::string address) : inode(), address(address) {
 }
