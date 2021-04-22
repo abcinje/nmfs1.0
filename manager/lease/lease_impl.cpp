@@ -1,10 +1,10 @@
-#include "manager_impl.hpp"
+#include "lease_impl.hpp"
 
 #include <chrono>
 
 using namespace std::chrono;
 
-Status manager_impl::lease_acquire(ServerContext *context, const lease_request *request, lease_response *response)
+Status lease_impl::acquire(ServerContext *context, const lease_request *request, lease_response *response)
 {
 	system_clock::time_point due;
 	int ret = table.acquire(request->ino(), due);

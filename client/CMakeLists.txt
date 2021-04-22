@@ -1,17 +1,17 @@
 # Protobuf files
-get_filename_component(manager_proto "proto/manager.proto" REALPATH)
-get_filename_component(manager_proto_path "${manager_proto}" PATH)
+get_filename_component(lease_proto "proto/lease.proto" REALPATH)
+get_filename_component(lease_proto_path "${lease_proto}" PATH)
 
 add_custom_command(
-  OUTPUT "manager.pb.cc" "manager.pb.h" "manager.grpc.pb.cc" "manager.grpc.pb.h"
+  OUTPUT "lease.pb.cc" "lease.pb.h" "lease.grpc.pb.cc" "lease.grpc.pb.h"
   COMMAND ${PROTOBUF_PROTOC}
   ARGS
     --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
     --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
-    -I "${manager_proto_path}"
+    -I "${lease_proto_path}"
     --plugin=protoc-gen-grpc="${GRPC_CPP_PLUGIN_EXECUTABLE}"
-    "${manager_proto}"
-  DEPENDS "${manager_proto}"
+    "${lease_proto}"
+  DEPENDS "${lease_proto}"
 )
 
 # Include header files
@@ -50,12 +50,12 @@ add_executable(
   in_memory/dentry_table.cpp
 
   # manager protobuf
-  "${CMAKE_CURRENT_BINARY_DIR}/manager.pb.cc"
-  "${CMAKE_CURRENT_BINARY_DIR}/manager.grpc.pb.cc"
+  "${CMAKE_CURRENT_BINARY_DIR}/lease.pb.cc"
+  "${CMAKE_CURRENT_BINARY_DIR}/lease.grpc.pb.cc"
 
   # lease
+  manager/lease_client.cpp
   manager/lease_table.cpp
-  manager/manager_client.cpp
 )
 
 target_link_libraries(

@@ -275,6 +275,36 @@ bool rados_io::exist(enum obj_category category, const string &key)
 	}
 }
 
+bool rados_io::stat(enum obj_category category, const string &key, size_t &size)
+{
+	global_logger.log(rados_io_ops, "Called rados_io::stat()");
+	global_logger.log(rados_io_ops, "key : " + key);
+
+	string p_key = get_prefix(category) + key;
+
+	size = 0;
+	int ret;
+	uint64_t obj_size;
+	time_t mtime;
+
+	/* We need to check all the RADOS objects */
+	for (uint64_t obj_num = 0; ; obj_num++) {
+		ret = ioctx.stat(p_key + get_postfix(obj_num), &obj_size, &mtime);
+
+		if (ret == -ENOENT && obj_num == 0) {
+			global_logger.log(rados_io_ops, "The object with key \"" + key + "\" doesn't exist.");
+			return false;
+		} else if (ret == -ENOENT) {
+			global_logger.log(rados_io_ops, "The object with key \"" + key + "\" has " + std::to_string(size) + " bytes of data.");
+			return true;
+		} else if (ret < 0) {
+			throw runtime_error("rados_io::stat() failed");
+		} else {
+			size += obj_size;
+		}
+	}
+}
+
 void rados_io::remove(enum obj_category category, const string &key)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::remove()");
