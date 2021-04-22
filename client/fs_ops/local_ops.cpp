@@ -58,7 +58,7 @@ int local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t m
 	fuse_context *fuse_ctx = fuse_get_context();
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	shared_ptr<inode> i = std::make_shared<local_inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
+	shared_ptr<inode> i = std::make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
 	parent_dentry_table->create_child_inode(new_child_name, i);
 
 	client *c = (client *) (fuse_ctx->private_data);
@@ -104,7 +104,7 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 	if (dst_parent_dentry_table->check_child_inode(symlink_name->data()) != -1)
 		return -EEXIST;
 
-	shared_ptr<inode> symlink_i = std::make_shared<local_inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
+	shared_ptr<inode> symlink_i = std::make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
 
 	symlink_i->set_size(std::string(src).length());
 
@@ -223,7 +223,7 @@ int local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t 
 	fuse_context *fuse_ctx = fuse_get_context();
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	shared_ptr<inode> i = std::make_shared<local_inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
+	shared_ptr<inode> i = std::make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
 
 	i->sync();
 
