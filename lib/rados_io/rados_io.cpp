@@ -34,10 +34,7 @@ size_t rados_io::read_obj(const string &key, char *value, size_t len, off_t offs
 	int ret;
 
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(value, len);
-
-	while(ioctx.lock_shared(key, key, key, key, key, NULL, 0) != 0);
 	ret = ioctx.read(key, bl, len, offset);
-	ioctx.unlock(key, key, key);
 
 	if (ret >= 0) {
 		global_logger.log(rados_io_ops,"Read an object. (key: \"" + key + "\")");
@@ -59,10 +56,7 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	int ret;
 
 	librados::bufferlist bl = librados::bufferlist::static_from_mem(const_cast<char *>(value), len);
-
-	while(ioctx.lock_exclusive(key, key, key, key, NULL, 0) != 0);
 	ret = ioctx.write(key, bl, len, offset);
-	ioctx.unlock(key, key, key);
 
 	if (ret >= 0) {
 		global_logger.log(rados_io_ops, "Wrote an object. (key: \"" + key + "\")");
@@ -102,10 +96,7 @@ void rados_io::truncate_obj(const string &key, uint64_t cut_size) {
 	global_logger.log(rados_io_ops,"Called rados_io::write_obj()");
 	global_logger.log(rados_io_ops,"key : " + key + " cut_size : " + std::to_string(cut_size));
 	int ret;
-
-	while(ioctx.lock_exclusive(key, key, key, key, NULL, 0) != 0);
 	ret = ioctx.trunc(key, cut_size);
-	ioctx.unlock(key, key, key);
 
 	if (ret == 0) {
 		global_logger.log(rados_io_ops, "Truncate an object. (key: \"" + key + "\")");
