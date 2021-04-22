@@ -49,7 +49,7 @@ unique_ptr<char[]> dentry::serialize()
 {
 	global_logger.log(dentry_ops, "Called dentry.serialize()");
 	std::scoped_lock scl{this->dentry_mutex};
-	int raw_size = sizeof(uint64_t) + (this->get_child_num()) * sizeof(int) + (this->get_total_name_legth()) + (this->get_child_num())*sizeof(ino_t) + 1;
+	size_t raw_size = sizeof(uint64_t) + (this->get_child_num()) * sizeof(int) + (this->get_total_name_legth()) + (this->get_child_num())*sizeof(ino_t) + 1;
 	unique_ptr<char[]> raw = std::make_unique<char[]>(raw_size);
 	char *pointer = raw.get();
 
@@ -114,7 +114,7 @@ void dentry::sync()
 	global_logger.log(dentry_ops,"Called dentry.sync()");
 
 	std::scoped_lock scl{this->dentry_mutex};
-	int raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
+	size_t raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
 	unique_ptr<char[]> raw = this->serialize();
 	meta_pool->write(DENTRY, std::to_string(this->this_ino), raw.get(), raw_size - 1, 0);
 }

@@ -277,7 +277,7 @@ size_t local_read(shared_ptr<inode> i, char* buffer, size_t size, off_t offset) 
 }
 
 size_t local_write(shared_ptr<inode> i, const char* buffer, size_t size, off_t offset, int flags) {
-	int written_len = 0;
+	size_t written_len = 0;
 
 	if(flags & O_APPEND) {
 		offset = i->get_size();

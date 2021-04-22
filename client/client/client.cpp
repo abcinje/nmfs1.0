@@ -10,7 +10,7 @@
 extern rados_io *meta_pool;
 client::client() {
 	std::unique_ptr<char[]> client_list = std::make_unique<char[]>(MAX_CLIENT_NUM);
-	int client_list_len;
+	size_t client_list_len;
 
 	client_list_len = meta_pool->read(CLIENT, "client.list", client_list.get(), MAX_CLIENT_NUM, 0);
 
@@ -49,7 +49,7 @@ client::client(int id) : client_id(id), per_client_ino_offset(0) {
 
 client::~client() {
 	std::unique_ptr<char[]> client_list = std::make_unique<char[]>(MAX_CLIENT_NUM);
-	int client_list_len;
+	size_t client_list_len;
 
 	client_list_len = meta_pool->read(CLIENT, "client.list", client_list.get(), MAX_CLIENT_NUM, 0);
 	client_list[this->client_id] = 'x';

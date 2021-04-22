@@ -614,7 +614,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 	global_logger.log(fuse_op, "Called read()");
 	global_logger.log(fuse_op, "path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " + std::to_string(offset));
 
-	int read_len = 0;
+	size_t read_len = 0;
 
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
@@ -625,17 +625,17 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 	} catch(inode::permission_denied &e) {
 		return -EACCES;
 	} catch(rados_io::no_such_object &e) {
-		return e.num_bytes;
+		return (int)e.num_bytes;
 	}
 
-	return read_len;
+	return (int)read_len;
 }
 
 int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t offset, struct fuse_file_info* file_info) {
 	global_logger.log(fuse_op, "Called write()");
 	global_logger.log(fuse_op, "path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " + std::to_string(offset));
 
-	int written_len = 0;
+	size_t written_len = 0;
 
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
@@ -660,7 +660,7 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 		return -EACCES;
 	}
 
-	return written_len;
+	return (int)written_len;
 }
 
 int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_info) {
