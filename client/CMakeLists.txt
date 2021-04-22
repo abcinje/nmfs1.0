@@ -29,7 +29,7 @@ add_executable(
   # fs_ops
   fs_ops/local_ops.cpp
   fs_ops/fuse_ops.cpp
-  fs_ops/remote_ops.cpp`
+  fs_ops/remote_ops.cpp
 
   # util
   util.cpp
