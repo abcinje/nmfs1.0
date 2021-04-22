@@ -7,13 +7,6 @@
 #include "../meta/inode.hpp"
 #include "../meta/dentry.hpp"
 
-enum meta_location {
-    LOCAL = 0,
-    REMOTE,
-    UNKNOWN,
-    NOBODY /* temporaly status */
-};
-
 using std::shared_ptr;
 
 class dentry_table {
