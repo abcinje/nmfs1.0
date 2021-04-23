@@ -22,7 +22,6 @@ int local_release(ino_t ino, struct fuse_file_info* file_info);
 void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);
 void local_unlink(shared_ptr<inode> parent_i, std::string child_name);
 size_t local_read(shared_ptr<inode> i, char* buffer, size_t size, off_t offset);
-size_t local_read(shared_ptr<inode> i, char* buffer, size_t size, off_t offset);
 size_t local_write(shared_ptr<inode> i, const char* buffer, size_t size, off_t offset, int flags);
 void local_chmod(shared_ptr<inode> i, mode_t mode);
 void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid);

@@ -247,7 +247,16 @@ int local_release(shared_ptr<inode> i, struct fuse_file_info* file_info) {
 }
 
 int local_release(ino_t ino, struct fuse_file_info* file_info){
+	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+	{
+		std::scoped_lock<std::mutex> lock{file_handler_mutex};
+		it = fh_list.find(ino);
 
+		if (it == fh_list.end())
+			return -EIO;
+
+		fh_list.erase(it);
+	}
 }
 
 void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
@@ -339,16 +348,24 @@ void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid) {
 }
 
 void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]){
-	for (int tv_i = 0; tv_i < 2; tv_i++) {
-		if (tv[tv_i].tv_nsec == UTIME_NOW) {
-			struct timespec ts;
-			if (!timespec_get(&ts, TIME_UTC))
-				runtime_error("timespec_get() failed");
-			i->set_atime(ts);
-		} else if (tv[tv_i].tv_nsec == UTIME_OMIT) { ;
-		} else {
-			i->set_mtime(tv[tv_i]);
-		}
+	if (tv[0].tv_nsec == UTIME_NOW) {
+		struct timespec ts;
+		if (!timespec_get(&ts, TIME_UTC))
+			runtime_error("timespec_get() failed");
+		i->set_atime(ts);
+	} else if (tv[0].tv_nsec == UTIME_OMIT) { ;
+	} else {
+		i->set_atime(tv[0]);
+	}
+
+	if (tv[1].tv_nsec == UTIME_NOW) {
+		struct timespec ts;
+		if (!timespec_get(&ts, TIME_UTC))
+			runtime_error("timespec_get() failed");
+		i->set_mtime(ts);
+	} else if (tv[1].tv_nsec == UTIME_OMIT) { ;
+	} else {
+		i->set_mtime(tv[1]);
 	}
 
 	i->sync();
