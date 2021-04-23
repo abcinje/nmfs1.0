@@ -21,7 +21,7 @@ private:
 
 	std::recursive_mutex dentry_table_mutex;
 public:
-	explicit dentry_table(ino_t dir_ino);
+	explicit dentry_table(ino_t dir_ino, enum meta_location loc);
 	~dentry_table();
 
 	int create_child_inode(std::string filename, shared_ptr<inode> inode);

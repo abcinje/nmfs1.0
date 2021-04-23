@@ -1,6 +1,6 @@
 #include "dentry_table.hpp"
 
-dentry_table::dentry_table(ino_t dir_ino) : dir_ino(dir_ino){
+dentry_table::dentry_table(ino_t dir_ino, enum meta_location loc) : dir_ino(dir_ino), loc(loc){
 	/*
 	 * if LOCAL : pull_child_metadata() right after return to caller if dentry object exist
 	 * if REMOTE : don't call pull_child_metadata(), just add REMOTE info
@@ -20,15 +20,19 @@ dentry_table::~dentry_table() {
 int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
 	std::scoped_lock scl{this->dentry_table_mutex};
-	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
-	if(ret.second) {
-		ret.first->second = inode;
+	if(this->get_loc() == LOCAL) {
+		auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
+		if (ret.second) {
+			ret.first->second = inode;
 
-		this->dentries->add_new_child(filename, inode->get_ino());
-		this->dentries->sync();
-	} else {
-		global_logger.log(dentry_table_ops, "Already added file is tried to inserted");
-		return -1;
+			this->dentries->add_new_child(filename, inode->get_ino());
+			this->dentries->sync();
+		} else {
+			global_logger.log(dentry_table_ops, "Already added file is tried to inserted");
+			return -1;
+		}
+	} else if(this->get_loc() == REMOTE){
+		/* TODO */
 	}
 	return 0;
 }
@@ -50,24 +54,29 @@ int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode)
 int dentry_table::delete_child_inode(std::string filename) {
 	global_logger.log(dentry_table_ops, "Called delete_child_inode(" + filename + ")");
 	std::scoped_lock scl{this->dentry_table_mutex};
-	std::map<std::string, shared_ptr<inode>>::iterator it;
-	it = this->child_inodes.find(filename);
+	if(this->get_loc() == LOCAL) {
+		std::map < std::string, shared_ptr < inode >> ::iterator
+		it;
+		it = this->child_inodes.find(filename);
 
-	if(it == this->child_inodes.end()) {
-		global_logger.log(dentry_table_ops, "Non-existing file is tried to deleted");
-		return -1;
+		if (it == this->child_inodes.end()) {
+			global_logger.log(dentry_table_ops, "Non-existing file is tried to deleted");
+			return -1;
+		}
+
+		this->child_inodes.erase(it);
+
+		this->dentries->delete_child(filename);
+		this->dentries->sync();
+	} else if (this->get_loc() == REMOTE) {
+		/* TODO */
 	}
-
-	this->child_inodes.erase(it);
-
-	this->dentries->delete_child(filename);
-	this->dentries->sync();
 	return 0;
 }
 
 shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ")");
-	if(this->loc == LOCAL) {
+	if(this->get_loc() == LOCAL) {
 		std::scoped_lock scl{this->dentry_table_mutex};
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
@@ -78,7 +87,7 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 
 		/* TODO : returned inode could be dummy remote inode, So should find real inode from remote */
 		return it->second;
-	} else if (this->loc == REMOTE) {
+	} else if (this->get_loc() == REMOTE) {
 		/* TODO */
 	}
 
