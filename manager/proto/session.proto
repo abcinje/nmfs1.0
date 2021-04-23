@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+service session {
+  rpc mount(empty) returns (client_id) {}
+  rpc umount(empty) returns (empty) {}
+}
+
+message empty {}
+
+message client_id {
+  int32 id = 1;
+}
