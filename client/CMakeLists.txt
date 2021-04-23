@@ -14,6 +14,21 @@ add_custom_command(
   DEPENDS "${lease_proto}"
 )
 
+get_filename_component(rpc_proto "proto/rpc.proto" REALPATH)
+get_filename_component(rpc_proto_path "${rpc_proto}" PATH)
+
+add_custom_command(
+  OUTPUT "rpc.pb.cc" "rpc.pb.h" "rpc.grpc.pb.cc" "rpc.grpc.pb.h"
+  COMMAND ${PROTOBUF_PROTOC}
+  ARGS
+    --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
+    --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+    -I "${rpc_proto_path}"
+    --plugin=protoc-gen-grpc="${GRPC_CPP_PLUGIN_EXECUTABLE}"
+    "${rpc_proto}"
+  DEPENDS "${rpc_proto}"
+)
+
 # Include header files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -54,9 +69,16 @@ add_executable(
   "${CMAKE_CURRENT_BINARY_DIR}/lease.pb.cc"
   "${CMAKE_CURRENT_BINARY_DIR}/lease.grpc.pb.cc"
 
+  "${CMAKE_CURRENT_BINARY_DIR}/rpc.pb.cc"
+  "${CMAKE_CURRENT_BINARY_DIR}/rpc.grpc.pb.cc"
+
   # lease
   manager/lease_client.cpp
   manager/lease_table.cpp
+
+  #rpc
+  rpc/rpc_client.cpp
+  rpc/rpc_server.cpp
 )
 
 target_link_libraries(
