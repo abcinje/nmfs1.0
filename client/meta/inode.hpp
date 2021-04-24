@@ -67,6 +67,7 @@ public:
 
 	/* parent constructor for remote_inode */
 	inode();
+	virtual ~inode() = default;
 
 	void copy(inode *src);
 	void fill_stat(struct stat *s);
