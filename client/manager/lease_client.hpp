@@ -8,14 +8,14 @@
 #include <lease.pb.h>
 #include <lease.grpc.pb.h>
 
-#include "lease_table.hpp"
+#include "lease_table_client.hpp"
 
 using grpc::Channel;
 
 class lease_client {
 private:
 	std::unique_ptr<lease::Stub> stub;
-	lease_table table;
+	lease_table_client table;
 
 public:
 	lease_client(std::shared_ptr<Channel> channel);
