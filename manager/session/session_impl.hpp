@@ -30,7 +30,7 @@ private:
 
 	std::shared_ptr<rados_io> pool;
 	std::vector<char> map;
-	tsl::robin_map<std::string, uint32_t> imap;
+	tsl::robin_map<uint32_t, std::string> addrmap;
 
 	Status mount(ServerContext *context, const empty *dummy_in, client_id *id) override;
 	Status umount(ServerContext *context, const empty *dummy_in, empty *dummy_out) override;

@@ -9,6 +9,16 @@ Status session_impl::mount(ServerContext *context, const empty *dummy_in, client
 	uint32_t new_id;
 	std::string address;
 
+	/* address */
+	address = context->peer();
+
+	/* Check if the address is already in addrmap */
+	for (auto it = addrmap.cbegin(); it != addrmap.cend(); it++)
+		if (it->second == address) {
+			id->set_id(-1);
+			return Status::OK;
+		}
+
 	/* Choose a client id and update map */
 	if (map.size() == 0) {
 		map.push_back(INVALID);
@@ -34,17 +44,14 @@ Status session_impl::mount(ServerContext *context, const empty *dummy_in, client
 		}
 	}
 
-	/* address */
-	address = context->peer();
+	/* Record an <id, addr> pair */
+	addrmap[new_id] = address;
 
-	/* Record an <addr, id> pair */
-	imap[address] = new_id;
-
-	/* Store imap */
-	std::string imap_string;
-	for (auto it = imap.cbegin(); it != imap.cend(); it++)
-		imap_string += it->first + "<" + std::to_string(it->second) + "/";
-	pool->write(CLIENT, "client.imap", imap_string.data(), imap_string.size(), 0);
+	/* Store addrmap */
+	std::string addrmap_string;
+	for (auto it = addrmap.cbegin(); it != addrmap.cend(); it++)
+		addrmap_string += std::to_string(it->first) + ">" + it->second + "/";
+	pool->write(CLIENT, "client.addrmap", addrmap_string.data(), addrmap_string.size(), 0);
 
 	/* Store map */
 	pool->write(CLIENT, "client.map", map.data(), map.size(), 0);
@@ -62,13 +69,17 @@ Status session_impl::umount(ServerContext *context, const empty *dummy_in, empty
 	address = context->peer();
 
 	/* Erase an <addr, id> pair */
-	auto it = imap.find(address);
-	if (it != imap.end()) {
-		deleted_id = it->second;
-	} else {
+	tsl::robin_map<uint32_t, std::string>::const_iterator it;
+	for (it = addrmap.cbegin(); it != addrmap.cend(); it++)
+		if (it->second == address) {
+			deleted_id = it->first;
+			break;
+		}
+
+	if (it == addrmap.cend())
 		throw std::logic_error("session_impl::unmount() failed (Cannot find the client id)");
-	}
-	imap.erase(address);
+
+	addrmap.erase(deleted_id);
 
 	/* Update map */
 	map[deleted_id] = INVALID;
@@ -76,11 +87,11 @@ Status session_impl::umount(ServerContext *context, const empty *dummy_in, empty
 	/* Store map */
 	pool->write(CLIENT, "client.map", map.data(), map.size(), 0);
 
-	/* Store imap */
-	std::string imap_string;
-	for (auto it = imap.cbegin(); it != imap.cend(); it++)
-		imap_string += it->first + "<" + std::to_string(it->second) + "/";
-	pool->write(CLIENT, "client.imap", imap_string.data(), imap_string.size(), 0);
+	/* Store addrmap */
+	std::string addrmap_string;
+	for (it = addrmap.cbegin(); it != addrmap.cend(); it++)
+		addrmap_string += std::to_string(it->first) + ">" + it->second + "/";
+	pool->write(CLIENT, "client.addrmap", addrmap_string.data(), addrmap_string.size(), 0);
 
 	return Status::OK;
 }
@@ -94,19 +105,18 @@ session_impl::session_impl(std::shared_ptr<rados_io> meta_pool) : pool(meta_pool
 		pool->read(CLIENT, "client.map", map.data(), size, 0);
 	}
 
-	if (pool->stat(CLIENT, "client.imap", size)) {
-		std::string imap_value;
-		imap_value.resize(size);
-		pool->read(CLIENT, "client.imap", imap_value.data(), size, 0);
+	if (pool->stat(CLIENT, "client.addrmap", size)) {
+		std::string addrmap_string;
+		addrmap_string.resize(size);
+		pool->read(CLIENT, "client.addrmap", addrmap_string.data(), size, 0);
 
-		std::string delimiters("/<");
+		std::string delimiters("/>");
 		boost::char_separator<char> sep(delimiters.c_str());
-		boost::tokenizer<boost::char_separator<char>> tok(imap_value, sep);
+		boost::tokenizer<boost::char_separator<char>> tok(addrmap_string, sep);
 
 		for (auto it = tok.begin(); it != tok.end(); ) {
-			std::string address(*(it++));
 			uint32_t client_id = static_cast<uint32_t>(std::stoul(*(it++)));
-			imap[address] = client_id;
+			addrmap[client_id] = *(it++);
 		}
 	}
 }
