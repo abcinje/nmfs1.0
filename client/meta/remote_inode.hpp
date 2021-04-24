@@ -12,6 +12,9 @@ private :
     std::string address;
 public:
     remote_inode(std::string address);
+
+
+    void for_polymorphic() {};
 };
 
 

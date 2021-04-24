@@ -67,7 +67,6 @@ public:
 
 	/* parent constructor for remote_inode */
 	inode();
-	virtual ~inode() = default;
 
 	void copy(inode *src);
 	void fill_stat(struct stat *s);
@@ -106,6 +105,8 @@ public:
 	void set_loc(uint64_t loc);
 	void set_link_target_len(int len);
 	void set_link_target_name(const char *name);
+
+	virtual void for_polymorphic() {};
 };
 
 ino_t alloc_new_ino();
