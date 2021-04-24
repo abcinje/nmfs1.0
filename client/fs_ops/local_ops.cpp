@@ -85,8 +85,6 @@ void local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t 
 	/* TODO : separate make_new_child routine and become_leader routine */
 	shared_ptr<dentry_table> new_dentry_table = become_leader_of_new_dir(parent_i->get_ino(), i->get_ino());
 
-	client *c = (client *) (fuse_ctx->private_data);
-	i->set_loc(c->get_client_id());
 	i->set_size(new_dentry_table->get_total_name_legth());
 	i->sync();
 
