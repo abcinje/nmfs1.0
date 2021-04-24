@@ -3,13 +3,11 @@
 #include "../meta/file_handler.hpp"
 #include "../util.hpp"
 #include "local_ops.hpp"
+#include "remote_ops.hpp"
 #include <cstring>
-#include <map>
 #include <mutex>
 
 using namespace std;
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
 #define META_POOL "nmfs.meta2"
 #define DATA_POOL "nmfs.data2"
 
@@ -82,7 +80,6 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
-	std::scoped_lock scl{atomic_mutex};
 	try {
 		if(std::string(path) == "/") {
 			/* TODO : specific control for root directory */
@@ -97,7 +94,7 @@ int fuse_ops::getattr(const char* path, struct stat* stat, struct fuse_file_info
 			if(i->get_loc() == LOCAL) {
 				local_getattr(i, stat);
 			} else if (i->get_loc() == REMOTE) {
-				/* TODO */
+				remote_getattr(std::dynamic_pointer_cast<remote_inode>(i) ,stat);
 			}
 		}
 	} catch(inode::no_entry &e) {
@@ -119,7 +116,7 @@ int fuse_ops::access(const char* path, int mask) {
 		if(i->get_loc() == LOCAL) {
 			local_access(i, mask);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			remote_access(std::dynamic_pointer_cast<remote_inode>(i) ,mask);
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -145,7 +142,8 @@ int fuse_ops::symlink(const char *src, const char *dst){
 			std::scoped_lock scl{atomic_mutex};
 			ret = local_symlink(dst_parent_i, src, dst);
 		} else if (dst_parent_i->get_loc() == REMOTE) {
-			/* TODO */
+			std::scoped_lock scl{atomic_mutex};
+			ret = remote_symlink(std::dynamic_pointer_cast<remote_inode>(dst_parent_i), src, dst);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -175,7 +173,7 @@ int fuse_ops::readlink(const char* path, char* buf, size_t size)
 		if(i->get_loc() == LOCAL) {
 			ret = local_readlink(i, buf, size);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			ret = remote_readlink(std::dynamic_pointer_cast<remote_inode>(i), buf, size);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -199,7 +197,7 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 		if(i->get_loc() == LOCAL) {
 			ret = local_opendir(i, file_info);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -242,7 +240,7 @@ int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, of
 	if(i->get_loc() == LOCAL) {
 		local_readdir(i, buffer, filler);
 	} else if (i->get_loc() == REMOTE) {
-		/* TODO */
+		remote_readdir(std::dynamic_pointer_cast<remote_inode>(i), buffer, filler);
 	}
 
 	return 0;
@@ -261,7 +259,8 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 			std::scoped_lock scl{atomic_mutex};
 			local_mkdir(parent_i, *get_filename_from_path(path), mode);
 		} else if (parent_i->get_loc() == REMOTE) {
-			/* TODO */
+			std::scoped_lock scl{atomic_mutex};
+			remote_mkdir(std::dynamic_pointer_cast<remote_inode>(parent_i), *get_filename_from_path(path), mode);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -323,7 +322,8 @@ int fuse_ops::rename(const char* old_path, const char* new_path, unsigned int fl
 				std::scoped_lock scl{atomic_mutex};
 				ret = local_rename_same_parent(parent_i, old_path, new_path, flags);
 			} else if (parent_i->get_loc() == REMOTE) {
-				/* TODO */
+				std::scoped_lock scl{atomic_mutex};
+				ret = remote_rename_same_parent(std::dynamic_pointer_cast<remote_inode>(parent_i), old_path, new_path, flags);
 			}
 
 
@@ -399,7 +399,7 @@ int fuse_ops::open(const char* path, struct fuse_file_info* file_info){
 		if(i->get_loc() == LOCAL) {
 			ret = local_open(i, file_info);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			ret = remote_open(std::dynamic_pointer_cast<remote_inode>(i), file_info);
 		}
 
 	} catch (inode::no_entry &e) {
@@ -444,7 +444,8 @@ int fuse_ops::create(const char* path, mode_t mode, struct fuse_file_info* file_
 			std::scoped_lock scl{atomic_mutex};
 			local_create(parent_i, *get_filename_from_path(path), mode, file_info);
 		} else if (parent_i->get_loc() == REMOTE) {
-			/* TODO */
+			std::scoped_lock scl{atomic_mutex};
+			remote_create(std::dynamic_pointer_cast<remote_inode>(parent_i), *get_filename_from_path(path), mode, file_info);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -469,7 +470,8 @@ int fuse_ops::unlink(const char* path){
 			std::scoped_lock scl{atomic_mutex};
 			local_unlink(parent_i, *file_name);
 		} else if (parent_i->get_loc() == REMOTE) {
-			/* TODO */
+			std::scoped_lock scl{atomic_mutex};
+			remote_unlink(std::dynamic_pointer_cast<remote_inode>(parent_i), *file_name);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -492,7 +494,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 		if(i->get_loc() == LOCAL) {
 			read_len = local_read(i, buffer, size, offset);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			read_len = remote_read(std::dynamic_pointer_cast<remote_inode>(i), buffer, size, offset);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -519,7 +521,8 @@ int fuse_ops::write(const char* path, const char* buffer, size_t size, off_t off
 			std::scoped_lock scl{atomic_mutex};
 			written_len = local_write(i, buffer, size, offset, file_info->flags);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			std::scoped_lock scl{atomic_mutex};
+			written_len = remote_write(std::dynamic_pointer_cast<remote_inode>(i), buffer, size, offset, file_info->flags);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -546,7 +549,7 @@ int fuse_ops::chmod(const char* path, mode_t mode, struct fuse_file_info* file_i
 		if(i->get_loc() == LOCAL) {
 			local_chmod(i, mode);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			remote_chmod(std::dynamic_pointer_cast<remote_inode>(i), mode);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -573,7 +576,7 @@ int fuse_ops::chown(const char* path, uid_t uid, gid_t gid, struct fuse_file_inf
 		if(i->get_loc() == LOCAL) {
 			local_chown(i, uid, gid);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			remote_chown(std::dynamic_pointer_cast<remote_inode>(i), uid, gid);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -600,7 +603,7 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 		if(i->get_loc() == LOCAL) {
 			local_utimens(i, tv);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			remote_utimens(std::dynamic_pointer_cast<remote_inode>(i), tv);
 		}
 
 	} catch(inode::no_entry &e) {
@@ -612,7 +615,7 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	return 0;
 }
 
-int fuse_ops::truncate (const char *path, off_t offset, struct fuse_file_info *fi){
+int fuse_ops::truncate(const char *path, off_t offset, struct fuse_file_info *fi){
 	global_logger.log(fuse_op, "Called truncate()");
 	global_logger.log(fuse_op, "path : " + std::string(path) + " offset : " + std::to_string(offset));
 
@@ -628,7 +631,7 @@ int fuse_ops::truncate (const char *path, off_t offset, struct fuse_file_info *f
 		if(i->get_loc() == LOCAL) {
 			ret = local_truncate(i, offset);
 		} else if (i->get_loc() == REMOTE) {
-			/* TODO */
+			ret = remote_truncate(std::dynamic_pointer_cast<remote_inode>(i), offset);
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
