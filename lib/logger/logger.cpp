@@ -13,6 +13,10 @@ void logger::log(enum code_location location, std::string message)
 			location_str = "fuse_operations";
 			message = CYAN + message + RESET;
 			break;
+		case local_fs_op:
+			location_str = "local_fs_operations";
+			message = CYAN + message + RESET;
+			break;
 		case rados_io_ops:
 			location_str = "rados_io_ops";
 			break;

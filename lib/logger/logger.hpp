@@ -6,6 +6,7 @@
 
 enum code_location {
 	fuse_op = 0,
+	local_fs_op,
 	rados_io_ops,
 	dentry_ops,
 	inode_ops,
