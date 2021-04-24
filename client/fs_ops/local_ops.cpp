@@ -58,6 +58,8 @@ int local_releasedir(ino_t ino, struct fuse_file_info* file_info){
 
 		fh_list.erase(it);
 	}
+
+	return 0;
 }
 
 void local_readdir(shared_ptr<inode> i, void* buffer, fuse_fill_dir_t filler) {
@@ -257,6 +259,8 @@ int local_release(ino_t ino, struct fuse_file_info* file_info){
 
 		fh_list.erase(it);
 	}
+
+	return 0;
 }
 
 void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
