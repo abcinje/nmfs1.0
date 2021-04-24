@@ -29,6 +29,21 @@ add_custom_command(
   DEPENDS "${session_proto}"
 )
 
+get_filename_component(rpc_proto "proto/rpc.proto" ABSOLUTE)
+get_filename_component(rpc_proto_path "${rpc_proto}" PATH)
+
+add_custom_command(
+  OUTPUT "rpc.pb.cc" "rpc.pb.h" "rpc.grpc.pb.cc" "rpc.grpc.pb.h"
+  COMMAND ${PROTOBUF_PROTOC}
+  ARGS
+    --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
+    --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+    -I "${rpc_proto_path}"
+    --plugin=protoc-gen-grpc="${GRPC_CPP_PLUGIN_EXECUTABLE}"
+    "${rpc_proto}"
+  DEPENDS "${rpc_proto}"
+)
+
 # Include header files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -65,16 +80,22 @@ add_executable(
   in_memory/directory_table.cpp
   in_memory/dentry_table.cpp
 
-  # manager protobuf
+  # protobuf
   ${CMAKE_CURRENT_BINARY_DIR}/lease.pb.cc
   ${CMAKE_CURRENT_BINARY_DIR}/lease.grpc.pb.cc
   ${CMAKE_CURRENT_BINARY_DIR}/session.pb.cc
   ${CMAKE_CURRENT_BINARY_DIR}/session.grpc.pb.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/rpc.pb.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/rpc.grpc.pb.cc
 
   # manager
   manager/lease_client.cpp
   manager/lease_table.cpp
   manager/session_client.cpp
+
+  #rpc
+  rpc/rpc_client.cpp
+  rpc/rpc_server.cpp
 )
 
 target_link_libraries(

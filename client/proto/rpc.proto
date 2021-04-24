@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+service remote_ops {
+  rpc rpc_getattr(rpc_common_request) returns (rpc_getattr_respond) {}
+  rpc rpc_access(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_opendir(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_readdir(rpc_common_request) returns (stream rpc_name_respond) {}
+  rpc rpc_mkdir(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_rmdir(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_symlink(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_readlink(rpc_common_request) returns (rpc_name_respond) {}
+  rpc rpc_rename_same_parent(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_rename_not_same_parent(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_open(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_create(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_unlink(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_read(rpc_common_request) returns (rpc_common_respond) {} /* TODO : FIX DATA I/O */
+  rpc rpc_write(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_chmod(rpc_common_request) returns (rpc_void_respond) {}
+  rpc rpc_chown(rpc_common_request) returns (rpc_void_respond) {}
+  rpc rpc_utimens(rpc_common_request) returns (rpc_void_respond) {}
+  rpc rpc_truncate(rpc_common_request) returns (rpc_common_respond) {}
+}
+
+/* FILE SYSTEM OPERATION REQUEST */
+message rpc_common_request {
+  uint64 	i_ino = 1;
+
+  uint32 	i_mode = 2;
+  uint32	i_uid = 3;
+  uint32 i_gid = 4;
+  uint64 i_nlink = 5;
+  int64 i_size = 6;
+  int64 a_sec = 7;
+  int64 a_nsec = 8;
+  int64 m_sec = 9;
+  int64 m_nsec = 10;
+}
+
+/* FILE SYSTEM OPERATION RESPOND */
+message rpc_common_respond {
+  sint32 ret = 1;
+}
+
+message rpc_void_respond {
+}
+
+message rpc_getattr_respond {
+  uint32 	i_mode = 1;
+  uint32	i_uid = 2;
+  uint32 i_gid = 3;
+  uint64 	i_ino = 4;
+  uint64 i_nlink = 5;
+  int64 i_size = 6;
+  int64 a_sec = 7;
+  int64 a_nsec = 8;
+  int64 m_sec = 9;
+  int64 m_nsec = 10;
+  int64 c_sec = 11;
+  int64 c_nsec = 12;
+}
+
+message rpc_name_respond {
+  string filename = 1;
+}

@@ -30,7 +30,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
-	leader_id = 0;
+	loc = LOCAL;
 	i_ino = root ? 0 : alloc_new_ino();
 }
 
@@ -44,7 +44,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const c
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
-	leader_id = 0;
+	loc = LOCAL;
 	i_ino = alloc_new_ino();
 
 	this->set_link_target_len(link_target_len);
@@ -63,9 +63,11 @@ inode::inode(ino_t ino)
 		throw no_entry("No such file or Directory: in inode(ino) constructor");
 	}
 }
-inode::inode(){
 
+inode::inode(){
+	loc = REMOTE;
 }
+
 void inode::copy(inode *src)
 {
 	global_logger.log(inode_ops, "Called inode.copy()");
@@ -204,9 +206,9 @@ struct timespec inode::get_ctime(){
 	return this->i_ctime;
 }
 
-uint64_t inode::get_leader_id() {
+uint64_t inode::get_loc() {
 	std::scoped_lock scl{this->inode_mutex};
-	return this->leader_id;
+	return this->loc;
 }
 int inode::get_link_target_len(){
 	std::scoped_lock scl{this->inode_mutex};
@@ -251,9 +253,9 @@ void inode::set_mtime(struct timespec mtime){
 	this->i_mtime = mtime;
 }
 
-void inode::set_leader_id(uint64_t client_id) {
+void inode::set_loc(uint64_t loc) {
 	std::scoped_lock scl{this->inode_mutex};
-	this->leader_id = client_id;
+	this->loc = loc;
 }
 void inode::set_link_target_len(int len){
 	std::scoped_lock scl{this->inode_mutex};

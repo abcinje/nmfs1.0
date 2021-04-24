@@ -5,13 +5,13 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 extern rados_io *meta_pool;
 extern rados_io *data_pool;
-extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
-extern std::mutex file_handler_mutex;
 extern directory_table *indexing_table;
 
-int local_getattr(shared_ptr<inode> i, struct stat* stat) {
+std::map<ino_t, unique_ptr<file_handler>> fh_list;
+std::mutex file_handler_mutex;
+
+void local_getattr(shared_ptr<inode> i, struct stat* stat) {
 	i->fill_stat(stat);
-	return 0;
 }
 
 void local_access(shared_ptr<inode> i, int mask) {
@@ -47,14 +47,28 @@ int local_releasedir(shared_ptr<inode> i, struct fuse_file_info* file_info) {
 	return 0;
 }
 
-int local_readdir(shared_ptr<inode> i, void* buffer, fuse_fill_dir_t filler) {
-	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(i->get_ino());
+int local_releasedir(ino_t ino, struct fuse_file_info* file_info){
+	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+	{
+		std::scoped_lock<std::mutex> lock{file_handler_mutex};
+		it = fh_list.find(ino);
 
-	parent_dentry_table->fill_filler(buffer, filler);
+		if (it == fh_list.end())
+			return -EIO;
+
+		fh_list.erase(it);
+	}
+
 	return 0;
 }
 
-int local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
+void local_readdir(shared_ptr<inode> i, void* buffer, fuse_fill_dir_t filler) {
+	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(i->get_ino());
+
+	parent_dentry_table->fill_filler(buffer, filler);
+}
+
+void local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
 	fuse_context *fuse_ctx = fuse_get_context();
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
@@ -62,7 +76,7 @@ int local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t m
 	parent_dentry_table->create_child_inode(new_child_name, i);
 
 	client *c = (client *) (fuse_ctx->private_data);
-	i->set_leader_id(c->get_client_id());
+	i->set_loc(c->get_client_id());
 	i->set_size(0);
 	i->sync();
 
@@ -76,13 +90,23 @@ int local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t m
 	/* TODO : separate make_new_child routine and become_leader routine */
 	shared_ptr<dentry_table> new_dentry_table = become_leader_of_new_dir(parent_i->get_ino(), i->get_ino());
 	indexing_table->add_dentry_table(i->get_ino(), new_dentry_table);
-	return 0;
+
+
 }
 
 int local_rmdir(shared_ptr<inode> parent_i, shared_ptr<inode> target_i, std::string target_name) {
+	if(!S_ISDIR(target_i->get_mode()))
+		return -ENOTDIR;
+
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_i->get_ino());
 
+	if(target_dentry_table == nullptr) {
+		throw std::runtime_error("directory table is corrupted : Can't find leaesd directory");
+	}
+
+	if(target_dentry_table->get_child_num() > 2)
+		return -ENOTEMPTY;
 	meta_pool->remove(DENTRY, std::to_string(target_i->get_ino()));
 	meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
 
@@ -92,6 +116,7 @@ int local_rmdir(shared_ptr<inode> parent_i, shared_ptr<inode> target_i, std::str
 	parent_i->sync();
 
 	indexing_table->delete_dentry_table(target_i->get_ino());
+
 	return 0;
 }
 
@@ -129,6 +154,10 @@ int local_readlink(shared_ptr<inode> i, char *buf, size_t size) {
 }
 
 int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, const char* new_path, unsigned int flags){
+	size_t paradox_check = std::string(new_path).find(old_path);
+	if((paradox_check == 0) && (std::string(new_path).at(std::string(old_path).length()) == '/'))
+		return -EINVAL;
+
 	unique_ptr<std::string> old_name = get_filename_from_path(old_path);
 	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
@@ -153,7 +182,7 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, c
 	return 0;
 }
 
-int local_rename_not_same_dir(shared_ptr<inode> src_parent_i, shared_ptr<inode> dst_parent_i, const char* old_path, const char* new_path, unsigned int flags){
+int local_rename_not_same_parent(shared_ptr<inode> src_parent_i, shared_ptr<inode> dst_parent_i, const char* old_path, const char* new_path, unsigned int flags){
 	unique_ptr<std::string> old_name = get_filename_from_path(old_path);
 	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
@@ -219,7 +248,22 @@ int local_release(shared_ptr<inode> i, struct fuse_file_info* file_info) {
 	return 0;
 }
 
-int local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
+int local_release(ino_t ino, struct fuse_file_info* file_info){
+	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
+	{
+		std::scoped_lock<std::mutex> lock{file_handler_mutex};
+		it = fh_list.find(ino);
+
+		if (it == fh_list.end())
+			return -EIO;
+
+		fh_list.erase(it);
+	}
+
+	return 0;
+}
+
+void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
 	fuse_context *fuse_ctx = fuse_get_context();
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
@@ -240,10 +284,9 @@ int local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t 
 		fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
 	}
 
-	return 0;
 }
 
-int local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
+void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 	shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(child_name);
@@ -266,7 +309,6 @@ int local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 		target_i->sync();
 	}
 
-	return 0;
 }
 
 size_t local_read(shared_ptr<inode> i, char* buffer, size_t size, off_t offset) {
@@ -310,16 +352,24 @@ void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid) {
 }
 
 void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]){
-	for (int tv_i = 0; tv_i < 2; tv_i++) {
-		if (tv[tv_i].tv_nsec == UTIME_NOW) {
-			struct timespec ts;
-			if (!timespec_get(&ts, TIME_UTC))
-				runtime_error("timespec_get() failed");
-			i->set_atime(ts);
-		} else if (tv[tv_i].tv_nsec == UTIME_OMIT) { ;
-		} else {
-			i->set_mtime(tv[tv_i]);
-		}
+	if (tv[0].tv_nsec == UTIME_NOW) {
+		struct timespec ts;
+		if (!timespec_get(&ts, TIME_UTC))
+			runtime_error("timespec_get() failed");
+		i->set_atime(ts);
+	} else if (tv[0].tv_nsec == UTIME_OMIT) { ;
+	} else {
+		i->set_atime(tv[0]);
+	}
+
+	if (tv[1].tv_nsec == UTIME_NOW) {
+		struct timespec ts;
+		if (!timespec_get(&ts, TIME_UTC))
+			runtime_error("timespec_get() failed");
+		i->set_mtime(ts);
+	} else if (tv[1].tv_nsec == UTIME_OMIT) { ;
+	} else {
+		i->set_mtime(tv[1]);
 	}
 
 	i->sync();
@@ -327,6 +377,9 @@ void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]){
 
 int local_truncate (const shared_ptr<inode> i, off_t offset) {
 	/*TODO : clear setuid, setgid*/
+	if(S_ISDIR(i->get_mode()))
+		return -EISDIR;
+
 	int ret;
 	ret = data_pool->truncate(DATA, std::to_string(i->get_ino()), offset);
 

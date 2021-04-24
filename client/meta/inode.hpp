@@ -18,6 +18,13 @@ using std::unique_ptr;
 using std::runtime_error;
 using std::string;
 
+enum meta_location {
+    LOCAL = 0,
+    REMOTE,
+    UNKNOWN,
+    NOBODY /* temporaly status */
+};
+
 class inode {
 private:
 	mode_t	i_mode;
@@ -31,7 +38,7 @@ private:
 	struct timespec	i_mtime;
 	struct timespec	i_ctime;
 
-	uint64_t leader_id;
+	uint64_t loc;
 
 	int link_target_len;
 	char *link_target_name;
@@ -60,6 +67,7 @@ public:
 
 	/* parent constructor for remote_inode */
 	inode();
+	virtual ~inode() = default;
 
 	void copy(inode *src);
 	void fill_stat(struct stat *s);
@@ -79,7 +87,7 @@ public:
 	struct timespec get_mtime();
 	struct timespec get_ctime();
 
-	uint64_t get_leader_id();
+	uint64_t get_loc();
 
 	int get_link_target_len();
 	ino_t get_link_target_ino();
@@ -95,7 +103,7 @@ public:
 	void set_atime(struct timespec atime);
 	void set_mtime(struct timespec mtime);
 
-	void set_leader_id(uint64_t client_id);
+	void set_loc(uint64_t loc);
 	void set_link_target_len(int len);
 	void set_link_target_name(const char *name);
 };
