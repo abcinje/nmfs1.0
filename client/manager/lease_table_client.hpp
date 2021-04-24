@@ -1,5 +1,5 @@
-#ifndef _LEASE_TABLE_HPP_
-#define _LEASE_TABLE_HPP_
+#ifndef _LEASE_TABLE_CLIENT_HPP_
+#define _LEASE_TABLE_CLIENT_HPP_
 
 #include <chrono>
 #include <shared_mutex>
@@ -7,7 +7,7 @@
 
 using namespace std::chrono;
 
-class lease_table {
+class lease_table_client {
 private:
 	class lease_entry {
 	private:
@@ -26,11 +26,11 @@ private:
 	tsl::robin_map<ino_t, lease_entry *> map;
 
 public:
-	lease_table(void) = default;
-	~lease_table(void);
+	lease_table_client(void) = default;
+	~lease_table_client(void);
 
 	bool check(ino_t ino) const;
 	void update(ino_t ino, const system_clock::time_point &new_due);
 };
 
-#endif /* _LEASE_TABLE_HPP_ */
+#endif /* _LEASE_TABLE_CLIENT_HPP_ */

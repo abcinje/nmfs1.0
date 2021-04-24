@@ -1,31 +1,31 @@
-#include "lease_table.hpp"
+#include "lease_table_client.hpp"
 
 #include <iostream>
 
-lease_table::lease_entry::lease_entry(const system_clock::time_point &new_due) : due(new_due)
+lease_table_client::lease_entry::lease_entry(const system_clock::time_point &new_due) : due(new_due)
 {
 }
 
-system_clock::time_point lease_table::lease_entry::get_due(void) const
+system_clock::time_point lease_table_client::lease_entry::get_due(void) const
 {
 	std::shared_lock<std::shared_mutex>(sm);
 	return due;
 }
 
-void lease_table::lease_entry::set_due(const system_clock::time_point &new_due)
+void lease_table_client::lease_entry::set_due(const system_clock::time_point &new_due)
 {
 	std::unique_lock<std::shared_mutex>(sm);
 	due = new_due;
 }
 
-lease_table::~lease_table(void)
+lease_table_client::~lease_table_client(void)
 {
-	std::cerr << "Some thread has called ~lease_table()." << std::endl;
+	std::cerr << "Some thread has called ~lease_table_client()." << std::endl;
 	std::cerr << "Aborted." << std::endl;
 	exit(1);
 }
 
-bool lease_table::check(ino_t ino) const
+bool lease_table_client::check(ino_t ino) const
 {
 	lease_entry *e;
 
@@ -42,7 +42,7 @@ bool lease_table::check(ino_t ino) const
 	return system_clock::now() < e->get_due();
 }
 
-void lease_table::update(ino_t ino, const system_clock::time_point &new_due)
+void lease_table_client::update(ino_t ino, const system_clock::time_point &new_due)
 {
 	lease_entry *e;
 	bool found = false;
