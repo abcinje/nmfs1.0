@@ -18,7 +18,7 @@ dentry_table::~dentry_table() {
 }
 
 int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> inode){
-	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
+	global_logger.log(dentry_table_ops, "Called create_child_ino(" + filename + ")");
 	std::scoped_lock scl{this->dentry_table_mutex};
 	if(this->get_loc() == LOCAL) {
 		auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
