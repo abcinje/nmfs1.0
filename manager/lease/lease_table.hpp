@@ -4,6 +4,7 @@
 #include <chrono>
 #include <mutex>
 #include <shared_mutex>
+#include <string>
 #include <tsl/robin_map.h>
 
 using namespace std::chrono;
@@ -16,12 +17,24 @@ private:
 	private:
 		std::mutex m;
 		system_clock::time_point due;
+		std::string addr;
 
 	public:
-		lease_entry(void);
+		lease_entry(const std::string &remote_addr);
 		~lease_entry(void) = default;
 
-		bool cas(system_clock::time_point &new_due);
+		/*
+		 * cas() - Try to acquire the lease atomically
+		 *
+		 * On success
+		 * - Return true
+		 * - 'new_due' is set to the updated due
+		 *
+		 * On failure
+		 * - Return false
+		 * - 'remote_addr' is changed to the address of the current leader
+		 */
+		bool cas(system_clock::time_point &new_due, std::string &remote_addr);
 	};
 
 	std::shared_mutex sm;
@@ -31,7 +44,18 @@ public:
 	lease_table(void) = default;
 	~lease_table(void);
 
-	int acquire(ino_t ino, system_clock::time_point &new_due);
+	/*
+	 * acquire() - Try to acquire the lease atomically
+	 *
+	 * On success
+	 * - Return 0
+	 * - 'new_due' is set to the updated due
+	 *
+	 * On failure
+	 * - Return -1
+	 * - 'remote_addr' is changed to the address of the current leader
+	 */
+	int acquire(ino_t ino, system_clock::time_point &new_due, std::string &remote_addr);
 };
 
 #endif /* _LEASE_TABLE_HPP_ */

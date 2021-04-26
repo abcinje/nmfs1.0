@@ -6,9 +6,11 @@ service lease {
 
 message lease_request {
   int64 ino = 1;
+  string remote_addr = 2;
 }
 
 message lease_response {
   int32 ret = 1;
   int64 due = 2;
+  string remote_addr = 3;
 }
