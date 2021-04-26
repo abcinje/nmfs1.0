@@ -37,6 +37,12 @@ void logger::log(enum code_location location, std::string message)
 		case lease_ops:
 			location_str = "lease_operation";
 			break;
+		case rpc_client_ops:
+			location_str = "rpc_client";
+			break;
+		case rpc_server_ops:
+			location_str = "rpc_server";
+			break;
 		default:
 			location_str = "Unknown";
 	}

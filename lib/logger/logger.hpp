@@ -13,7 +13,9 @@ enum code_location {
 	inode_ops,
 	directory_table_ops,
 	dentry_table_ops,
-	lease_ops
+	lease_ops,
+	rpc_client_ops,
+	rpc_server_ops
 };
 
 
