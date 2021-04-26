@@ -16,9 +16,9 @@ service remote_ops {
   rpc rpc_unlink(rpc_common_request) returns (rpc_common_respond) {}
   rpc rpc_read(rpc_common_request) returns (rpc_common_respond) {} /* TODO : FIX DATA I/O */
   rpc rpc_write(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_chmod(rpc_common_request) returns (rpc_void_respond) {}
-  rpc rpc_chown(rpc_common_request) returns (rpc_void_respond) {}
-  rpc rpc_utimens(rpc_common_request) returns (rpc_void_respond) {}
+  rpc rpc_chmod(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_chown(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_utimens(rpc_common_request) returns (rpc_common_respond) {}
   rpc rpc_truncate(rpc_common_request) returns (rpc_common_respond) {}
 }
 
@@ -42,9 +42,6 @@ message rpc_common_respond {
   sint32 ret = 1;
 }
 
-message rpc_void_respond {
-}
-
 message rpc_getattr_respond {
   uint32 	i_mode = 1;
   uint32	i_uid = 2;
@@ -58,8 +55,12 @@ message rpc_getattr_respond {
   int64 m_nsec = 10;
   int64 c_sec = 11;
   int64 c_nsec = 12;
+
+  sint32 ret = 13;
 }
 
 message rpc_name_respond {
   string filename = 1;
+
+  sint32 ret = 2;
 }
