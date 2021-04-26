@@ -15,7 +15,9 @@ void logger::log(enum code_location location, std::string message)
 			break;
 		case local_fs_op:
 			location_str = "local_fs_operations";
-			message = CYAN + message + RESET;
+			break;
+		case remote_fs_op:
+			location_str = "remote_fs_operations";
 			break;
 		case rados_io_ops:
 			location_str = "rados_io_ops";
