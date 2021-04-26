@@ -17,6 +17,9 @@ rados_io *data_pool;
 directory_table *indexing_table;
 std::mutex atomic_mutex;
 
+std::map<ino_t, unique_ptr<file_handler>> fh_list;
+std::mutex file_handler_mutex;
+
 unsigned int fuse_capable;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)

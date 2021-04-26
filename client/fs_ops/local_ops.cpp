@@ -7,8 +7,8 @@ extern rados_io *meta_pool;
 extern rados_io *data_pool;
 extern directory_table *indexing_table;
 
-std::map<ino_t, unique_ptr<file_handler>> fh_list;
-std::mutex file_handler_mutex;
+extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
+extern std::mutex file_handler_mutex;
 
 void local_getattr(shared_ptr<inode> i, struct stat* stat) {
 	global_logger.log(local_fs_op, "Called getattr()");
