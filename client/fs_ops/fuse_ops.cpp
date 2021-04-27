@@ -276,20 +276,30 @@ int fuse_ops::readdir(const char* path, void* buffer, fuse_fill_dir_t filler, of
 	global_logger.log(fuse_op, "Called readdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
+	if(std::string(path) == "/") {
+		/* TODO : specific control for root directory */
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-	shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
-	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+		if(i->get_loc() == LOCAL) {
+			local_readdir(i, buffer, filler);
+		} else if (i->get_loc() == REMOTE) {
+			remote_readdir(std::dynamic_pointer_cast<remote_inode>(i), buffer, filler);
+		}
+	} else {
+		unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+		unique_ptr<std::string> file_name = get_filename_from_path(path);
 
-	shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-	if(i->get_loc() == LOCAL) {
-		local_readdir(i, buffer, filler);
-	} else if (i->get_loc() == REMOTE) {
-		remote_readdir(std::dynamic_pointer_cast<remote_inode>(i), buffer, filler);
+		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
+
+		if (i->get_loc() == LOCAL) {
+			local_readdir(i, buffer, filler);
+		} else if (i->get_loc() == REMOTE) {
+			remote_readdir(std::dynamic_pointer_cast<remote_inode>(i), buffer, filler);
+		}
 	}
-
 	return 0;
 }
 
