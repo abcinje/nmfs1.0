@@ -117,15 +117,25 @@ int fuse_ops::access(const char* path, int mask) {
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+		if(std::string(path) == "/") {
+			/* TODO : specific control for root directory */
+			shared_ptr<inode> i = indexing_table->path_traversal(path);
+			if (i->get_loc() == LOCAL) {
+				local_access(i, mask);
+			} else if (i->get_loc() == REMOTE) {
+				remote_access(std::dynamic_pointer_cast<remote_inode>(i), mask);
+			}
+		} else {
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
+			shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
-		if(i->get_loc() == LOCAL) {
-			local_access(i, mask);
-		} else if (i->get_loc() == REMOTE) {
-			remote_access(std::dynamic_pointer_cast<remote_inode>(i) ,mask);
+			if (i->get_loc() == LOCAL) {
+				local_access(i, mask);
+			} else if (i->get_loc() == REMOTE) {
+				remote_access(std::dynamic_pointer_cast<remote_inode>(i), mask);
+			}
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
@@ -203,15 +213,26 @@ int fuse_ops::opendir(const char* path, struct fuse_file_info* file_info){
 	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+		if(std::string(path) == "/") {
+			/* TODO : specific control for root directory */
+			shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
+			if (i->get_loc() == LOCAL) {
+				ret = local_opendir(i, file_info);
+			} else if (i->get_loc() == REMOTE) {
+				ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
+			}
+		} else {
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		if(i->get_loc() == LOCAL) {
-			ret = local_opendir(i, file_info);
-		} else if (i->get_loc() == REMOTE) {
-			ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
+			shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
+
+			if (i->get_loc() == LOCAL) {
+				ret = local_opendir(i, file_info);
+			} else if (i->get_loc() == REMOTE) {
+				ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
+			}
 		}
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
