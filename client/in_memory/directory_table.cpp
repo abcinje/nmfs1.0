@@ -92,6 +92,22 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 
 }
 
+uint64_t directory_table::check_dentry_table(ino_t ino){
+	global_logger.log(directory_table_ops, "check_dentry_table(" + std::to_string(ino) + ")");
+	std::scoped_lock scl{this->directory_table_mutex};
+	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
+	it = this->dentry_tables.find(ino);
+
+	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
+		global_logger.log(directory_table_ops, "dentry_table : HIT");
+		return it->second->get_loc();
+	}
+	else { /* UNKNOWN */
+		return UNKNOWN;
+	}
+
+}
+
 int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable){
 	global_logger.log(directory_table_ops, "Called add_dentry_table(" + std::to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};

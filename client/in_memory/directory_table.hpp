@@ -12,6 +12,8 @@
 #include "../client/client.hpp"
 #include "../temp/lease_util.hpp"
 
+#define ENOTLEADER 8000
+
 using std::shared_ptr;
 
 class directory_table {
@@ -28,6 +30,7 @@ public:
 
     	shared_ptr<inode> path_traversal(std::string path);
     	shared_ptr<dentry_table> get_dentry_table(ino_t ino);
+		uint64_t check_dentry_table(ino_t ino);
 
     	shared_ptr<inode> get_root_inode();
 };
