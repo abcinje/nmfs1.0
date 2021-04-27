@@ -249,16 +249,22 @@ int fuse_ops::releasedir(const char* path, struct fuse_file_info* file_info){
 
 	if(path != nullptr) {
 		global_logger.log(fuse_op, "path : " + std::string(path));
-		unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-		unique_ptr<std::string> file_name = get_filename_from_path(path);
+		if(std::string(path) == "/") {
+			/* TODO : specific control for root directory */
+			shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+			ret = local_releasedir(i, file_info);
+		} else {
+			unique_ptr<std::string> parent_name = get_parent_dir_path(path);
+			unique_ptr<std::string> file_name = get_filename_from_path(path);
 
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(parent_name->data());
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		ret = local_releasedir(i, file_info);
+			shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
+			ret = local_releasedir(i, file_info);
+		}
 
 	} else {
 		global_logger.log(fuse_op, "path : nullpath");
