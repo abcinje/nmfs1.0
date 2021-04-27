@@ -14,6 +14,7 @@ using grpc::Status;
 #include <session.grpc.pb.h>
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 #include <tsl/robin_map.h>
@@ -28,6 +29,7 @@ private:
 		RECOVERY,
 	};
 
+	std::mutex m;
 	std::shared_ptr<rados_io> pool;
 	std::vector<char> map;
 	tsl::robin_map<uint32_t, std::string> addrmap;
