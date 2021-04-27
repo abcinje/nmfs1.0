@@ -8,13 +8,13 @@ lease_table_client::lease_entry::lease_entry(const system_clock::time_point &new
 
 system_clock::time_point lease_table_client::lease_entry::get_due(void) const
 {
-	std::shared_lock<std::shared_mutex>(sm);
+	std::shared_lock<std::shared_mutex> lock(sm);
 	return due;
 }
 
 void lease_table_client::lease_entry::set_due(const system_clock::time_point &new_due)
 {
-	std::unique_lock<std::shared_mutex>(sm);
+	std::unique_lock<std::shared_mutex> lock(sm);
 	due = new_due;
 }
 
@@ -30,7 +30,7 @@ bool lease_table_client::check(ino_t ino) const
 	lease_entry *e;
 
 	{
-		std::shared_lock<std::shared_mutex>(sm);
+		std::shared_lock<std::shared_mutex> lock(sm);
 		auto it = map.find(ino);
 		if (it != map.end()) {
 			e = it->second;
@@ -48,7 +48,7 @@ void lease_table_client::update(ino_t ino, const system_clock::time_point &new_d
 	bool found = false;
 
 	{
-		std::shared_lock<std::shared_mutex>(sm);
+		std::shared_lock<std::shared_mutex> lock(sm);
 		auto it = map.find(ino);
 		if (it != map.end()) {
 			found = true;
@@ -62,7 +62,7 @@ void lease_table_client::update(ino_t ino, const system_clock::time_point &new_d
 	}
 
 	{
-		std::unique_lock<std::shared_mutex>(sm);
+		std::unique_lock<std::shared_mutex> lock(sm);
 		if (map.find(ino) == map.end())
 			map[ino] = new lease_entry(new_due);
 	}

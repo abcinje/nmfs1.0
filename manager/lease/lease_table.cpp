@@ -8,7 +8,7 @@ lease_table::lease_entry::lease_entry(const std::string &remote_addr) : due(syst
 
 bool lease_table::lease_entry::cas(system_clock::time_point &new_due, std::string &remote_addr)
 {
-	std::unique_lock<std::mutex>(m);
+	std::unique_lock<std::mutex> lock(m);
 
 	if (system_clock::now() >= due) {
 		new_due = due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
@@ -33,7 +33,7 @@ int lease_table::acquire(ino_t ino, system_clock::time_point &new_due, std::stri
 	bool found = false;
 
 	{
-		std::shared_lock<std::shared_mutex>(sm);
+		std::shared_lock<std::shared_mutex> lock(sm);
 		auto it = map.find(ino);
 		if (it != map.end()) {
 			found = true;
@@ -45,7 +45,7 @@ int lease_table::acquire(ino_t ino, system_clock::time_point &new_due, std::stri
 		return e->cas(new_due, remote_addr) ? 0 : -1;
 
 	{
-		std::unique_lock<std::shared_mutex>(sm);
+		std::unique_lock<std::shared_mutex> lock(sm);
 		auto it = map.find(ino);
 		if (it != map.end()) {
 			return -1;
