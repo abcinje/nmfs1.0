@@ -18,7 +18,7 @@ private:
 		lease_entry(const system_clock::time_point &new_due);
 		~lease_entry(void) = default;
 
-		system_clock::time_point get_due(void) const;
+		system_clock::time_point get_due(void);
 		void set_due(const system_clock::time_point &new_due);
 	};
 
@@ -29,7 +29,7 @@ public:
 	lease_table_client(void) = default;
 	~lease_table_client(void);
 
-	bool check(ino_t ino) const;
+	bool check(ino_t ino);
 	void update(ino_t ino, const system_clock::time_point &new_due);
 };
 

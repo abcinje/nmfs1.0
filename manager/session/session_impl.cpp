@@ -6,7 +6,7 @@
 
 Status session_impl::mount(ServerContext *context, const empty *dummy_in, client_id *id)
 {
-	std::unique_lock<std::mutex> lock(m);
+	std::unique_lock lock(m);
 
 	uint32_t new_id;
 	std::string address;
@@ -64,7 +64,7 @@ Status session_impl::mount(ServerContext *context, const empty *dummy_in, client
 
 Status session_impl::umount(ServerContext *context, const empty *dummy_in, empty *dummy_out)
 {
-	std::unique_lock<std::mutex> lock(m);
+	std::unique_lock lock(m);
 
 	uint32_t deleted_id;
 	std::string address;
