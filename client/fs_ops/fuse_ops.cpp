@@ -566,11 +566,7 @@ int fuse_ops::read(const char* path, char* buffer, size_t size, off_t offset, st
 
 		shared_ptr<inode> i = parent_dentry_table->get_child_inode(file_name->data());
 
-		if(i->get_loc() == LOCAL) {
-			read_len = local_read(i, buffer, size, offset);
-		} else if (i->get_loc() == REMOTE) {
-			read_len = remote_read(std::dynamic_pointer_cast<remote_inode>(i), buffer, size, offset);
-		}
+		read_len = local_read(i, buffer, size, offset);
 
 	} catch(inode::no_entry &e) {
 		return -ENOENT;
