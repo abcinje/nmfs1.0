@@ -20,7 +20,6 @@ int remote_rename_not_same_parent(shared_ptr<remote_inode> src_parent_i, shared_
 int remote_open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 void remote_create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);
 void remote_unlink(shared_ptr<remote_inode> parent_i, std::string child_name);
-size_t remote_read(shared_ptr<remote_inode> i, char* buffer, size_t size, off_t offset);
 size_t remote_write(shared_ptr<remote_inode>i, const char* buffer, size_t size, off_t offset, int flags);
 void remote_chmod(shared_ptr<remote_inode> i, mode_t mode);
 void remote_chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid);

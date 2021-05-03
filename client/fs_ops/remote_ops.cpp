@@ -105,15 +105,6 @@ void remote_unlink(shared_ptr<remote_inode> parent_i, std::string child_name) {
 	rc->unlink(parent_i, child_name);
 }
 
-size_t remote_read(shared_ptr<remote_inode> i, char* buffer, size_t size, off_t offset) {
-	global_logger.log(remote_fs_op, "Called remote_read()");
-	std::string remote_address(i->get_address());
-	std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
-
-	size_t readlen = rc->read(i, buffer, size, offset);
-	return readlen;
-}
-
 size_t remote_write(shared_ptr<remote_inode> i, const char* buffer, size_t size, off_t offset, int flags) {
 	global_logger.log(remote_fs_op, "Called remote_write()");
 	std::string remote_address(i->get_address());
