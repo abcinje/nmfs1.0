@@ -14,6 +14,8 @@
 
 #define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
 #define REG_INODE_SIZE (sizeof(inode) - sizeof(char *) - sizeof(std::recursive_mutex))
+#define DIR_INODE_SIZE 4096
+
 using std::unique_ptr;
 using std::runtime_error;
 using std::string;
