@@ -24,17 +24,27 @@ service remote_ops {
 
 /* FILE SYSTEM OPERATION REQUEST */
 message rpc_common_request {
-  uint64 	i_ino = 1;
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
 
-  uint32 	i_mode = 2;
-  uint32	i_uid = 3;
-  uint32 i_gid = 4;
-  uint64 i_nlink = 5;
-  int64 i_size = 6;
-  int64 a_sec = 7;
-  int64 a_nsec = 8;
-  int64 m_sec = 9;
-  int64 m_nsec = 10;
+  uint64 	i_ino = 3;
+
+  uint32 	i_mode = 4;
+  uint32	i_uid = 5;
+  uint32 i_gid = 6;
+  uint64 i_nlink = 7;
+  int64 i_size = 8;
+  int64 a_sec = 9;
+  int64 a_nsec = 10;
+  int64 m_sec = 11;
+  int64 m_nsec = 12;
+
+  /* symlink, rename */
+  string src = 13;
+  string dst = 14;
+
+  /* open */
+  int32 flags = 15;
 }
 
 /* FILE SYSTEM OPERATION RESPOND */
