@@ -55,8 +55,7 @@ int dentry_table::delete_child_inode(std::string filename) {
 	global_logger.log(dentry_table_ops, "Called delete_child_inode(" + filename + ")");
 	std::scoped_lock scl{this->dentry_table_mutex};
 	if(this->get_loc() == LOCAL) {
-		std::map < std::string, shared_ptr < inode >> ::iterator
-		it;
+		std::map < std::string, shared_ptr < inode >> ::iterator it;
 		it = this->child_inodes.find(filename);
 
 		if (it == this->child_inodes.end()) {
