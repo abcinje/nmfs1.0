@@ -4,6 +4,7 @@
 #include <grpcpp/grpcpp.h>
 #include <rpc.grpc.pb.h>
 #include "../meta/remote_inode.hpp"
+#include "../meta/file_handler.hpp"
 
 using grpc::Channel;
 using grpc::ClientContext;

@@ -1,5 +1,8 @@
 #include "rpc_client.hpp"
 
+extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
+extern std::mutex file_handler_mutex;
+
 rpc_client::rpc_client(std::shared_ptr<Channel> channel) : stub_(remote_ops::NewStub(channel)){}
 
 void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* stat) {
@@ -9,6 +12,8 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 	rpc_getattr_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
 
 	Status status = stub_->rpc_getattr(&context, Input, &Output);
 	if(status.ok()){
@@ -27,6 +32,9 @@ void rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
+	Input.set_i_mode(mask);
 
 	Status status = stub_->rpc_access(&context, Input, &Output);
 	if(status.ok()){
@@ -44,9 +52,19 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
 
 	Status status = stub_->rpc_opendir(&context, Input, &Output);
 	if(status.ok()){
+		{
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
+			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+
+			fh->set_fhno((void *) file_info->fh);
+			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+		}
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -103,6 +121,10 @@ int rpc_client::symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, 
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(dst_parent_i->get_dentry_table_ino());
+	Input.set_filename(dst_parent_i->get_file_name());
+	Input.set_src(src);
+	Input.set_dst(dst);
 
 	Status status = stub_->rpc_symlink(&context, Input, &Output);
 	if(status.ok()){
@@ -120,12 +142,16 @@ int rpc_client::readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 	rpc_name_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
+	Input.set_i_size(size);
 
 	Status status = stub_->rpc_readlink(&context, Input, &Output);
-
-	/* fill Output */
-
 	if(status.ok()){
+		/* fill buffer */
+		size_t len = MIN(Output.filename().length(), size-1);
+		memcpy(buf, Output.filename().c_str(), len);
+		buf[len] = '\0';
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -161,9 +187,20 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
+	Input.set_flags(file_info->flags);
 
 	Status status = stub_->rpc_open(&context, Input, &Output);
 	if(status.ok()){
+		{
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
+			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+
+			fh->set_fhno((void *) file_info->fh);
+			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+		}
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -182,6 +219,7 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 	Status status = stub_->rpc_create(&context, Input, &Output);
 	if(status.ok()){
 
+		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::create() failed");
@@ -198,7 +236,7 @@ void rpc_client::unlink(shared_ptr<remote_inode> parent_i, std::string child_nam
 
 	Status status = stub_->rpc_unlink(&context, Input, &Output);
 	if(status.ok()){
-
+		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::unlink() failed");
