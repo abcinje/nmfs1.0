@@ -10,11 +10,19 @@
 class remote_inode : public inode {
 private :
     std::string address;
+
+	ino_t dentry_table_ino;
+	std::string file_name;
+
 public:
     remote_inode(std::string address);
-	std::string get_address();
 
-    void for_polymorphic() {};
+	[[nodiscard]] const string &get_address() const;
+
+	[[nodiscard]] ino_t get_dentry_table_ino() const;
+	[[nodiscard]] const string &get_file_name() const;
+
+	void for_polymorphic() override {};
 };
 
 
