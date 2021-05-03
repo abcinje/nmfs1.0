@@ -3,23 +3,22 @@ syntax = "proto3";
 service remote_ops {
   rpc rpc_getattr(rpc_common_request) returns (rpc_getattr_respond) {}
   rpc rpc_access(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_opendir(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_opendir(rpc_open_opendir_request) returns (rpc_common_respond) {}
   rpc rpc_readdir(rpc_common_request) returns (stream rpc_name_respond) {}
-  rpc rpc_mkdir(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_mkdir(rpc_mkdir_request) returns (rpc_common_respond) {}
   rpc rpc_rmdir(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_symlink(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_readlink(rpc_common_request) returns (rpc_name_respond) {}
-  rpc rpc_rename_same_parent(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_symlink(rpc_symlink_request) returns (rpc_common_respond) {}
+  rpc rpc_readlink(rpc_readlink_request) returns (rpc_name_respond) {}
+  rpc rpc_rename_same_parent(rpc_rename_same_parent_request) returns (rpc_common_respond) {}
   rpc rpc_rename_not_same_parent(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_open(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_create(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_unlink(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_read(rpc_common_request) returns (rpc_common_respond) {} /* TODO : FIX DATA I/O */
-  rpc rpc_write(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_chmod(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_chown(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_utimens(rpc_common_request) returns (rpc_common_respond) {}
-  rpc rpc_truncate(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_open(rpc_open_opendir_request) returns (rpc_common_respond) {}
+  rpc rpc_create(rpc_create_request) returns (rpc_create_respond) {}
+  rpc rpc_unlink(rpc_unlink_request) returns (rpc_common_respond) {}
+  rpc rpc_write(rpc_write_request) returns (rpc_write_respond) {}
+  rpc rpc_chmod(rpc_chmod_request) returns (rpc_common_respond) {}
+  rpc rpc_chown(rpc_chown_request) returns (rpc_common_respond) {}
+  rpc rpc_utimens(rpc_utimens_request) returns (rpc_common_respond) {}
+  rpc rpc_truncate(rpc_truncate_request) returns (rpc_common_respond) {}
 }
 
 /* FILE SYSTEM OPERATION REQUEST */
@@ -38,15 +37,104 @@ message rpc_common_request {
   int64 a_nsec = 10;
   int64 m_sec = 11;
   int64 m_nsec = 12;
-
-  /* symlink, rename */
-  string src = 13;
-  string dst = 14;
-
-  /* open */
-  int32 flags = 15;
 }
 
+message rpc_access_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  uint32 	mask = 3;
+}
+
+message rpc_mkdir_request {
+  uint64 dentry_table_ino = 1;
+
+  string new_dir_name = 2;
+  uint32 new_mode = 3;
+}
+
+message rpc_symlink_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  string src = 3;
+  string dst = 4;
+}
+
+message rpc_readlink_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  int64 size = 3;
+}
+
+message rpc_rename_same_parent_request {
+  uint64 dentry_table_ino = 1;
+
+  string old_path = 2;
+  string new_path = 3;
+  uint32 flags = 4;
+}
+
+message rpc_create_request {
+  uint64 dentry_table_ino = 1;
+
+  string new_file_name = 2;
+  uint32 new_mode = 3;
+}
+
+message rpc_unlink_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+}
+
+message rpc_write_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  uint64 size = 3;
+  int64 offset = 4;
+  uint32 flags = 5;
+}
+
+message rpc_open_opendir_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  uint32 flags = 3;
+}
+
+message rpc_chmod_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  uint32 mode = 3;
+}
+
+message rpc_chown_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  uint32 uid = 3;
+  uint32 gid = 4;
+}
+
+message rpc_utimens_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  int64 a_sec = 3;
+  int64 a_nsec = 4;
+  int64 m_sec = 5;
+  int64 m_nsec = 6;
+}
+
+message rpc_truncate_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+
+  int64 offset = 3;
+}
 /* FILE SYSTEM OPERATION RESPOND */
 message rpc_common_respond {
   sint32 ret = 1;
@@ -73,4 +161,17 @@ message rpc_name_respond {
   string filename = 1;
 
   sint32 ret = 2;
+}
+
+message rpc_create_respond {
+  uint64 	new_ino = 1;
+
+  sint32 ret = 2;
+}
+
+message rpc_write_respond {
+  uint64 size = 1;
+  int64 offset = 2;
+
+  sint32 ret = 3;
 }
