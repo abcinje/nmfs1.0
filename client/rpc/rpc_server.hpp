@@ -4,6 +4,7 @@
 #include <rpc.grpc.pb.h>
 #include "../in_memory/directory_table.hpp"
 #include "../meta/file_handler.hpp"
+#include "../util.hpp"
 
 using grpc::Server;
 using grpc::ServerBuilder;
