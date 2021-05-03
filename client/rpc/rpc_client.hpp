@@ -33,7 +33,6 @@ public:
 	int open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 	void create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);
 	void unlink(shared_ptr<remote_inode> parent_i, std::string child_name);
-	size_t read(shared_ptr<remote_inode> i, char* buffer, size_t size, off_t offset);
 	size_t write(shared_ptr<remote_inode>i, const char* buffer, size_t size, off_t offset, int flags);
 	void chmod(shared_ptr<remote_inode> i, mode_t mode);
 	void chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid);

@@ -1,4 +1,5 @@
 #include "rpc_client.hpp"
+extern rados_io *data_pool;
 
 extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
 extern std::mutex file_handler_mutex;
@@ -48,7 +49,7 @@ void rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {
 	global_logger.log(rpc_client_ops, "Called opendir()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_open_opendir_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
@@ -96,10 +97,13 @@ void rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir
 void rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(rpc_client_ops, "Called mkdir()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_mkdir_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_new_dir_name(new_child_name);
+	Input.set_new_mode(mode);
 
 	Status status = stub_->rpc_mkdir(&context, Input, &Output);
 	if(status.ok()){
@@ -117,7 +121,7 @@ int rpc_client::rmdir(shared_ptr<remote_inode> parent_i, shared_ptr<inode> targe
 int rpc_client::symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst) {
 	global_logger.log(rpc_client_ops, "Called symlink()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_symlink_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
@@ -138,13 +142,13 @@ int rpc_client::symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, 
 int rpc_client::readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 	global_logger.log(rpc_client_ops, "Called readlink()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_readlink_request Input;
 	rpc_name_respond Output;
 
 	/* prepare Input */
 	Input.set_dentry_table_ino(i->get_dentry_table_ino());
 	Input.set_filename(i->get_file_name());
-	Input.set_i_size(size);
+	Input.set_size(size);
 
 	Status status = stub_->rpc_readlink(&context, Input, &Output);
 	if(status.ok()){
@@ -162,10 +166,14 @@ int rpc_client::readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 int rpc_client::rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old_path, const char* new_path, unsigned int flags) {
 	global_logger.log(rpc_client_ops, "Called access()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_rename_same_parent_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_old_path(old_path);
+	Input.set_new_path(new_path);
+	Input.set_flags(flags);
 
 	Status status = stub_->rpc_rename_same_parent(&context, Input, &Output);
 	if(status.ok()){
@@ -183,7 +191,7 @@ int rpc_client::rename_not_same_parent(shared_ptr<remote_inode> src_parent_i, sh
 int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {
 	global_logger.log(rpc_client_ops, "Called open()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_open_opendir_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
@@ -211,14 +219,24 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
 	global_logger.log(rpc_client_ops, "Called create()");
 	ClientContext context;
-	rpc_common_request Input;
-	rpc_common_respond Output;
+	rpc_create_request Input;
+	rpc_create_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_new_file_name(new_child_name);
+	Input.set_new_mode(mode);
 
 	Status status = stub_->rpc_create(&context, Input, &Output);
 	if(status.ok()){
+		{
+			std::scoped_lock<std::mutex> lock{file_handler_mutex};
+			unique_ptr<file_handler> fh = std::make_unique<file_handler>(Output.new_ino());
+			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
+			fh->set_fhno((void *) file_info->fh);
+			fh_list.insert(std::make_pair(Output.new_ino(), std::move(fh)));
+		}
 		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -229,10 +247,12 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 void rpc_client::unlink(shared_ptr<remote_inode> parent_i, std::string child_name) {
 	global_logger.log(rpc_client_ops, "Called unlink()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_unlink_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_filename(child_name);
 
 	Status status = stub_->rpc_unlink(&context, Input, &Output);
 	if(status.ok()){
@@ -243,34 +263,24 @@ void rpc_client::unlink(shared_ptr<remote_inode> parent_i, std::string child_nam
 	}
 }
 
-size_t rpc_client::read(shared_ptr<remote_inode> i, char* buffer, size_t size, off_t offset) {
-	global_logger.log(rpc_client_ops, "Called read()");
-	ClientContext context;
-	rpc_common_request Input;
-	rpc_common_respond Output;
 
-	/* prepare Input */
-
-	Status status = stub_->rpc_read(&context, Input, &Output);
-	if(status.ok()){
-		return Output.ret();
-	} else {
-		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::read() failed");
-	}
-}
-
-size_t rpc_client::write(shared_ptr<remote_inode>i, const char* buffer, size_t size, off_t offset, int flags) {
+size_t rpc_client::write(shared_ptr<remote_inode> i, const char* buffer, size_t size, off_t offset, int flags) {
 	global_logger.log(rpc_client_ops, "Called write()");
 	ClientContext context;
-	rpc_common_request Input;
-	rpc_common_respond Output;
+	rpc_write_request Input;
+	rpc_write_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
+	Input.set_offset(offset);
+	Input.set_size(size);
+	Input.set_flags(flags);
 
 	Status status = stub_->rpc_write(&context, Input, &Output);
 	if(status.ok()){
-		return Output.ret();
+		size_t written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, Output.size(), Output.offset());
+		return written_len;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::write() failed");
@@ -280,10 +290,13 @@ size_t rpc_client::write(shared_ptr<remote_inode>i, const char* buffer, size_t s
 void rpc_client::chmod(shared_ptr<remote_inode> i, mode_t mode) {
 	global_logger.log(rpc_client_ops, "Called chmod()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_chmod_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
+	Input.set_mode(mode);
 
 	Status status = stub_->rpc_chmod(&context, Input, &Output);
 	if(status.ok()){
@@ -297,10 +310,14 @@ void rpc_client::chmod(shared_ptr<remote_inode> i, mode_t mode) {
 void rpc_client::chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 	global_logger.log(rpc_client_ops, "Called chown()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_chown_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
+	Input.set_uid(uid);
+	Input.set_gid(gid);
 
 	Status status = stub_->rpc_chown(&context, Input, &Output);
 	if(status.ok()){
@@ -314,10 +331,16 @@ void rpc_client::chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 void rpc_client::utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]) {
 	global_logger.log(rpc_client_ops, "Called utimens()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_utimens_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
+	Input.set_a_sec(tv[0].tv_sec);
+	Input.set_a_nsec(tv[0].tv_nsec);
+	Input.set_m_sec(tv[1].tv_sec);
+	Input.set_m_nsec(tv[1].tv_nsec);
 
 	Status status = stub_->rpc_utimens(&context, Input, &Output);
 	if(status.ok()){
@@ -331,14 +354,18 @@ void rpc_client::utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]
 int rpc_client::truncate(shared_ptr<remote_inode> i, off_t offset) {
 	global_logger.log(rpc_client_ops, "Called truncate()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_truncate_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_filename(i->get_file_name());
+	Input.set_offset(offset);
 
 	Status status = stub_->rpc_truncate(&context, Input, &Output);
 	if(status.ok()){
-		return Output.ret();
+		int ret = data_pool->truncate(DATA, std::to_string(i->get_ino()), offset);
+		return ret;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::truncate() failed");
