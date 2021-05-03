@@ -85,18 +85,14 @@ void local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t 
 	/* TODO : separate make_new_child routine and become_leader routine */
 	shared_ptr<dentry_table> new_dentry_table = become_leader_of_new_dir(parent_i->get_ino(), i->get_ino());
 
-	i->set_size(new_dentry_table->get_total_name_legth());
+	i->set_size(DIR_INODE_SIZE);
 	i->sync();
 
 	/* TODO : manage dentry and inode of newly created directory */
 	//shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
 	//new_d->sync();
 
-	parent_i->set_size(parent_dentry_table->get_total_name_legth());
-	parent_i->sync();
-
 	indexing_table->add_dentry_table(i->get_ino(), new_dentry_table);
-
 }
 
 int local_rmdir(shared_ptr<inode> parent_i, shared_ptr<inode> target_i, std::string target_name) {
@@ -117,9 +113,6 @@ int local_rmdir(shared_ptr<inode> parent_i, shared_ptr<inode> target_i, std::str
 	meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
 
 	parent_dentry_table->delete_child_inode(target_name);
-
-	parent_i->set_size(parent_dentry_table->get_total_name_legth());
-	parent_i->sync();
 
 	indexing_table->delete_dentry_table(target_i->get_ino());
 
@@ -142,9 +135,6 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 
 	dst_parent_dentry_table->create_child_inode(symlink_name->data(), symlink_i);
 	symlink_i->sync();
-
-	dst_parent_i->set_size(dst_parent_dentry_table->get_total_name_legth());
-	dst_parent_i->sync();
 
 	return 0;
 }
@@ -187,7 +177,6 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, c
 		return -ENOSYS;
 	}
 
-	parent_i->set_size(parent_dentry_table->get_total_name_legth());
 	return 0;
 }
 
@@ -214,8 +203,6 @@ int local_rename_not_same_parent(shared_ptr<inode> src_parent_i, shared_ptr<inod
 		return -ENOSYS;
 	}
 
-	src_parent_i->set_size(src_dentry_table->get_total_name_legth());
-	dst_parent_i->set_size(dst_dentry_table->get_total_name_legth());
 	return 0;
 }
 
@@ -286,8 +273,6 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 	i->sync();
 
 	parent_dentry_table->create_child_inode(new_child_name, i);
-	parent_i->set_size(parent_dentry_table->get_total_name_legth());
-	parent_i->sync();
 
 	{
 		std::scoped_lock<std::mutex> lock{file_handler_mutex};
@@ -315,10 +300,6 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 
 		/* parent dentry */
 		parent_dentry_table->delete_child_inode(child_name);
-
-		/* parent inode */
-		parent_i->set_size(parent_dentry_table->get_total_name_legth());
-		parent_i->sync();
 	} else {
 		target_i->set_nlink(nlink);
 		target_i->sync();
