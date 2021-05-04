@@ -34,16 +34,17 @@ public:
 	int pull_child_metadata();
 
 	enum meta_location get_loc();
-	uint64_t get_leader_id();
 
-	void set_loc(enum meta_location loc);
 	void set_leader_id(uint64_t leader_id);
 	void set_dentries(shared_ptr<dentry> dentries);
 
 	/* wrapper of dentry class member functions */
 	void fill_filler(void *buffer, fuse_fill_dir_t filler);
 	uint64_t get_child_num();
-	uint64_t get_total_name_legth();
+
+	/* only used in rpc_readdir */
+	std::map<std::string, shared_ptr<inode>>::iterator get_child_inode_begin();
+	std::map<std::string, shared_ptr<inode>>::iterator get_child_inode_end();
 };
 
 #endif //NMFS0_DENTRY_TABLE_HPP

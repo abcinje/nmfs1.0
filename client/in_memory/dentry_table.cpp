@@ -130,15 +130,7 @@ enum meta_location dentry_table::get_loc() {
 	std::scoped_lock scl{this->dentry_table_mutex};
 	return this->loc;
 }
-uint64_t dentry_table::get_leader_id() {
-	std::scoped_lock scl{this->dentry_table_mutex};
-	return this->leader_id;
-}
 
-void dentry_table::set_loc(enum meta_location loc) {
-	std::scoped_lock scl{this->dentry_table_mutex};
-	this->loc = loc;
-}
 void dentry_table::set_leader_id(uint64_t leader_id) {
 	std::scoped_lock scl{this->dentry_table_mutex};
 	this->leader_id = leader_id;
@@ -148,18 +140,22 @@ void dentry_table::set_dentries(shared_ptr<dentry> dentries) {
 	this->dentries = dentries;
 }
 
-
 void dentry_table::fill_filler(void *buffer, fuse_fill_dir_t filler) {
 	std::scoped_lock scl{this->dentry_table_mutex};
 	this->dentries->fill_filler(buffer, filler);
 }
+
 uint64_t dentry_table::get_child_num() {
 	std::scoped_lock scl{this->dentry_table_mutex};
 	return this->dentries->get_child_num();
 }
-uint64_t dentry_table::get_total_name_legth() {
-	std::scoped_lock scl{this->dentry_table_mutex};
-	return this->dentries->get_total_name_legth();
+
+std::map<std::string, shared_ptr<inode>>::iterator dentry_table::get_child_inode_begin() {
+	return this->child_inodes.begin();
+}
+
+std::map<std::string, shared_ptr<inode>>::iterator dentry_table::get_child_inode_end() {
+	return this->child_inodes.end();
 }
 
 
