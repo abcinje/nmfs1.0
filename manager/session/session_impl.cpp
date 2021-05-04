@@ -36,7 +36,7 @@ Status session_impl::mount(ServerContext *context, const empty *dummy_in, client
 			}
 
 		if (i == map.size()) {
-			if (i < (2 << 24)) {
+			if (i < (1 << CLIENT_BITS)) {
 				map.push_back(VALID);
 				new_id = i;
 			} else {

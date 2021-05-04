@@ -21,6 +21,8 @@ using grpc::Status;
 
 #include "../../lib/rados_io/rados_io.hpp"
 
+#define CLIENT_BITS 24
+
 class session_impl final : public session::Service {
 private:
 	enum state {
