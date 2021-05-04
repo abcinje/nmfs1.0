@@ -36,7 +36,7 @@ Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_commo
 	return Status::OK;
 }
 
-Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_common_request *request,
+Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_access_request *request,
 							  ::rpc_common_respond *response) {
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
@@ -47,7 +47,7 @@ Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_common
 	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
 
 	try{
-		i->permission_check(request->i_mode());
+		i->permission_check(request->mask());
 	} catch(inode::permission_denied &e) {
 		response->set_ret(-EACCES);
 		return Status::OK;
@@ -76,10 +76,24 @@ Status rpc_server::rpc_opendir(::grpc::ServerContext *context, const ::rpc_open_
 	return Status::OK;
 }
 
-Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_common_request *request,
+Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_readdir_request *request,
 							   ::grpc::ServerWriter<::rpc_name_respond> *writer) {
+	rpc_name_respond response;
+	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+		response.set_ret(-ENOTLEADER);
+		writer->Write(response);
+		return Status::OK;
+	}
 
-	return Service::rpc_readdir(context, request, writer);
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+
+	std::map<std::string, shared_ptr<inode>>::iterator it;
+	for(it = parent_dentry_table->get_child_inode_begin(); it != parent_dentry_table->get_child_inode_end(); it++){
+		response.set_filename(it->first);
+		writer->Write(response);
+	}
+
+	return Status::OK;
 }
 
 Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_request *request,

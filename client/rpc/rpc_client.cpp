@@ -29,13 +29,13 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 void rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 	global_logger.log(rpc_client_ops, "Called access()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_access_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
 	Input.set_dentry_table_ino(i->get_dentry_table_ino());
 	Input.set_filename(i->get_file_name());
-	Input.set_i_mode(mask);
+	Input.set_mask(mask);
 
 	Status status = stub_->rpc_access(&context, Input, &Output);
 	if(status.ok()){
@@ -76,12 +76,11 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 void rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler) {
 	global_logger.log(rpc_client_ops, "Called readdir()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_readdir_request Input;
 	rpc_name_respond Output;
 	std::unique_ptr<ClientReader<rpc_name_respond>> reader(stub_->rpc_readdir(&context, Input));
 
 	while(reader->Read(&Output)){
-		/* TODO : manage stream ouput */
 		filler(buffer, Output.filename().c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 	}
 

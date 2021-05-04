@@ -16,13 +16,13 @@ public:
     Status rpc_getattr(::grpc::ServerContext *context, const ::rpc_common_request *request,
 		       ::rpc_getattr_respond *response) override;
 
-    Status rpc_access(::grpc::ServerContext *context, const ::rpc_common_request *request,
+    Status rpc_access(::grpc::ServerContext *context, const ::rpc_access_request *request,
 		      ::rpc_common_respond *response) override;
 
     Status rpc_opendir(::grpc::ServerContext *context, const ::rpc_open_opendir_request *request,
 		       ::rpc_common_respond *response) override;
 
-    Status rpc_readdir(::grpc::ServerContext *context, const ::rpc_common_request *request,
+    Status rpc_readdir(::grpc::ServerContext *context, const ::rpc_readdir_request *request,
 		       ::grpc::ServerWriter<::rpc_name_respond> *writer) override;
 
     Status rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_request *request,
