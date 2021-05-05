@@ -24,7 +24,7 @@ private:
 	std::recursive_mutex directory_table_mutex;
 public:
     	directory_table();
-	~directory_table();
+		~directory_table();
     	int add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable);
     	int delete_dentry_table(ino_t ino);
 

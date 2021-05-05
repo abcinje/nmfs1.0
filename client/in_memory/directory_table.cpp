@@ -53,10 +53,14 @@ shared_ptr<inode> directory_table::path_traversal(std::string path) {
 		global_logger.log(directory_table_ops, "Check target: " + target_name);
 
 		check_target_ino = parent_dentry_table->check_child_inode(target_name);
+		/* TODO : ino_t cannot be -1 */
 		if (check_target_ino == -1)
 			throw inode::no_entry("No such file or Directory: in path traversal");
 		else
 			target_inode = parent_dentry_table->get_child_inode(target_name);
+
+		if(target_inode == nullptr)
+			throw std::runtime_error("Failed to make remote_inode in path_traversal()");
 
 		if(S_ISDIR(target_inode->get_mode()))
 			target_inode->permission_check(X_OK);
@@ -81,6 +85,10 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 		return it->second;
 	}
 	else { /* UNKNOWN */
+		/* TODO : need to revise with manager functions
+		 * if the directory has no leader, make local dentry_table
+		 * if the directory already has leader, make remote dentry_table and fill loc and leader_ip
+		 */
 		global_logger.log(directory_table_ops, "dentry_table : MISS");
 		shared_ptr<inode> i = std::make_shared<inode>(ino);
 
