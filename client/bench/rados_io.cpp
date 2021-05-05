@@ -12,7 +12,6 @@ rados_io::rados_io(const conn_info &ci, string pool)
 		throw runtime_error("rados_io::rados_io() failed "
 				"(couldn't initialize the cluster handle)");
 	} else {
-		/* TODO: log */
 	}
 
 
@@ -21,7 +20,6 @@ rados_io::rados_io(const conn_info &ci, string pool)
 		throw runtime_error("rados_io::rados_io() failed "
 				"(couldn't read the Ceph configuration file)");
 	} else {
-		/* TODO: log */
 	}
 
 	if ((ret = cluster.connect()) < 0) {
@@ -29,7 +27,6 @@ rados_io::rados_io(const conn_info &ci, string pool)
 		throw runtime_error("rados_io::rados_io() failed "
 				"(couldn't connect to cluster)");
 	} else {
-		/* TODO: log */
 	}
 
 	if ((ret = cluster.ioctx_create(pool.c_str(), ioctx)) < 0) {
@@ -37,17 +34,14 @@ rados_io::rados_io(const conn_info &ci, string pool)
 		throw runtime_error("rados_io::rados_io() failed "
 				"(couldn't set up ioctx)");
 	} else {
-		/* TODO: log */
 	}
 }
 
 rados_io::~rados_io(void)
 {
 	ioctx.close();
-	/* TODO: log */
 
 	cluster.shutdown();
-	/* TODO: log */
 }
 
 size_t rados_io::read(const string &key, string &value, off_t offset, size_t len)
@@ -74,7 +68,6 @@ size_t rados_io::read(const string &key, string &value, off_t offset, size_t len
 
 	ret = ioctx.read(key, bl, len, offset);
 	if (ret >= 0) {
-		/* TODO: log */
 	} else if (ret == -ENOENT) {
 		throw runtime_error("rados_io::read() failed (object doesn't exist)");
 	} else {
@@ -100,7 +93,6 @@ size_t rados_io::write(const string &key, const string &value, off_t offset)
 	}
 
 	if (ret >= 0) {
-		/* TODO: log */
 	} else {
 		throw runtime_error("rados_io::write() failed");
 	}
@@ -116,10 +108,8 @@ bool rados_io::exist(const string &key)
 
 	ret = ioctx.stat(key, &size, &mtime);
 	if (ret >= 0) {
-		/* TODO: log */
 		return true;
 	} else if (ret == -ENOENT) {
-		/* TODO: log */
 		return false;
 	} else {
 		throw runtime_error("rados_io::exist() failed");
@@ -132,9 +122,7 @@ void rados_io::remove(const string &key)
 
 	ret = ioctx.remove(key);
 	if (ret >= 0) {
-		/* TODO: log */
 	} else if (ret == -ENOENT) {
-		/* TODO: log */
 	} else {
 		throw runtime_error("rados_io::remove() failed");
 	}
