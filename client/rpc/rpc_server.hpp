@@ -13,7 +13,13 @@ using grpc::Status;
 
 class rpc_server : public remote_ops::Service {
 public:
-    Status rpc_getattr(::grpc::ServerContext *context, const ::rpc_common_request *request,
+	Status rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,
+								 ::rpc_dentry_table_respond *response) override;
+
+	Status rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inode_request *request,
+						::rpc_inode_respond *response) override;
+
+	Status rpc_getattr(::grpc::ServerContext *context, const ::rpc_common_request *request,
 		       ::rpc_getattr_respond *response) override;
 
     Status rpc_access(::grpc::ServerContext *context, const ::rpc_access_request *request,

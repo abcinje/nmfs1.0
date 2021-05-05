@@ -7,6 +7,27 @@ extern directory_table *indexing_table;
 extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
 extern std::mutex file_handler_mutex;
 
+Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,
+										 ::rpc_dentry_table_respond *response) {
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	ino_t check_target_ino = parent_dentry_table->check_child_inode(request->filename());
+
+	/* TODO : ino_t cannot be -1 */
+	response->set_checked_ino(check_target_ino);
+	response->set_ret(0);
+	return Status::OK;
+}
+
+Status rpc_server::rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inode_request *request,
+								::rpc_inode_respond *response) {
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+
+	response->set_i_mode(i->get_mode());
+	response->set_ret(0);
+	return Status::OK;
+}
+
 Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_common_request *request,
 							   ::rpc_getattr_respond *response) {
 
