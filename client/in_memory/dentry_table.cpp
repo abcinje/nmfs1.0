@@ -10,30 +10,23 @@ dentry_table::dentry_table(ino_t dir_ino, enum meta_location loc) : dir_ino(dir_
 dentry_table::~dentry_table() {
 	global_logger.log(dentry_table_ops, "Called ~dentry_table(" + std::to_string(this->dir_ino)+")");
 	this->child_inodes.clear();
-
-	fuse_context *fuse_ctx = fuse_get_context();
-	client *myself = (client *)(fuse_ctx->private_data);
-	uint64_t client_id = myself->get_client_id();
-
 }
 
 int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called create_child_ino(" + filename + ")");
 	std::scoped_lock scl{this->dentry_table_mutex};
-	if(this->get_loc() == LOCAL) {
-		auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
-		if (ret.second) {
-			ret.first->second = inode;
 
-			this->dentries->add_new_child(filename, inode->get_ino());
-			this->dentries->sync();
-		} else {
-			global_logger.log(dentry_table_ops, "Already added file is tried to inserted");
-			return -1;
-		}
-	} else if(this->get_loc() == REMOTE){
-		/* TODO */
+	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
+	if (ret.second) {
+		ret.first->second = inode;
+
+		this->dentries->add_new_child(filename, inode->get_ino());
+		this->dentries->sync();
+	} else {
+		global_logger.log(dentry_table_ops, "Already added file is tried to inserted");
+		return -1;
 	}
+
 	return 0;
 }
 
@@ -54,22 +47,20 @@ int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode)
 int dentry_table::delete_child_inode(std::string filename) {
 	global_logger.log(dentry_table_ops, "Called delete_child_inode(" + filename + ")");
 	std::scoped_lock scl{this->dentry_table_mutex};
-	if(this->get_loc() == LOCAL) {
-		std::map < std::string, shared_ptr < inode >> ::iterator it;
-		it = this->child_inodes.find(filename);
 
-		if (it == this->child_inodes.end()) {
-			global_logger.log(dentry_table_ops, "Non-existing file is tried to deleted");
-			return -1;
-		}
+	std::map<std::string, shared_ptr<inode >>::iterator it;
+	it = this->child_inodes.find(filename);
 
-		this->child_inodes.erase(it);
-
-		this->dentries->delete_child(filename);
-		this->dentries->sync();
-	} else if (this->get_loc() == REMOTE) {
-		/* TODO */
+	if (it == this->child_inodes.end()) {
+		global_logger.log(dentry_table_ops, "Non-existing file is tried to deleted");
+		return -1;
 	}
+
+	this->child_inodes.erase(it);
+
+	this->dentries->delete_child(filename);
+	this->dentries->sync();
+
 	return 0;
 }
 

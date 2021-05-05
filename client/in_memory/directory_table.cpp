@@ -90,9 +90,8 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 		 * if the directory already has leader, make remote dentry_table and fill loc and leader_ip
 		 */
 		global_logger.log(directory_table_ops, "dentry_table : MISS");
-		shared_ptr<inode> i = std::make_shared<inode>(ino);
 
-		shared_ptr<dentry_table> new_dentry_table = become_leader(i->get_ino());
+		shared_ptr<dentry_table> new_dentry_table = become_leader(ino);
 		this->add_dentry_table(ino, new_dentry_table);
 
 		return new_dentry_table;
@@ -111,6 +110,7 @@ uint64_t directory_table::check_dentry_table(ino_t ino){
 		return it->second->get_loc();
 	}
 	else { /* UNKNOWN */
+		global_logger.log(directory_table_ops, "dentry_table : MISS");
 		return UNKNOWN;
 	}
 
