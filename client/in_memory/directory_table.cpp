@@ -31,7 +31,7 @@ directory_table::~directory_table() {
 	}
 }
 
-shared_ptr<inode> directory_table::path_traversal(std::string path) {
+shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	global_logger.log(directory_table_ops, "Called path_traverse(" + path + ")");
 
 	std::scoped_lock scl{this->directory_table_mutex};
