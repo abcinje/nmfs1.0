@@ -1,8 +1,5 @@
 #include "local_ops.hpp"
 
-#include <utility>
-
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 extern rados_io *meta_pool;
 extern rados_io *data_pool;
 extern directory_table *indexing_table;
