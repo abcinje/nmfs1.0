@@ -7,22 +7,24 @@
 
 #include "inode.hpp"
 
+class rpc_client;
+
 class remote_inode : public inode {
 private :
-    std::string address;
+    std::string leader_ip;
 
 	ino_t dentry_table_ino;
 	std::string file_name;
 
 public:
-    remote_inode(std::string address);
+    remote_inode(std::string leader_ip, ino_t dentry_table_ino, std::string file_name);
 
 	[[nodiscard]] const string &get_address() const;
 
 	[[nodiscard]] ino_t get_dentry_table_ino() const;
 	[[nodiscard]] const string &get_file_name() const;
 
-	void for_polymorphic() override {};
+	void set_mode(mode_t mode) override;
 };
 
 
