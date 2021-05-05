@@ -6,6 +6,45 @@ extern std::mutex file_handler_mutex;
 
 rpc_client::rpc_client(std::shared_ptr<Channel> channel) : stub_(remote_ops::NewStub(channel)){}
 
+/* dentry_table operations */
+ino_t rpc_client::check_child_inode(ino_t dentry_table_ino, std::string filename){
+	global_logger.log(rpc_client_ops, "Called check_child_inode()");
+	ClientContext context;
+	rpc_dentry_table_request Input;
+	rpc_dentry_table_respond Output;
+
+	Input.set_dentry_table_ino(dentry_table_ino);
+	Input.set_filename(filename);
+
+	Status status = stub_->rpc_check_child_inode(&context, Input, &Output);
+	if(status.ok()){
+		return Output.checked_ino();
+	} else {
+		global_logger.log(rpc_client_ops, status.error_message());
+		throw std::runtime_error("rpc_client::check_child_inode() failed");
+	}
+}
+
+/* inode operations */
+mode_t rpc_client::get_mode(ino_t dentry_table_ino, std::string filename){
+	global_logger.log(rpc_client_ops, "Called get_mode()");
+	ClientContext context;
+	rpc_inode_request Input;
+	rpc_inode_respond Output;
+
+	Input.set_dentry_table_ino(dentry_table_ino);
+	Input.set_filename(filename);
+
+	Status status = stub_->rpc_get_mode(&context, Input, &Output);
+	if(status.ok()){
+		return Output.i_mode();
+	} else {
+		global_logger.log(rpc_client_ops, status.error_message());
+		throw std::runtime_error("rpc_client::get_mode() failed");
+	}
+}
+
+/* file system operations */
 void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 	global_logger.log(rpc_client_ops, "Called getattr()");
 	ClientContext context;
@@ -18,7 +57,7 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 
 	Status status = stub_->rpc_getattr(&context, Input, &Output);
 	if(status.ok()){
-		/* fill stat */
+		/* TODO: fill stat */
 		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -39,7 +78,8 @@ void rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 
 	Status status = stub_->rpc_access(&context, Input, &Output);
 	if(status.ok()){
-
+		/* TODO: permission check */
+		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::access() failed");

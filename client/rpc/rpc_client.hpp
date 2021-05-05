@@ -20,6 +20,13 @@ private:
 public:
 	rpc_client(std::shared_ptr<Channel> channel);
 
+	/* dentry_table operations */
+	ino_t check_child_inode(ino_t dentry_table_ino, std::string filename);
+
+	/* inode operations */
+	mode_t get_mode(ino_t dentry_table_ino, std::string filename);
+
+	/* file system operations */
 	void getattr(shared_ptr<remote_inode> i, struct stat* stat);
 	void access(shared_ptr<remote_inode> i, int mask);
 	int opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
