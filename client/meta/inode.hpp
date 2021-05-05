@@ -91,11 +91,10 @@ public:
 	uint64_t get_loc();
 
 	int get_link_target_len();
-	ino_t get_link_target_ino();
 	char *get_link_target_name();
 
 	// setter
-	void set_mode(mode_t mode);
+	virtual void set_mode(mode_t mode);
 	void set_uid(uid_t uid);
 	void set_gid(gid_t gid);
 	void set_ino(ino_t ino);
@@ -107,8 +106,6 @@ public:
 	void set_loc(uint64_t loc);
 	void set_link_target_len(int len);
 	void set_link_target_name(const char *name);
-
-	virtual void for_polymorphic() {};
 };
 
 ino_t alloc_new_ino();
