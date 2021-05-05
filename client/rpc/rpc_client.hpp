@@ -27,7 +27,7 @@ public:
 	mode_t get_mode(ino_t dentry_table_ino, std::string filename);
 
 	/* file system operations */
-	void getattr(shared_ptr<remote_inode> i, struct stat* stat);
+	void getattr(shared_ptr<remote_inode> i, struct stat* s);
 	void access(shared_ptr<remote_inode> i, int mask);
 	int opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 	void readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler);

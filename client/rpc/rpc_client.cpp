@@ -45,7 +45,7 @@ mode_t rpc_client::get_mode(ino_t dentry_table_ino, std::string filename){
 }
 
 /* file system operations */
-void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* stat) {
+void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* s) {
 	global_logger.log(rpc_client_ops, "Called getattr()");
 	ClientContext context;
 	rpc_common_request Input;
@@ -57,7 +57,19 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 
 	Status status = stub_->rpc_getattr(&context, Input, &Output);
 	if(status.ok()){
-		/* TODO: fill stat */
+		s->st_mode	= Output.i_mode();
+		s->st_uid	= Output.i_uid();
+		s->st_gid	= Output.i_gid();
+		s->st_ino	= Output.i_ino();
+		s->st_nlink	= Output.i_nlink();
+		s->st_size	= Output.i_size();
+
+		s->st_atim.tv_sec	= Output.a_sec();
+		s->st_atim.tv_nsec	= Output.a_nsec();
+		s->st_mtim.tv_sec	= Output.m_sec();
+		s->st_mtim.tv_nsec	= Output.m_nsec();
+		s->st_ctim.tv_sec	= Output.c_sec();
+		s->st_ctim.tv_sec	= Output.c_nsec();
 		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -78,7 +90,8 @@ void rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 
 	Status status = stub_->rpc_access(&context, Input, &Output);
 	if(status.ok()){
-		/* TODO: permission check */
+		if(Output.ret() == -EACCES)
+			throw inode::permission_denied("Permission Denied: Remote");
 		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
