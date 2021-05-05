@@ -1,6 +1,22 @@
 syntax = "proto3";
 
 service lease {
+  /*
+   * acquire() - Try to acquire a lease for a given ino
+   *
+   * Parameters
+   * ino - inode number
+   * remote_addr - the server address of the requestor
+   *
+   *
+   * On success,
+   * ret == 0
+   * due == the due time (absolute)
+   *
+   * On failure,
+   * ret == -1
+   * remote_addr == the server address of the leader
+   */
   rpc acquire(lease_request) returns (lease_response) {}
 }
 
