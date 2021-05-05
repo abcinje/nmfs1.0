@@ -5,7 +5,7 @@ extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
 extern std::mutex file_handler_mutex;
 
 rpc_client::rpc_client(std::shared_ptr<Channel> channel) : stub_(remote_ops::NewStub(channel)){}
-
+/* TODO : Handle -ENOTLEADER */
 /* dentry_table operations */
 ino_t rpc_client::check_child_inode(ino_t dentry_table_ino, std::string filename){
 	global_logger.log(rpc_client_ops, "Called check_child_inode()");
@@ -134,7 +134,10 @@ void rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir
 	std::unique_ptr<ClientReader<rpc_name_respond>> reader(stub_->rpc_readdir(&context, Input));
 
 	while(reader->Read(&Output)){
-		filler(buffer, Output.filename().c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
+		if(Output.ret() == 0)
+			filler(buffer, Output.filename().c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
+		else
+			break;
 	}
 
 	Status status = reader->Finish();
