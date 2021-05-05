@@ -165,7 +165,7 @@ void inode::permission_check(int mask){
 	}
 
 	if(!ret)
-		throw permission_denied("Permission Denied: ");
+		throw permission_denied("Permission Denied: Local");
 }
 
 // getter
