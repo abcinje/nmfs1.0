@@ -64,7 +64,6 @@ public:
 	/* for symlink */
 	inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const char *link_target_name);
 
-	/* TODO : add permission check */
 	inode(ino_t ino);
 
 	/* parent constructor for remote_inode */
