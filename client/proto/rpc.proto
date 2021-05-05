@@ -1,6 +1,12 @@
 syntax = "proto3";
 
 service remote_ops {
+
+  /* DENTRY_TABLE OPERATIONS */
+  rpc rpc_check_child_inode(rpc_dentry_table_request) returns (rpc_dentry_table_respond) {}
+  /* INODE OPERATIONS */
+  rpc rpc_get_mode(rpc_inode_request) returns (rpc_inode_respond) {}
+  /* FILE SYSTEM OPERATIONS */
   rpc rpc_getattr(rpc_common_request) returns (rpc_getattr_respond) {}
   rpc rpc_access(rpc_access_request) returns (rpc_common_respond) {}
   rpc rpc_opendir(rpc_open_opendir_request) returns (rpc_common_respond) {}
@@ -19,6 +25,29 @@ service remote_ops {
   rpc rpc_chown(rpc_chown_request) returns (rpc_common_respond) {}
   rpc rpc_utimens(rpc_utimens_request) returns (rpc_common_respond) {}
   rpc rpc_truncate(rpc_truncate_request) returns (rpc_common_respond) {}
+}
+/* DENTRY_TABLE OPERATIONS REQUEST AND RESPOND*/
+message rpc_dentry_table_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+}
+
+message rpc_dentry_table_respond {
+  uint64 	checked_ino = 1;
+
+  sint32 ret = 2;
+}
+
+/* INODE OPERATIONS REQUEST AND RESPOND*/
+message rpc_inode_request {
+  uint64 dentry_table_ino = 1;
+  string filename = 2;
+}
+
+message rpc_inode_respond {
+  uint32 	i_mode = 1;
+
+  sint32 ret = 2;
 }
 
 /* FILE SYSTEM OPERATION REQUEST */
