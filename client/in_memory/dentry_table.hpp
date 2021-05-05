@@ -6,6 +6,7 @@
 #include <memory>
 #include "../meta/inode.hpp"
 #include "../meta/dentry.hpp"
+#include "../rpc/rpc_client.hpp"
 
 using std::shared_ptr;
 
@@ -17,7 +18,7 @@ private:
 	std::map<std::string, shared_ptr<inode>> child_inodes;
 
 	enum meta_location loc;
-	uint64_t leader_id;
+	std::string leader_ip;
 
 	std::recursive_mutex dentry_table_mutex;
 public:
@@ -35,7 +36,7 @@ public:
 
 	enum meta_location get_loc();
 
-	void set_leader_id(uint64_t leader_id);
+	void set_leader_id(std::string leader_ip);
 	void set_dentries(shared_ptr<dentry> dentries);
 
 	/* wrapper of dentry class member functions */

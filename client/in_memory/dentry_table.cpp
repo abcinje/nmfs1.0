@@ -84,10 +84,10 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 			throw inode::no_entry("No such file or directory : get_child_inode");
 		}
 
-		/* TODO : returned inode could be dummy remote inode, So should find real inode from remote */
 		return it->second;
 	} else if (this->get_loc() == REMOTE) {
-		/* TODO */
+		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(this->leader_ip, this->dir_ino, filename);
+		return std::dynamic_pointer_cast<inode>(remote_i);
 	}
 
 	return nullptr;
@@ -106,7 +106,11 @@ ino_t dentry_table::check_child_inode(std::string filename){
 
 		return it->second->get_ino();
 	} else if (this->loc == REMOTE) {
-		/* TODO */
+		std::string remote_address(this->leader_ip);
+		std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
+
+		ino_t ino = rc->check_child_inode(this->dir_ino, filename);
+		return ino;
 	}
 
 	return -1;
@@ -131,10 +135,11 @@ enum meta_location dentry_table::get_loc() {
 	return this->loc;
 }
 
-void dentry_table::set_leader_id(uint64_t leader_id) {
+void dentry_table::set_leader_id(std::string leader_ip) {
 	std::scoped_lock scl{this->dentry_table_mutex};
-	this->leader_id = leader_id;
+	this->leader_ip = leader_ip;
 }
+
 void dentry_table::set_dentries(shared_ptr<dentry> dentries) {
 	std::scoped_lock scl{this->dentry_table_mutex};
 	this->dentries = dentries;
