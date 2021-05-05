@@ -19,8 +19,3 @@ shared_ptr<dentry_table> become_leader_of_new_dir(ino_t parnet_ino, ino_t ino){
 
 	return new_dentry_table;
 }
-
-int retire_leader(ino_t directory_ino) {
-	/* TODO */
-	return 0;
-}
