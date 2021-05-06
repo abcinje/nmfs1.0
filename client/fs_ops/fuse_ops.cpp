@@ -61,7 +61,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 		d.sync();
 	}
 
-	thread remote_server_thread(run_rpc_server, "127.0.0.1:8888");
+	thread remote_server_thread(run_rpc_server, remote_handle_ip);
 
 	indexing_table = new directory_table();
 

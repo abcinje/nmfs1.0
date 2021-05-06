@@ -9,7 +9,7 @@ extern std::mutex file_handler_mutex;
 
 extern std::unique_ptr<Server> remote_handle;
 
-void run_rpc_server(std::string remote_address){
+void run_rpc_server(const std::string& remote_address){
 	rpc_server rpc_service;
 	ServerBuilder builder;
 	builder.AddListeningPort(remote_address, grpc::InsecureServerCredentials());

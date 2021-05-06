@@ -11,7 +11,7 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
 
-void run_rpc_server(std::string remote_address);
+void run_rpc_server(const std::string& remote_address);
 
 class rpc_server : public remote_ops::Service {
 public:
