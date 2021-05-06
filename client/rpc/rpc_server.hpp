@@ -15,13 +15,13 @@ void run_rpc_server(const std::string& remote_address);
 
 class rpc_server : public remote_ops::Service {
 public:
-	Status rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,
-								 ::rpc_dentry_table_respond *response) override;
+    Status rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,
+				 ::rpc_dentry_table_respond *response) override;
 
-	Status rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inode_request *request,
-						::rpc_inode_respond *response) override;
+    Status rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inode_request *request,
+			::rpc_inode_respond *response) override;
 
-	Status rpc_getattr(::grpc::ServerContext *context, const ::rpc_common_request *request,
+    Status rpc_getattr(::grpc::ServerContext *context, const ::rpc_common_request *request,
 		       ::rpc_getattr_respond *response) override;
 
     Status rpc_access(::grpc::ServerContext *context, const ::rpc_access_request *request,
@@ -34,7 +34,7 @@ public:
 		       ::grpc::ServerWriter<::rpc_name_respond> *writer) override;
 
     Status rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_request *request,
-		     ::rpc_common_respond *response) override;
+		     ::rpc_mkdir_respond *response) override;
 
     Status rpc_rmdir(::grpc::ServerContext *context, const ::rpc_common_request *request,
 		     ::rpc_common_respond *response) override;

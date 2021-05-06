@@ -130,7 +130,7 @@ Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_readd
 }
 
 Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_request *request,
-							 ::rpc_common_respond *response) {
+							 ::rpc_mkdir_respond *response) {
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -144,6 +144,10 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 	i->set_size(DIR_INODE_SIZE);
 	i->sync();
 
+	shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
+	new_d->sync();
+
+	response->set_new_dir_ino(i->get_ino());
 	response->set_ret(0);
 	return Status::OK;
 }

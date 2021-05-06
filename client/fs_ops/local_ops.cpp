@@ -71,7 +71,7 @@ void local_readdir(shared_ptr<inode> i, void* buffer, fuse_fill_dir_t filler) {
 	parent_dentry_table->fill_filler(buffer, filler);
 }
 
-void local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
+ino_t local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(local_fs_op, "Called mkdir()");
 	fuse_context *fuse_ctx = fuse_get_context();
 
@@ -79,17 +79,13 @@ void local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t 
 	shared_ptr<inode> i = std::make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
 	parent_dentry_table->create_child_inode(new_child_name, i);
 
-	/* TODO : separate make_new_child routine and become_leader routine */
-	shared_ptr<dentry_table> new_dentry_table = become_leader_of_new_dir(parent_i->get_ino(), i->get_ino());
-
 	i->set_size(DIR_INODE_SIZE);
 	i->sync();
 
-	/* TODO : manage dentry and inode of newly created directory */
-	//shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
-	//new_d->sync();
+	shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
+	new_d->sync();
 
-	indexing_table->add_dentry_table(i->get_ino(), new_dentry_table);
+	return i->get_ino();
 }
 
 int local_rmdir(shared_ptr<inode> parent_i, shared_ptr<inode> target_i, std::string target_name) {

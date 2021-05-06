@@ -333,10 +333,12 @@ int fuse_ops::mkdir(const char* path, mode_t mode){
 
 		if(parent_i->get_loc() == LOCAL) {
 			std::scoped_lock scl{atomic_mutex};
-			local_mkdir(parent_i, *get_filename_from_path(path), mode);
+			ino_t new_dir_ino = local_mkdir(parent_i, *get_filename_from_path(path), mode);
+			indexing_table->lease_dentry_table(new_dir_ino);
 		} else if (parent_i->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
-			remote_mkdir(std::dynamic_pointer_cast<remote_inode>(parent_i), *get_filename_from_path(path), mode);
+			ino_t new_dir_ino = remote_mkdir(std::dynamic_pointer_cast<remote_inode>(parent_i), *get_filename_from_path(path), mode);
+			indexing_table->lease_dentry_table(new_dir_ino);
 		}
 
 	} catch(inode::no_entry &e) {
