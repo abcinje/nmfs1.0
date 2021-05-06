@@ -25,23 +25,19 @@ unsigned int fuse_capable;
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 {
 	global_logger.log(fuse_op, "Called init()");
+	/* TODO : argument parsing */
+
 	client *this_client;
 
 	rados_io::conn_info ci = {"client.admin", "ceph", 0};
 	meta_pool = new rados_io(ci, META_POOL);
 	data_pool = new rados_io(ci, DATA_POOL);
+	/* TODO : lease client init */
 
-
-	/* client id allocation */
-	if (!meta_pool->exist(CLIENT, "client.list")) {
-		global_logger.log(fuse_op, "Very first Client is mounted");
-		meta_pool->write(CLIENT, "client.list", "?o", 2, 0);
-		this_client = new client(1);
-	} else {
-		this_client = new client();
-		global_logger.log(fuse_op, "Client(ID=" + std::to_string(this_client->get_client_id()) + ") is mounted");
-		global_logger.log(fuse_op, "Start Inode offset = " + std::to_string(this_client->get_per_client_ino_offset()));
-	}
+	/* TODO : client id allocation */
+	this_client = new client();
+	global_logger.log(fuse_op, "Client(ID=" + std::to_string(this_client->get_client_id()) + ") is mounted");
+	global_logger.log(fuse_op, "Start Inode offset = " + std::to_string(this_client->get_per_client_ino_offset()));
 
 	/* root */
 	if (!meta_pool->exist(INODE, "0")) {
@@ -50,10 +46,11 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 
 		dentry d(0, true);
 
-		i.set_size(d.get_total_name_legth());
+		i.set_size(DIR_INODE_SIZE);
 		i.sync();
 		d.sync();
 	}
+	/* TODO : rpc_server init : class Thread */
 
 	indexing_table = new directory_table();
 
