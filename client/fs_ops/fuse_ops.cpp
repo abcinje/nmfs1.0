@@ -6,6 +6,8 @@
 #include "remote_ops.hpp"
 #include <cstring>
 #include <mutex>
+#include "../rpc/rpc_server.hpp"
+#include <thread>
 
 using namespace std;
 #define META_POOL "nmfs.meta2"
@@ -13,6 +15,9 @@ using namespace std;
 
 rados_io *meta_pool;
 rados_io *data_pool;
+
+
+std::unique_ptr<Server> remote;
 
 directory_table *indexing_table;
 std::mutex atomic_mutex;
@@ -50,7 +55,8 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 		i.sync();
 		d.sync();
 	}
-	/* TODO : rpc_server init : class Thread */
+
+	thread remote_server_thread(run_rpc_server, "127.0.0.1:8888");
 
 	indexing_table = new directory_table();
 
@@ -64,6 +70,8 @@ void fuse_ops::destroy(void *private_data)
 	global_logger.log(fuse_op, "Called destroy()");
 
 	delete indexing_table;
+
+	remote->Shutdown();
 
 	fuse_context *fuse_ctx = fuse_get_context();
 	client *myself = (client *)(fuse_ctx->private_data);

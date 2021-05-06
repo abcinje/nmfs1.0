@@ -11,6 +11,8 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
 
+void run_rpc_server(std::string remote_address);
+
 class rpc_server : public remote_ops::Service {
 public:
 	Status rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,
