@@ -12,10 +12,10 @@ private:
 	uint64_t per_client_ino_offset;
 
 	std::recursive_mutex client_mutex;
+
 public:
 	client();
-	client(int id);
-	~client();
+	~client() = default;
 
 	uint64_t get_client_id();
 	uint64_t get_per_client_ino_offset();

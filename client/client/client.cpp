@@ -7,24 +7,23 @@
  */
 
 #define MAX_CLIENT_NUM 4096
+
 extern rados_io *meta_pool;
+
 client::client() : per_client_ino_offset(0) {
 	/* TODO : client id allocation */
-
-}
-
-client::~client() {
-
 }
 
 uint64_t client::get_client_id() {
 	std::scoped_lock<std::recursive_mutex> scl{this->client_mutex};
 	return this->client_id;
 }
+
 uint64_t client::get_per_client_ino_offset(){
 	std::scoped_lock<std::recursive_mutex> scl{this->client_mutex};
 	return this->per_client_ino_offset;
 }
+
 void client::increase_ino_offset() {
 	std::scoped_lock<std::recursive_mutex> scl{this->client_mutex};
 	this->per_client_ino_offset++;
