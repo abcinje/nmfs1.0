@@ -7,16 +7,16 @@ extern directory_table *indexing_table;
 extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
 extern std::mutex file_handler_mutex;
 
-extern std::unique_ptr<Server> remote;
+extern std::unique_ptr<Server> remote_handle;
 
 void run_rpc_server(std::string remote_address){
 	rpc_server rpc_service;
 	ServerBuilder builder;
 	builder.AddListeningPort(remote_address, grpc::InsecureServerCredentials());
 	builder.RegisterService(&rpc_service);
-	remote = builder.BuildAndStart();
+	remote_handle = builder.BuildAndStart();
 
-	remote->Wait();
+	remote_handle->Wait();
 }
 
 Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,

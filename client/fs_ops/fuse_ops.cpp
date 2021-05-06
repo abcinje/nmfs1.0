@@ -17,7 +17,7 @@ rados_io *meta_pool;
 rados_io *data_pool;
 
 
-std::unique_ptr<Server> remote;
+std::unique_ptr<Server> remote_handle;
 
 directory_table *indexing_table;
 std::mutex atomic_mutex;
@@ -30,7 +30,13 @@ unsigned int fuse_capable;
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 {
 	global_logger.log(fuse_op, "Called init()");
-	/* TODO : argument parsing */
+	fuse_context *fuse_ctx = fuse_get_context();
+	std::string arg((char*)fuse_ctx->private_data);
+	size_t dot_pos = arg.find(',');
+
+	std::string manager_ip = arg.substr(0, dot_pos);
+	std::string remote_handle_ip = arg.substr(dot_pos+1);
+	global_logger.log(fuse_op, "manager IP: " + manager_ip + " remote_handle IP: " + remote_handle_ip);
 
 	client *this_client;
 
@@ -46,7 +52,6 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 
 	/* root */
 	if (!meta_pool->exist(INODE, "0")) {
-		fuse_context *fuse_ctx = fuse_get_context();
 		inode i(0, fuse_ctx->gid, S_IFDIR | 0777, true);
 
 		dentry d(0, true);
@@ -71,7 +76,7 @@ void fuse_ops::destroy(void *private_data)
 
 	delete indexing_table;
 
-	remote->Shutdown();
+	remote_handle->Shutdown();
 
 	fuse_context *fuse_ctx = fuse_get_context();
 	client *myself = (client *)(fuse_ctx->private_data);
