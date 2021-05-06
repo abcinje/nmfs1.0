@@ -8,5 +8,5 @@ service session {
 message empty {}
 
 message client_id {
-  int32 id = 1;
+  int64 id = 1;
 }

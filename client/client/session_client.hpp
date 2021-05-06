@@ -18,7 +18,7 @@ public:
 	session_client(std::shared_ptr<Channel> channel);
 	~session_client(void) = default;
 
-	uint32_t mount(void);
+	uint64_t mount(void);
 	void umount(void);
 };
 

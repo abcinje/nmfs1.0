@@ -9,7 +9,7 @@ session_client::session_client(std::shared_ptr<Channel> channel) : stub(session:
 {
 }
 
-uint32_t session_client::mount(void)
+uint64_t session_client::mount(void)
 {
 	empty dummy;
 	client_id id;

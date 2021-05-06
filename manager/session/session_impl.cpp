@@ -8,7 +8,7 @@ Status session_impl::mount(ServerContext *context, const empty *dummy_in, client
 {
 	std::unique_lock lock(m);
 
-	uint32_t new_id;
+	uint64_t new_id;
 	std::string address;
 
 	/* address */
@@ -27,7 +27,7 @@ Status session_impl::mount(ServerContext *context, const empty *dummy_in, client
 		map.push_back(VALID);
 		new_id = 1;
 	} else {
-		uint32_t i;
+		uint64_t i;
 
 		for (i = 1; i < map.size(); i++)
 			if (map[i] == INVALID) {
@@ -66,14 +66,14 @@ Status session_impl::umount(ServerContext *context, const empty *dummy_in, empty
 {
 	std::unique_lock lock(m);
 
-	uint32_t deleted_id;
+	uint64_t deleted_id;
 	std::string address;
 
 	/* address */
 	address = context->peer();
 
 	/* Erase an <addr, id> pair */
-	tsl::robin_map<uint32_t, std::string>::const_iterator it;
+	tsl::robin_map<uint64_t, std::string>::const_iterator it;
 	for (it = addrmap.cbegin(); it != addrmap.cend(); it++)
 		if (it->second == address) {
 			deleted_id = it->first;
@@ -119,7 +119,7 @@ session_impl::session_impl(std::shared_ptr<rados_io> meta_pool) : pool(meta_pool
 		boost::tokenizer<boost::char_separator<char>> tok(addrmap_string, sep);
 
 		for (auto it = tok.begin(); it != tok.end(); ) {
-			uint32_t client_id = static_cast<uint32_t>(std::stoul(*(it++)));
+			uint64_t client_id = std::stoul(*(it++));
 			addrmap[client_id] = *(it++);
 		}
 	}

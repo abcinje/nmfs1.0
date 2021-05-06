@@ -10,8 +10,9 @@
 
 extern rados_io *meta_pool;
 
-client::client() : per_client_ino_offset(0) {
-	/* TODO : client id allocation */
+client::client(std::shared_ptr<Channel> channel) : per_client_ino_offset(0) {
+	session_client session(channel);
+	client_id = session.mount();
 }
 
 uint64_t client::get_client_id() {

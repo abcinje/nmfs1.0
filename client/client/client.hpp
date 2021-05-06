@@ -14,7 +14,7 @@ private:
 	std::recursive_mutex client_mutex;
 
 public:
-	client();
+	client(std::shared_ptr<Channel> channel);
 	~client() = default;
 
 	uint64_t get_client_id();

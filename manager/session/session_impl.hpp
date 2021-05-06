@@ -34,7 +34,7 @@ private:
 	std::mutex m;
 	std::shared_ptr<rados_io> pool;
 	std::vector<char> map;
-	tsl::robin_map<uint32_t, std::string> addrmap;
+	tsl::robin_map<uint64_t, std::string> addrmap;
 
 	Status mount(ServerContext *context, const empty *dummy_in, client_id *id) override;
 	Status umount(ServerContext *context, const empty *dummy_in, empty *dummy_out) override;

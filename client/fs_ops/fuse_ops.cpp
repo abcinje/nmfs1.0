@@ -46,10 +46,10 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	meta_pool = new rados_io(ci, META_POOL);
 	data_pool = new rados_io(ci, DATA_POOL);
 
-	lc = std::make_unique<lease_client>(grpc::CreateChannel(manager_ip, grpc::InsecureChannelCredentials()), remote_handle_ip);
+	auto channel = grpc::CreateChannel(manager_ip, grpc::InsecureChannelCredentials());
+	lc = std::make_unique<lease_client>(channel, remote_handle_ip);
+	this_client = new client(channel);
 
-	/* TODO : client id allocation */
-	this_client = new client();
 	global_logger.log(fuse_op, "Client(ID=" + std::to_string(this_client->get_client_id()) + ") is mounted");
 	global_logger.log(fuse_op, "Start Inode offset = " + std::to_string(this_client->get_per_client_ino_offset()));
 
