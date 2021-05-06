@@ -33,12 +33,13 @@ void remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t fi
 	rc->readdir(i, buffer, filler);
 }
 
-void remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
+ino_t remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(remote_fs_op, "Called remote_mkdir()");
 	std::string remote_address(parent_i->get_address());
 	std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
 
-	rc->mkdir(parent_i, new_child_name, mode);
+	ino_t new_dir_ino = rc->mkdir(parent_i, new_child_name, mode);
+	return new_dir_ino;
 }
 
 int remote_rmdir(shared_ptr<remote_inode> parent_i, shared_ptr<remote_inode> target_i, std::string target_name) {

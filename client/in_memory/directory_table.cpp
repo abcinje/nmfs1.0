@@ -1,5 +1,7 @@
 #include "directory_table.hpp"
 
+extern std::unique_ptr<lease_client> lc;
+
 static int set_name_bound(int &start_name, int &end_name, const std::string &path, int path_len){
 	start_name = end_name + 2;
 	if(start_name >= path_len)
@@ -74,6 +76,25 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	return target_inode;
 }
 
+shared_ptr<dentry_table> directory_table::lease_dentry_table(ino_t ino){
+	std::string temp_address;
+	int ret = lc->acquire(ino, temp_address);
+	shared_ptr<dentry_table> new_dentry_table;
+	if(ret == 0) {
+		/* Success to acquire lease */
+		new_dentry_table = std::make_shared<dentry_table>(ino, LOCAL);
+		new_dentry_table->pull_child_metadata();
+		this->add_dentry_table(ino, new_dentry_table);
+	} else if(ret == -1) {
+		/* Fail to acquire lease, this dir already has the leader */
+		new_dentry_table = std::make_shared<dentry_table>(ino, REMOTE);
+		new_dentry_table->set_leader_id(temp_address);
+		this->add_dentry_table(ino, new_dentry_table);
+	}
+
+	return new_dentry_table;
+}
+
 shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 	global_logger.log(directory_table_ops, "get_dentry_table(" + std::to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
@@ -82,18 +103,22 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 
 	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
 		global_logger.log(directory_table_ops, "dentry_table : HIT");
+		bool accessible = lc->access(ino);
+		if(accessible) {
+			return it->second;
+		} else {
+			this->dentry_tables.erase(it);
+			shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
+		}
 		return it->second;
 	}
 	else { /* UNKNOWN */
-		/* TODO : need to revise with manager functions
+		/*
 		 * if the directory has no leader, make local dentry_table
 		 * if the directory already has leader, make remote dentry_table and fill loc and leader_ip
 		 */
 		global_logger.log(directory_table_ops, "dentry_table : MISS");
-
-		shared_ptr<dentry_table> new_dentry_table = become_leader(ino);
-		this->add_dentry_table(ino, new_dentry_table);
-
+		shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
 		return new_dentry_table;
 	}
 

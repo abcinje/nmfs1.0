@@ -12,6 +12,7 @@
 #include "../logger/logger.hpp"
 #include "../client/client.hpp"
 #include "../temp/lease_util.hpp"
+#include "../manager/lease_client.hpp"
 
 #define ENOTLEADER 8000
 
@@ -30,6 +31,7 @@ public:
 	int delete_dentry_table(ino_t ino);
 
 	shared_ptr<inode> path_traversal(const std::string &path);
+        shared_ptr<dentry_table> lease_dentry_table(ino_t ino);
 	shared_ptr<dentry_table> get_dentry_table(ino_t ino);
 	uint64_t check_dentry_table(ino_t ino);
 

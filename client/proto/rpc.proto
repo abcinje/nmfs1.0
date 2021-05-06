@@ -11,7 +11,7 @@ service remote_ops {
   rpc rpc_access(rpc_access_request) returns (rpc_common_respond) {}
   rpc rpc_opendir(rpc_open_opendir_request) returns (rpc_common_respond) {}
   rpc rpc_readdir(rpc_readdir_request) returns (stream rpc_name_respond) {}
-  rpc rpc_mkdir(rpc_mkdir_request) returns (rpc_common_respond) {}
+  rpc rpc_mkdir(rpc_mkdir_request) returns (rpc_mkdir_respond) {}
   rpc rpc_rmdir(rpc_common_request) returns (rpc_common_respond) {}
   rpc rpc_symlink(rpc_symlink_request) returns (rpc_common_respond) {}
   rpc rpc_readlink(rpc_readlink_request) returns (rpc_name_respond) {}
@@ -198,6 +198,12 @@ message rpc_name_respond {
 
 message rpc_create_respond {
   uint64 	new_ino = 1;
+
+  sint32 ret = 2;
+}
+
+message rpc_mkdir_respond {
+  uint64 	new_dir_ino = 1;
 
   sint32 ret = 2;
 }

@@ -149,11 +149,11 @@ void rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir
 	}
 }
 
-void rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
+ino_t rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(rpc_client_ops, "Called mkdir()");
 	ClientContext context;
 	rpc_mkdir_request Input;
-	rpc_common_respond Output;
+	rpc_mkdir_respond Output;
 
 	/* prepare Input */
 	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
@@ -162,7 +162,7 @@ void rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_
 
 	Status status = stub_->rpc_mkdir(&context, Input, &Output);
 	if(status.ok()){
-
+		return Output.new_dir_ino();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::mkdir() failed");
