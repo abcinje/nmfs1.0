@@ -15,9 +15,6 @@ using grpc::Status;
 
 #include <memory>
 #include <mutex>
-#include <string>
-#include <vector>
-#include <tsl/robin_map.h>
 
 #include "../../lib/rados_io/rados_io.hpp"
 
@@ -25,15 +22,9 @@ using grpc::Status;
 
 class session_impl final : public session::Service {
 private:
-	enum state {
-		INVALID,
-		VALID,
-	};
-
 	std::mutex m;
 	std::shared_ptr<rados_io> pool;
-	std::vector<char> map;
-	tsl::robin_map<uint64_t, std::string> addrmap;
+	uint64_t next_id;
 
 	Status mount(ServerContext *context, const empty *dummy_in, client_id *id) override;
 	Status umount(ServerContext *context, const empty *dummy_in, empty *dummy_out) override;
