@@ -26,6 +26,8 @@ std::mutex atomic_mutex;
 std::map<ino_t, unique_ptr<file_handler>> fh_list;
 std::mutex file_handler_mutex;
 
+thread *remote_server_thread;
+
 unsigned int fuse_capable;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
@@ -64,7 +66,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 		d.sync();
 	}
 
-	thread remote_server_thread(run_rpc_server, remote_handle_ip);
+	remote_server_thread = new thread(run_rpc_server, remote_handle_ip);
 
 	indexing_table = new directory_table();
 
