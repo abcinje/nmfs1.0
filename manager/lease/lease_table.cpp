@@ -46,12 +46,12 @@ int lease_table::acquire(ino_t ino, system_clock::time_point &new_due, std::stri
 
 	{
 		std::unique_lock lock(sm);
-		auto it = map.find(ino);
-		if (it != map.end()) {
-			return -1;
-		} else {
-			map[ino] = new lease_entry(remote_addr);
+		auto ret = map.insert({ino, nullptr});
+		if (ret.second) {
+			ret.first.value() = new lease_entry(remote_addr);
 			return 0;
+		} else {
+			return -1;
 		}
 	}
 }

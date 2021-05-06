@@ -63,7 +63,8 @@ void lease_table_client::update(ino_t ino, const system_clock::time_point &new_d
 
 	{
 		std::unique_lock lock(sm);
-		if (map.find(ino) == map.end())
-			map[ino] = new lease_entry(new_due);
+		auto ret = map.insert({ino, nullptr});
+		if (ret.second)
+			ret.first.value() = new lease_entry(new_due);
 	}
 }
