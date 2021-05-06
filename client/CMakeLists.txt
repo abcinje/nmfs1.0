@@ -72,6 +72,7 @@ add_executable(
 
   # client
   client/client.cpp
+  client/session_client.cpp
 
   # temp
   temp/lease_util.cpp
@@ -91,7 +92,6 @@ add_executable(
   # manager
   manager/lease_client.cpp
   manager/lease_table_client.cpp
-  manager/session_client.cpp
 
   #rpc
   rpc/rpc_client.cpp

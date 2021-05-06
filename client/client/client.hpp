@@ -3,7 +3,7 @@
 
 #include <mutex>
 #include "../../lib/rados_io/rados_io.hpp"
-#include "../../manager/session/session_impl.hpp"
+#include "session_client.hpp"
 
 class client {
 private:
