@@ -6,8 +6,6 @@
  * and allocate it to the field ""client_id"
  */
 
-#define MAX_CLIENT_NUM 4096
-
 extern rados_io *meta_pool;
 
 client::client(std::shared_ptr<Channel> channel) : per_client_ino_offset(0) {
