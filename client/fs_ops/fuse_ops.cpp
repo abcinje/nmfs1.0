@@ -4,9 +4,10 @@
 #include "../util.hpp"
 #include "local_ops.hpp"
 #include "remote_ops.hpp"
+#include "../rpc/rpc_server.hpp"
+#include "../manager/lease_client.hpp"
 #include <cstring>
 #include <mutex>
-#include "../rpc/rpc_server.hpp"
 #include <thread>
 
 using namespace std;
@@ -16,8 +17,8 @@ using namespace std;
 rados_io *meta_pool;
 rados_io *data_pool;
 
-
 std::unique_ptr<Server> remote_handle;
+std::unique_ptr<lease_client> lc;
 
 directory_table *indexing_table;
 std::mutex atomic_mutex;
@@ -43,7 +44,8 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	rados_io::conn_info ci = {"client.admin", "ceph", 0};
 	meta_pool = new rados_io(ci, META_POOL);
 	data_pool = new rados_io(ci, DATA_POOL);
-	/* TODO : lease client init */
+
+	lc = std::make_unique<lease_client>(grpc::CreateChannel(manager_ip, grpc::InsecureChannelCredentials()), remote_handle_ip);
 
 	/* TODO : client id allocation */
 	this_client = new client();
