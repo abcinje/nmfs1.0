@@ -14,7 +14,7 @@ using std::string;
 int main(int argc, char *argv[])
 {
 	if (argc < 3) {
-		std::cerr << "Usage: " << argv[0] << " <remote_server_ip> <remote_server_port>" << std::endl;
+		std::cerr << "Usage: " << argv[0] << " <manager_ip> <manager_port>" << std::endl;
 		return 1;
 	}
 
