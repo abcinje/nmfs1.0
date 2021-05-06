@@ -31,10 +31,11 @@ unsigned int fuse_capable;
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 {
 	global_logger.log(fuse_op, "Called init()");
+
+	/* argument parsing */
 	fuse_context *fuse_ctx = fuse_get_context();
 	std::string arg((char*)fuse_ctx->private_data);
 	size_t dot_pos = arg.find(',');
-
 	std::string manager_ip = arg.substr(0, dot_pos);
 	std::string remote_handle_ip = arg.substr(dot_pos+1);
 	global_logger.log(fuse_op, "manager IP: " + manager_ip + " remote_handle IP: " + remote_handle_ip);
