@@ -28,7 +28,6 @@ private:
 	enum state {
 		INVALID,
 		VALID,
-		RECOVERY,
 	};
 
 	std::mutex m;
