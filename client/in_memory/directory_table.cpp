@@ -103,8 +103,8 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 
 	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
 		global_logger.log(directory_table_ops, "dentry_table : HIT");
-		bool accessable = lc->access(ino);
-		if(accessable) {
+		bool accessible = lc->access(ino);
+		if(accessible) {
 			return it->second;
 		} else {
 			this->dentry_tables.erase(it);
