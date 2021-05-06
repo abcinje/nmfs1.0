@@ -23,7 +23,7 @@ Status session_impl::umount(ServerContext *context, const empty *dummy_in, empty
 	return Status::OK;
 }
 
-session_impl::session_impl(std::shared_ptr<rados_io> meta_pool)
+session_impl::session_impl(std::shared_ptr<rados_io> meta_pool) : pool(meta_pool)
 {
 	size_t size;
 
