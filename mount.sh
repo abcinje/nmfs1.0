@@ -1,3 +1,10 @@
 #!/usr/bin/env bash
 
-sudo ./build/client/nmfs -f -o allow_other ../mnt
+MANAGER_IP="172.31.35.141"
+MANAGER_PORT="8900"
+REMOTE_HANDLE_IP="172.31.35.141"
+REMOTE_HANDLE_PORT="8888"
+
+IP_ARGS=$MANAGER_IP:$MANAGER_PORT,$REMOTE_HANDLE_IP:$REMOTE_HANDLE_PORT
+
+sudo ./build/client/nmfs -f -o allow_other ../mnt $IP_ARGS
