@@ -78,6 +78,7 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 		return it->second;
 	} else if (this->get_loc() == REMOTE) {
 		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(this->leader_ip, this->dir_ino, filename);
+		remote_i->set_loc(REMOTE);
 		return std::dynamic_pointer_cast<inode>(remote_i);
 	}
 

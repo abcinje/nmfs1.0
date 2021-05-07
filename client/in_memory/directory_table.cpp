@@ -69,10 +69,16 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 
 		parent_inode = target_inode;
 		if(S_ISDIR(parent_inode->get_mode()))
-			parent_dentry_table = this->get_dentry_table(target_inode->get_ino());
+			parent_dentry_table = this->get_dentry_table(check_target_ino);
 	}
 
-	target_inode = parent_inode;
+	if(parent_dentry_table->get_loc() == LOCAL) {
+		target_inode = parent_inode;
+	} else if(parent_dentry_table->get_loc() == REMOTE){
+		target_inode = parent_inode;
+		target_inode->set_ino(check_target_ino);
+	}
+
 	return target_inode;
 }
 
