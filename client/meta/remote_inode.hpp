@@ -1,7 +1,3 @@
-//
-// Created by bori1 on 2021-04-23.
-//
-
 #ifndef NMFS_REMOTE_INODE_H
 #define NMFS_REMOTE_INODE_H
 
