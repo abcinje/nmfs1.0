@@ -11,8 +11,8 @@
 #include <thread>
 
 using namespace std;
-#define META_POOL "nmfs.meta2"
-#define DATA_POOL "nmfs.data2"
+#define META_POOL "nmfs.meta"
+#define DATA_POOL "nmfs.data"
 
 rados_io *meta_pool;
 rados_io *data_pool;

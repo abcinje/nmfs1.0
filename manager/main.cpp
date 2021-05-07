@@ -9,7 +9,7 @@ using std::string;
 #include "lease/lease_impl.hpp"
 #include "session/session_impl.hpp"
 
-#define META_POOL "nmfs.meta2"
+#define META_POOL "nmfs.meta"
 
 int main(int argc, char *argv[])
 {
