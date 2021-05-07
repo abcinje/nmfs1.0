@@ -270,7 +270,9 @@ int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-	shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+	ino_t target_dir_ino = parent_dentry_table->check_child_inode(*file_name);
+	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_dir_ino);
+	shared_ptr<inode> i = target_dentry_table->get_child_inode(*file_name);
 
 	if (i->get_loc() == LOCAL) {
 		local_readdir(i, buffer, filler);
@@ -545,7 +547,7 @@ int fuse_ops::read(const char *path, char *buffer, size_t size, off_t offset, st
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
-
+		/* TODO : i need inode number */
 		read_len = local_read(i, buffer, size, offset);
 
 	} catch (inode::no_entry &e) {
