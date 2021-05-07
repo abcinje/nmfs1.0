@@ -134,6 +134,8 @@ ino_t dentry::get_child_ino(std::string child_name)
 void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler)
 {
 	std::scoped_lock scl{this->dentry_mutex};
+	filler(buffer, ".", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
+	filler(buffer, "..", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 	for (auto it = this->child_list.begin(); it != this->child_list.end(); it++)
 		filler(buffer, it->first.c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 }
