@@ -7,13 +7,13 @@
 #include <sstream>
 #include <string>
 
-static std::string TimepointToString(const std::chrono::system_clock::time_point& p_tpTime)
+static std::string TimepointToString(const std::chrono::system_clock::time_point& time, const std::string& format)
 {
-	std::string p_sFormat("%H%M%S%.6f");
-	auto converted_timep = std::chrono::system_clock::to_time_t(p_tpTime);
-	std::ostringstream oss;
-	oss << std::put_time(std::localtime(&converted_timep), p_sFormat.c_str());
-	return oss.str();
+	std::time_t tt = std::chrono::system_clock::to_time_t(time);
+	std::tm tm = *std::gmtime(&tt); //GMT (UTC)
+	std::stringstream ss;
+	ss << std::put_time( &tm, format.c_str() );
+	return ss.str();
 }
 
 lease_table::lease_entry::lease_entry(const std::string &remote_addr) : due(system_clock::now() + milliseconds(LEASE_PERIOD_MS)), addr(remote_addr)
@@ -22,20 +22,20 @@ lease_table::lease_entry::lease_entry(const std::string &remote_addr) : due(syst
 
 bool lease_table::lease_entry::cas(system_clock::time_point &new_due, std::string &remote_addr)
 {
-	global_logger.log(manager_lease, "CAS has been called. Current time is " + TimepointToString(due));
+	global_logger.log(manager_lease, "CAS has been called. Current time is " + TimepointToString(due, "UTC: %Y-%m-%d %H:%M:%S"));
 	std::unique_lock lock(m);
 
 	if (system_clock::now() >= due) {
 		global_logger.log(manager_lease, "CAS: success :)");
-		global_logger.log(manager_lease, "  (" + addr + ", " + TimepointToString(due) + ")");
+		global_logger.log(manager_lease, "  (" + addr + ", " + TimepointToString(due, "UTC: %Y-%m-%d %H:%M:%S") + ")");
 		new_due = due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
 		addr = remote_addr;
-		global_logger.log(manager_lease, "  -> (" + addr + ", " + TimepointToString(due) + ")");
+		global_logger.log(manager_lease, "  -> (" + addr + ", " + TimepointToString(due, "UTC: %Y-%m-%d %H:%M:%S") + ")");
 		return true;
 	}
 
 	global_logger.log(manager_lease, "CAS: failure :(");
-	global_logger.log(manager_lease, "  (" + addr + ", " + TimepointToString(due) + ")");
+	global_logger.log(manager_lease, "  (" + addr + ", " + TimepointToString(due, "UTC: %Y-%m-%d %H:%M:%S") + ")");
 	global_logger.log(manager_lease, "  -> Not expired yet");
 	remote_addr = addr;
 	return false;
