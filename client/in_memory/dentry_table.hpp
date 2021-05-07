@@ -36,6 +36,9 @@ public:
 
 	enum meta_location get_loc();
 
+	ino_t get_dir_ino() const;
+	const string &get_leader_ip() const;
+
 	void set_leader_id(std::string leader_ip);
 	void set_dentries(shared_ptr<dentry> dentries);
 

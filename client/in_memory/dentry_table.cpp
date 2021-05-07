@@ -154,6 +154,14 @@ std::map<std::string, shared_ptr<inode>>::iterator dentry_table::get_child_inode
 	return this->child_inodes.end();
 }
 
+ino_t dentry_table::get_dir_ino() const {
+	return dir_ino;
+}
+
+const string &dentry_table::get_leader_ip() const {
+	return leader_ip;
+}
+
 
 
 
