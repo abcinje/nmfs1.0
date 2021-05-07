@@ -17,7 +17,6 @@ using std::shared_ptr;
 
 class directory_table {
 private:
-	shared_ptr<inode> root_inode;
 	std::map<ino_t, shared_ptr<dentry_table>> dentry_tables;
 
 	std::recursive_mutex directory_table_mutex;
@@ -31,8 +30,6 @@ public:
         shared_ptr<dentry_table> lease_dentry_table(ino_t ino);
 	shared_ptr<dentry_table> get_dentry_table(ino_t ino);
 	uint64_t check_dentry_table(ino_t ino);
-
-	shared_ptr<inode> get_root_inode();
 };
 
 #endif //NMFS0_DIRECTORY_TABLE_HPP

@@ -1,5 +1,7 @@
 #include "dentry_table.hpp"
 
+extern std::shared_ptr<inode> root_inode;
+
 dentry_table::dentry_table(ino_t dir_ino, enum meta_location loc) : dir_ino(dir_ino), loc(loc){
 	/*
 	 * if LOCAL : pull_child_metadata() right after return to caller if dentry object exist
@@ -68,6 +70,8 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
 	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ")");
 	if(this->get_loc() == LOCAL) {
 		std::scoped_lock scl{this->dentry_table_mutex};
+		if(filename == "/")
+			return root_inode;
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
 

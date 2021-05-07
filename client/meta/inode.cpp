@@ -4,7 +4,7 @@ using std::runtime_error;
 
 extern rados_io *meta_pool;
 std::recursive_mutex alloc_mutex;
-
+std::shared_ptr<inode> root_inode;
 inode::no_entry::no_entry(const string &msg) : runtime_error(msg)
 {
 }

@@ -1,7 +1,7 @@
 #include "directory_table.hpp"
 
 extern std::unique_ptr<lease_client> lc;
-
+extern std::shared_ptr<inode> root_inode;
 static int set_name_bound(int &start_name, int &end_name, const std::string &path, int path_len){
 	start_name = end_name + 2;
 	if(start_name >= path_len)
@@ -21,12 +21,12 @@ static int set_name_bound(int &start_name, int &end_name, const std::string &pat
 }
 
 directory_table::directory_table() {
-	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(0);
-	this->root_inode  = std::make_shared<inode>(0);
-	if(parent_dentry_table->get_loc() == LOCAL)
-		this->root_inode->set_loc(LOCAL);
+	shared_ptr<dentry_table> root_dentry_table = this->get_dentry_table(0);
+	root_inode  = std::make_shared<inode>(0);
+	if(root_dentry_table->get_loc() == LOCAL)
+		root_inode->set_loc(LOCAL);
 	else
-		this->root_inode->set_loc(REMOTE);
+		root_inode->set_loc(REMOTE);
 }
 
 directory_table::~directory_table() {
@@ -43,7 +43,7 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 
 	std::scoped_lock scl{this->directory_table_mutex};
 	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(0);
-	shared_ptr<inode> parent_inode = this->get_root_inode();
+	shared_ptr<inode> parent_inode = root_inode;
 
 	ino_t check_target_ino;
 	shared_ptr<inode> target_inode;
@@ -83,7 +83,8 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	} else if(parent_dentry_table->get_loc() == REMOTE){
 		global_logger.log(directory_table_ops, "Return Remote Inode");
 		target_inode = parent_inode;
-		target_inode->set_ino(check_target_ino);
+		if(path != "/")
+			target_inode->set_ino(check_target_ino);
 	}
 
 	return target_inode;
@@ -185,9 +186,4 @@ int directory_table::delete_dentry_table(ino_t ino){
 	this->dentry_tables.erase(it);
 
 	return 0;
-}
-
-shared_ptr<inode> directory_table::get_root_inode() {
-	std::scoped_lock scl{this->directory_table_mutex};
-	return this->root_inode;
 }
