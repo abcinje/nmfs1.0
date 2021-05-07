@@ -20,7 +20,7 @@ private:
 		std::string addr;
 
 	public:
-		lease_entry(const std::string &remote_addr);
+		lease_entry(system_clock::time_point &new_due, const std::string &remote_addr);
 		~lease_entry(void) = default;
 
 		/*
