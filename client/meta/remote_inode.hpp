@@ -20,7 +20,7 @@ public:
 	[[nodiscard]] ino_t get_dentry_table_ino() const;
 	[[nodiscard]] const string &get_file_name() const;
 
-	void set_mode(mode_t mode) override;
+	mode_t get_mode() override;
 };
 
 
