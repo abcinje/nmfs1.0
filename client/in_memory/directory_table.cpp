@@ -109,8 +109,8 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 		} else {
 			this->dentry_tables.erase(it);
 			shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
+			return new_dentry_table;
 		}
-		return it->second;
 	}
 	else { /* UNKNOWN */
 		/*
