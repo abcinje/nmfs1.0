@@ -39,36 +39,36 @@ lease_table_client::~lease_table_client(void)
 
 bool lease_table_client::check(ino_t ino)
 {
-	global_logger.log(manager_lease, "Called check(" + std::to_string(ino) + ")");
+	global_logger.log(lease_ops, "Called check(" + std::to_string(ino) + ")");
 	lease_entry *e;
 
 	{
 		std::shared_lock lock(sm);
 		auto it = map.find(ino);
 		if (it != map.end()) {
-			global_logger.log(manager_lease, "Find lease in the table!");
+			global_logger.log(lease_ops, "Find lease in the table!");
 			e = it->second;
 		} else {
-			global_logger.log(manager_lease, "Failed to find lease duration");
+			global_logger.log(lease_ops, "Failed to find lease duration");
 			return false;
 		}
 	}
 	const std::chrono::system_clock::time_point input = system_clock::now();
-	global_logger.log(manager_lease, "system_clock::now: " + serializeTimePoint(input, "UTC: %Y-%m-%d %H:%M:%S"));
-	global_logger.log(manager_lease, "e->get_due(): " + serializeTimePoint(e->get_due(), "UTC: %Y-%m-%d %H:%M:%S"));
+	global_logger.log(lease_ops, "system_clock::now: " + serializeTimePoint(input, "UTC: %Y-%m-%d %H:%M:%S"));
+	global_logger.log(lease_ops, "e->get_due(): " + serializeTimePoint(e->get_due(), "UTC: %Y-%m-%d %H:%M:%S"));
 
 	if(input < e->get_due())
-		global_logger.log(manager_lease, "TRUE : LEASE IS VALID");
+		global_logger.log(lease_ops, "TRUE : LEASE IS VALID");
 	else
-		global_logger.log(manager_lease, "FALSE : LEASE IS EXPIRED");
+		global_logger.log(lease_ops, "FALSE : LEASE IS EXPIRED");
 
 	return system_clock::now() < e->get_due();
 }
 
 void lease_table_client::update(ino_t ino, const system_clock::time_point &new_due)
 {
-	global_logger.log(manager_lease, "Called update(" + std::to_string(ino) + ")");
-	global_logger.log(manager_lease, "new_due: " + serializeTimePoint(new_due, "UTC: %Y-%m-%d %H:%M:%S"));
+	global_logger.log(lease_ops, "Called update(" + std::to_string(ino) + ")");
+	global_logger.log(lease_ops, "new_due: " + serializeTimePoint(new_due, "UTC: %Y-%m-%d %H:%M:%S"));
 
 	lease_entry *e;
 	bool found = false;

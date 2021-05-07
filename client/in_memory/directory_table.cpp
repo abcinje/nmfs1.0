@@ -21,7 +21,12 @@ static int set_name_bound(int &start_name, int &end_name, const std::string &pat
 }
 
 directory_table::directory_table() {
+	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(0);
 	this->root_inode  = std::make_shared<inode>(0);
+	if(parent_dentry_table->get_loc() == LOCAL)
+		this->root_inode->set_loc(LOCAL);
+	else
+		this->root_inode->set_loc(REMOTE);
 }
 
 directory_table::~directory_table() {
@@ -73,8 +78,10 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	}
 
 	if(parent_dentry_table->get_loc() == LOCAL) {
+		global_logger.log(directory_table_ops, "Return Local Inode");
 		target_inode = parent_inode;
 	} else if(parent_dentry_table->get_loc() == REMOTE){
+		global_logger.log(directory_table_ops, "Return Remote Inode");
 		target_inode = parent_inode;
 		target_inode->set_ino(check_target_ino);
 	}
@@ -95,6 +102,7 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(ino_t ino){
 		this->add_dentry_table(ino, new_dentry_table);
 	} else if(ret == -1) {
 		global_logger.log(directory_table_ops, "Fail to acquire lease, this dir already has the leader");
+		global_logger.log(directory_table_ops, "Leader Address: " + temp_address);
 		/* Fail to acquire lease, this dir already has the leader */
 		new_dentry_table = std::make_shared<dentry_table>(ino, REMOTE);
 		new_dentry_table->set_leader_id(temp_address);
