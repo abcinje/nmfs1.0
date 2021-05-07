@@ -26,10 +26,14 @@ int lease_client::acquire(ino_t ino, std::string &remote_addr)
 	Status status = stub->acquire(&context, request, &response);
 
 	if (status.ok()) {
-		system_clock::time_point due{system_clock::duration{response.due()}};
-		table.update(ino, due);
-		remote_addr = response.remote_addr();
-		return response.ret();
+		int ret = response.ret();
+		if (ret == 0) {
+			system_clock::time_point due{system_clock::duration{response.due()}};
+			table.update(ino, due);
+		} else {
+			remote_addr = response.remote_addr();
+		}
+		return ret;
 	} else {
 		std::cerr << "[" << status.error_code() << "] " << status.error_message() << std::endl;
 		throw std::runtime_error("lease_client::acquire() failed");
