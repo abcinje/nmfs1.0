@@ -142,6 +142,8 @@ void rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir
 	ClientContext context;
 	rpc_readdir_request Input;
 	rpc_name_respond Output;
+
+	Input.set_dentry_table_ino(i->get_dentry_table_ino());
 	std::unique_ptr<ClientReader<rpc_name_respond>> reader(stub_->rpc_readdir(&context, Input));
 
 	while(reader->Read(&Output)){

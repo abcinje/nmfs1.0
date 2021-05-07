@@ -272,12 +272,13 @@ int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 
 	ino_t target_dir_ino = parent_dentry_table->check_child_inode(*file_name);
 	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_dir_ino);
-	shared_ptr<inode> i = target_dentry_table->get_child_inode(*file_name);
 
-	if (i->get_loc() == LOCAL) {
+	if (target_dentry_table->get_loc() == LOCAL) {
+		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
 		local_readdir(i, buffer, filler);
-	} else if (i->get_loc() == REMOTE) {
-		remote_readdir(std::dynamic_pointer_cast<remote_inode>(i), buffer, filler);
+	} else if (target_dentry_table->get_loc() == REMOTE) {
+		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(), target_dentry_table->get_dir_ino(), *file_name);
+		remote_readdir(remote_i, buffer, filler);
 	}
 
 	return 0;
