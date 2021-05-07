@@ -13,8 +13,6 @@
 #include "../client/client.hpp"
 #include "../manager/lease_client.hpp"
 
-#define ENOTLEADER 8000
-
 using std::shared_ptr;
 
 class directory_table {
