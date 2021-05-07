@@ -39,8 +39,6 @@ public:
 	 * On failure
 	 * - Return -1
 	 * - 'remote_addr' is changed to the address of the directory leader'
-	 *
-	 * TODO: Handle situations that directories are under recovery separately
 	 */
 	int acquire(ino_t ino, std::string &remote_addr);
 };
