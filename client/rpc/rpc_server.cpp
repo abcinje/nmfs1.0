@@ -21,6 +21,7 @@ void run_rpc_server(const std::string& remote_address){
 
 Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,
 										 ::rpc_dentry_table_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_check_child_inode()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -37,6 +38,7 @@ Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const :
 
 Status rpc_server::rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inode_request *request,
 								::rpc_inode_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_get_mode()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -52,7 +54,7 @@ Status rpc_server::rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inod
 
 Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_common_request *request,
 							   ::rpc_getattr_respond *response) {
-
+	global_logger.log(rpc_server_ops, "Called rpc_getattr()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -81,6 +83,7 @@ Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_commo
 
 Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_access_request *request,
 							  ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_access()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -102,6 +105,7 @@ Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_access
 
 Status rpc_server::rpc_opendir(::grpc::ServerContext *context, const ::rpc_open_opendir_request *request,
 							   ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_opendir()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -121,6 +125,7 @@ Status rpc_server::rpc_opendir(::grpc::ServerContext *context, const ::rpc_open_
 
 Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_readdir_request *request,
 							   ::grpc::ServerWriter<::rpc_name_respond> *writer) {
+	global_logger.log(rpc_server_ops, "Called rpc_readdir()");
 	rpc_name_respond response;
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response.set_ret(-ENOTLEADER);
@@ -145,6 +150,7 @@ Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_readd
 
 Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_request *request,
 							 ::rpc_mkdir_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_mkdir()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -168,6 +174,7 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 
 Status rpc_server::rpc_rmdir(::grpc::ServerContext *context, const ::rpc_common_request *request,
 							 ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_rmdir()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -178,6 +185,7 @@ Status rpc_server::rpc_rmdir(::grpc::ServerContext *context, const ::rpc_common_
 
 Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symlink_request *request,
 							   ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_symlink()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -206,6 +214,7 @@ Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symli
 
 Status rpc_server::rpc_readlink(::grpc::ServerContext *context, const ::rpc_readlink_request *request,
 								::rpc_name_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_readlink()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -225,6 +234,7 @@ Status rpc_server::rpc_readlink(::grpc::ServerContext *context, const ::rpc_read
 
 Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const ::rpc_rename_same_parent_request *request,
 										  ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_rename_same_parent()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -257,6 +267,7 @@ Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const 
 
 Status rpc_server::rpc_rename_not_same_parent(::grpc::ServerContext *context, const ::rpc_common_request *request,
 											  ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_rename_not_same_parent()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -267,6 +278,7 @@ Status rpc_server::rpc_rename_not_same_parent(::grpc::ServerContext *context, co
 
 Status rpc_server::rpc_open(::grpc::ServerContext *context, const ::rpc_open_opendir_request *request,
 							::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_open()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -296,6 +308,7 @@ Status rpc_server::rpc_open(::grpc::ServerContext *context, const ::rpc_open_ope
 
 Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create_request *request,
 							  ::rpc_create_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_create()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -315,6 +328,7 @@ Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create
 
 Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink_request *request,
 							  ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_unlink()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -344,6 +358,7 @@ Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink
 
 Status rpc_server::rpc_write(::grpc::ServerContext *context, const ::rpc_write_request *request,
 							 ::rpc_write_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_write()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -372,6 +387,7 @@ Status rpc_server::rpc_write(::grpc::ServerContext *context, const ::rpc_write_r
 
 Status rpc_server::rpc_chmod(::grpc::ServerContext *context, const ::rpc_chmod_request *request,
 							 ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_chmod()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -391,6 +407,7 @@ Status rpc_server::rpc_chmod(::grpc::ServerContext *context, const ::rpc_chmod_r
 
 Status rpc_server::rpc_chown(::grpc::ServerContext *context, const ::rpc_chown_request *request,
 							 ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_chown()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -413,6 +430,7 @@ Status rpc_server::rpc_chown(::grpc::ServerContext *context, const ::rpc_chown_r
 
 Status rpc_server::rpc_utimens(::grpc::ServerContext *context, const ::rpc_utimens_request *request,
 							   ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_utimens()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
@@ -455,6 +473,7 @@ Status rpc_server::rpc_utimens(::grpc::ServerContext *context, const ::rpc_utime
 
 Status rpc_server::rpc_truncate(::grpc::ServerContext *context, const ::rpc_truncate_request *request,
 								::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_truncate()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
