@@ -15,7 +15,9 @@ enum code_location {
 	dentry_table_ops,
 	lease_ops,
 	rpc_client_ops,
-	rpc_server_ops
+	rpc_server_ops,
+	manager_lease,
+	manager_session,
 };
 
 
