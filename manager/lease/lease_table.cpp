@@ -16,8 +16,9 @@ static std::string TimepointToString(const std::chrono::system_clock::time_point
 	return oss.str();
 }
 
-lease_table::lease_entry::lease_entry(const std::string &remote_addr) : due(system_clock::now() + milliseconds(LEASE_PERIOD_MS)), addr(remote_addr)
+lease_table::lease_entry::lease_entry(system_clock::time_point &new_due, const std::string &remote_addr) : due(system_clock::now() + milliseconds(LEASE_PERIOD_MS)), addr(remote_addr)
 {
+	new_due = due;
 }
 
 bool lease_table::lease_entry::cas(system_clock::time_point &new_due, std::string &remote_addr)
@@ -69,7 +70,7 @@ int lease_table::acquire(ino_t ino, system_clock::time_point &new_due, std::stri
 		std::unique_lock lock(sm);
 		auto ret = map.insert({ino, nullptr});
 		if (ret.second) {
-			ret.first.value() = new lease_entry(remote_addr);
+			ret.first.value() = new lease_entry(new_due, remote_addr);
 			return 0;
 		} else {
 			return -1;
