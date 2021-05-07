@@ -21,6 +21,11 @@ void run_rpc_server(const std::string& remote_address){
 
 Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,
 										 ::rpc_dentry_table_respond *response) {
+	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+		response->set_ret(-ENOTLEADER);
+		return Status::OK;
+	}
+
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	ino_t check_target_ino = parent_dentry_table->check_child_inode(request->filename());
 
@@ -32,6 +37,11 @@ Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const :
 
 Status rpc_server::rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inode_request *request,
 								::rpc_inode_respond *response) {
+	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+		response->set_ret(-ENOTLEADER);
+		return Status::OK;
+	}
+
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
 

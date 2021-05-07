@@ -18,6 +18,8 @@ ino_t rpc_client::check_child_inode(ino_t dentry_table_ino, std::string filename
 
 	Status status = stub_->rpc_check_child_inode(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		return Output.checked_ino();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -37,6 +39,8 @@ mode_t rpc_client::get_mode(ino_t dentry_table_ino, std::string filename){
 
 	Status status = stub_->rpc_get_mode(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		return Output.i_mode();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -57,6 +61,9 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* s) {
 
 	Status status = stub_->rpc_getattr(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
+
 		s->st_mode	= Output.i_mode();
 		s->st_uid	= Output.i_uid();
 		s->st_gid	= Output.i_gid();
@@ -90,6 +97,8 @@ void rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 
 	Status status = stub_->rpc_access(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		if(Output.ret() == -EACCES)
 			throw inode::permission_denied("Permission Denied: Remote");
 		return;
@@ -111,6 +120,8 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 
 	Status status = stub_->rpc_opendir(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		{
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
@@ -142,6 +153,8 @@ void rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir
 
 	Status status = reader->Finish();
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -162,6 +175,8 @@ ino_t rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child
 
 	Status status = stub_->rpc_mkdir(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		return Output.new_dir_ino();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -187,6 +202,8 @@ int rpc_client::symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, 
 
 	Status status = stub_->rpc_symlink(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -207,6 +224,8 @@ int rpc_client::readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 
 	Status status = stub_->rpc_readlink(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		/* fill buffer */
 		size_t len = MIN(Output.filename().length(), size-1);
 		memcpy(buf, Output.filename().c_str(), len);
@@ -232,6 +251,8 @@ int rpc_client::rename_same_parent(shared_ptr<remote_inode> parent_i, const char
 
 	Status status = stub_->rpc_rename_same_parent(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -256,6 +277,8 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 
 	Status status = stub_->rpc_open(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		{
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
@@ -284,6 +307,8 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 
 	Status status = stub_->rpc_create(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		{
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(Output.new_ino());
@@ -311,6 +336,8 @@ void rpc_client::unlink(shared_ptr<remote_inode> parent_i, std::string child_nam
 
 	Status status = stub_->rpc_unlink(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		return;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -334,6 +361,8 @@ size_t rpc_client::write(shared_ptr<remote_inode> i, const char* buffer, size_t 
 
 	Status status = stub_->rpc_write(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		size_t written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, Output.size(), Output.offset());
 		return written_len;
 	} else {
@@ -355,7 +384,8 @@ void rpc_client::chmod(shared_ptr<remote_inode> i, mode_t mode) {
 
 	Status status = stub_->rpc_chmod(&context, Input, &Output);
 	if(status.ok()){
-
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::chmod() failed");
@@ -376,7 +406,8 @@ void rpc_client::chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 
 	Status status = stub_->rpc_chown(&context, Input, &Output);
 	if(status.ok()){
-
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::chown() failed");
@@ -399,7 +430,8 @@ void rpc_client::utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]
 
 	Status status = stub_->rpc_utimens(&context, Input, &Output);
 	if(status.ok()){
-
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::utimens() failed");
@@ -419,6 +451,8 @@ int rpc_client::truncate(shared_ptr<remote_inode> i, off_t offset) {
 
 	Status status = stub_->rpc_truncate(&context, Input, &Output);
 	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		int ret = data_pool->truncate(DATA, std::to_string(i->get_ino()), offset);
 		return ret;
 	} else {

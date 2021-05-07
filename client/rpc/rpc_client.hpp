@@ -5,6 +5,7 @@
 #include <rpc.grpc.pb.h>
 #include "../meta/remote_inode.hpp"
 #include "../meta/file_handler.hpp"
+#include "../in_memory/directory_table.hpp"
 
 using grpc::Channel;
 using grpc::ClientContext;
