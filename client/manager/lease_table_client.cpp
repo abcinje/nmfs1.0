@@ -1,6 +1,18 @@
 #include "lease_table_client.hpp"
 
 #include <iostream>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+
+std::string serializeTimePoint( const std::chrono::system_clock::time_point& time, const std::string& format)
+{
+	std::time_t tt = std::chrono::system_clock::to_time_t(time);
+	std::tm tm = *std::gmtime(&tt); //GMT (UTC)
+	std::stringstream ss;
+	ss << std::put_time( &tm, format.c_str() );
+	return ss.str();
+}
 
 lease_table_client::lease_entry::lease_entry(const system_clock::time_point &new_due) : due(new_due)
 {
@@ -27,6 +39,7 @@ lease_table_client::~lease_table_client(void)
 
 bool lease_table_client::check(ino_t ino)
 {
+	global_logger.log(manager_lease, "Called check(" + std::to_string(ino) + ")");
 	lease_entry *e;
 
 	{
@@ -35,15 +48,21 @@ bool lease_table_client::check(ino_t ino)
 		if (it != map.end()) {
 			e = it->second;
 		} else {
+			global_logger.log(manager_lease, "Failed to find lease duration");
 			return false;
 		}
 	}
+	global_logger.log(manager_lease, "system_clock::now: " + serializeTimePoint(system_clock::now(), "UTC: %Y-%m-%d %H:%M:%S"));
+	global_logger.log(manager_lease, "e->get_due(): " + serializeTimePoint(e->get_due(), "UTC: %Y-%m-%d %H:%M:%S"));
 
 	return system_clock::now() < e->get_due();
 }
 
 void lease_table_client::update(ino_t ino, const system_clock::time_point &new_due)
 {
+	global_logger.log(manager_lease, "Called update(" + std::to_string(ino) + ")");
+	global_logger.log(manager_lease, "new_due: " + serializeTimePoint(new_due, "UTC: %Y-%m-%d %H:%M:%S"));
+
 	lease_entry *e;
 	bool found = false;
 

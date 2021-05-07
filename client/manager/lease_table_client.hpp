@@ -4,6 +4,7 @@
 #include <chrono>
 #include <shared_mutex>
 #include <tsl/robin_map.h>
+#include "../../lib/logger/logger.hpp"
 
 using namespace std::chrono;
 

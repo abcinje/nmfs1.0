@@ -77,15 +77,18 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 }
 
 shared_ptr<dentry_table> directory_table::lease_dentry_table(ino_t ino){
+	global_logger.log(directory_table_ops, "Called lease_dentry_table(" + std::to_string(ino) + ")");
 	std::string temp_address;
 	int ret = lc->acquire(ino, temp_address);
 	shared_ptr<dentry_table> new_dentry_table;
 	if(ret == 0) {
+		global_logger.log(directory_table_ops, "Success to acquire lease");
 		/* Success to acquire lease */
 		new_dentry_table = std::make_shared<dentry_table>(ino, LOCAL);
 		new_dentry_table->pull_child_metadata();
 		this->add_dentry_table(ino, new_dentry_table);
 	} else if(ret == -1) {
+		global_logger.log(directory_table_ops, "Fail to acquire lease, this dir already has the leader");
 		/* Fail to acquire lease, this dir already has the leader */
 		new_dentry_table = std::make_shared<dentry_table>(ino, REMOTE);
 		new_dentry_table->set_leader_id(temp_address);
