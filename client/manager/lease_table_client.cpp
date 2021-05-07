@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <sstream>
 
-std::string serializeTimePoint( const std::chrono::system_clock::time_point& time, const std::string& format)
+std::string serializeTimePoint(const std::chrono::system_clock::time_point& time, const std::string& format)
 {
 	std::time_t tt = std::chrono::system_clock::to_time_t(time);
 	std::tm tm = *std::gmtime(&tt); //GMT (UTC)
@@ -46,14 +46,21 @@ bool lease_table_client::check(ino_t ino)
 		std::shared_lock lock(sm);
 		auto it = map.find(ino);
 		if (it != map.end()) {
+			global_logger.log(manager_lease, "Find lease in the table!");
 			e = it->second;
 		} else {
 			global_logger.log(manager_lease, "Failed to find lease duration");
 			return false;
 		}
 	}
-	global_logger.log(manager_lease, "system_clock::now: " + serializeTimePoint(system_clock::now(), "UTC: %Y-%m-%d %H:%M:%S"));
+	const std::chrono::system_clock::time_point input = system_clock::now();
+	global_logger.log(manager_lease, "system_clock::now: " + serializeTimePoint(input, "UTC: %Y-%m-%d %H:%M:%S"));
 	global_logger.log(manager_lease, "e->get_due(): " + serializeTimePoint(e->get_due(), "UTC: %Y-%m-%d %H:%M:%S"));
+
+	if(input < e->get_due())
+		global_logger.log(manager_lease, "TRUE : LEASE IS VALID");
+	else
+		global_logger.log(manager_lease, "FALSE : LEASE IS EXPIRED");
 
 	return system_clock::now() < e->get_due();
 }
