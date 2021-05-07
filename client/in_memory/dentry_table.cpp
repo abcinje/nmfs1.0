@@ -93,6 +93,8 @@ ino_t dentry_table::check_child_inode(std::string filename){
 	global_logger.log(dentry_table_ops, "Called check_child_inode(" + filename + ")");
 	if(this->loc == LOCAL) {
 		std::scoped_lock scl{this->dentry_table_mutex};
+		if(filename == "/")
+			return 0;
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
 
