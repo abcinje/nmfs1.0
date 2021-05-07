@@ -27,12 +27,13 @@ int lease_client::acquire(ino_t ino, std::string &remote_addr)
 
 	if (status.ok()) {
 		int ret = response.ret();
-		if (ret == 0) {
-			system_clock::time_point due{system_clock::duration{response.due()}};
-			table.update(ino, due);
-		} else {
+
+		system_clock::time_point due{system_clock::duration{response.due()}};
+		table.update(ino, due);
+
+		if (ret)
 			remote_addr = response.remote_addr();
-		}
+
 		return ret;
 	} else {
 		std::cerr << "[" << status.error_code() << "] " << status.error_message() << std::endl;

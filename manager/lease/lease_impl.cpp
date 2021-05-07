@@ -11,8 +11,10 @@ Status lease_impl::acquire(ServerContext *context, const lease_request *request,
 	int ret = table.acquire(request->ino(), due, remote_addr);
 
 	response->set_ret(ret);
-	response->set_due(ret == -1 ? 0 : due.time_since_epoch().count());
-	response->set_remote_addr(remote_addr);
+	response->set_due(due.time_since_epoch().count());
+
+	if (ret)
+		response->set_remote_addr(remote_addr);
 
 	return Status::OK;
 }
