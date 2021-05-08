@@ -95,7 +95,7 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 
-		if (path == "/" || i->get_loc() == LOCAL) {
+		if (std::string(path) == "/" || i->get_loc() == LOCAL) {
 			local_getattr(i, stat);
 		} else if (i->get_loc() == REMOTE) {
 			remote_getattr(std::dynamic_pointer_cast<remote_inode>(i), stat);
@@ -117,7 +117,7 @@ int fuse_ops::access(const char *path, int mask) {
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (path == "/" || i->get_loc() == LOCAL) {
+		if (std::string(path) == "/" || i->get_loc() == LOCAL) {
 			local_access(i, mask);
 		} else if (i->get_loc() == REMOTE) {
 			remote_access(std::dynamic_pointer_cast<remote_inode>(i), mask);
@@ -196,7 +196,7 @@ int fuse_ops::opendir(const char *path, struct fuse_file_info *file_info) {
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (path == "/" || i->get_loc() == LOCAL) {
+		if (std::string(path) == "/" || i->get_loc() == LOCAL) {
 			ret = local_opendir(i, file_info);
 		} else if (i->get_loc() == REMOTE) {
 			ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
@@ -258,19 +258,21 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
+		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
+
 		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		if (parent_dentry_table->get_loc() == LOCAL) {
 			std::scoped_lock scl{atomic_mutex};
-			ino_t new_dir_ino = local_mkdir(parent_i, *get_filename_from_path(path), mode);
+			ino_t new_dir_ino = local_mkdir(parent_i, *target_name, mode);
 			indexing_table->lease_dentry_table(new_dir_ino);
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
 			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(),
 																			   parent_dentry_table->get_dir_ino(),
-																			   *(get_filename_from_path(path)));
-			ino_t new_dir_ino = remote_mkdir(remote_i, *get_filename_from_path(path), mode);
+																			   *target_name);
+			ino_t new_dir_ino = remote_mkdir(remote_i, *target_name, mode);
 			indexing_table->lease_dentry_table(new_dir_ino);
 		}
 
@@ -463,7 +465,10 @@ int fuse_ops::create(const char *path, mode_t mode, struct fuse_file_info *file_
 			local_create(parent_i, *target_name, mode, file_info);
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
-			remote_create(std::dynamic_pointer_cast<remote_inode>(parent_i), *get_filename_from_path(path),
+			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(),
+																			   parent_dentry_table->get_dir_ino(),
+																			   *target_name);
+			remote_create(remote_i, *target_name,
 						  mode, file_info);
 		}
 
@@ -491,7 +496,10 @@ int fuse_ops::unlink(const char *path) {
 			local_unlink(parent_i, *target_name);
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
-			remote_unlink(std::dynamic_pointer_cast<remote_inode>(parent_i), *target_name);
+			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(),
+																			   parent_dentry_table->get_dir_ino(),
+																			   *target_name);
+			remote_unlink(remote_i, *target_name);
 		}
 
 	} catch (inode::no_entry &e) {
