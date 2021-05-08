@@ -17,7 +17,7 @@ const string &remote_inode::get_file_name() const {
 	return file_name;
 }
 
-void remote_inode::set_mode(mode_t mode) {
+mode_t remote_inode::get_mode() {
 	std::string remote_address(this->leader_ip);
 	std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
 

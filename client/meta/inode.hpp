@@ -78,7 +78,7 @@ public:
 	void permission_check(int mask);
 
 	// getter
-	mode_t get_mode();
+	virtual mode_t get_mode();
 	uid_t get_uid();
 	gid_t get_gid();
 	ino_t get_ino();
@@ -94,7 +94,7 @@ public:
 	char *get_link_target_name();
 
 	// setter
-	virtual void set_mode(mode_t mode);
+	void set_mode(mode_t mode);
 	void set_uid(uid_t uid);
 	void set_gid(gid_t gid);
 	void set_ino(ino_t ino);
