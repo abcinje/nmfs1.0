@@ -25,5 +25,7 @@ mode_t remote_inode::get_mode() {
 
 	/* store returned i_mode value for next called permission_check() */
 	this->inode::set_mode(returend_mode);
+
+	return returend_mode;
 }
 
