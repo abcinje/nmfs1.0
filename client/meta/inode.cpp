@@ -102,7 +102,7 @@ unique_ptr<char> inode::serialize(void)
 	unique_ptr<char> value(new char[REG_INODE_SIZE + this->link_target_len]);
 	memcpy(value.get(), this, REG_INODE_SIZE);
 
-	if(S_ISLNK(this->get_mode()) && (this->link_target_len > 0)){
+	if(S_ISLNK(this->i_mode) && (this->link_target_len > 0)){
 		global_logger.log(inode_ops, "serialize symbolic link inode");
 		memcpy(value.get() + REG_INODE_SIZE, (this->link_target_name), this->link_target_len);
 	}
@@ -115,7 +115,7 @@ void inode::deserialize(const char *value)
 	std::scoped_lock scl{this->inode_mutex};
 	memcpy(this, value, REG_INODE_SIZE);
 
-	if(S_ISLNK(this->get_mode())){
+	if(S_ISLNK(this->i_mode)){
 		char *raw = (char *)calloc(this->link_target_len + 1, sizeof(char));
 		meta_pool->read(INODE, std::to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);
 		this->link_target_name = raw;
@@ -146,12 +146,12 @@ void inode::permission_check(int mask){
 	fuse_context *fuse_ctx = fuse_get_context();
 
 	std::scoped_lock scl{this->inode_mutex};
-	if(fuse_ctx->uid == get_uid()){
-		target_mode = (get_mode() & S_IRWXU) >> 6;
-	} else if (fuse_ctx->gid == get_gid()){
-		target_mode = (get_mode() & S_IRWXG) >> 3;
+	if(fuse_ctx->uid == this->i_uid){
+		target_mode = (this->i_mode & S_IRWXU) >> 6;
+	} else if (fuse_ctx->gid == this->i_gid){
+		target_mode = (this->i_mode & S_IRWXG) >> 3;
 	} else {
-		target_mode = get_mode() & S_IRWXO;
+		target_mode = this->i_mode & S_IRWXO;
 	}
 
 	if(check_read){
