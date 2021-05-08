@@ -30,7 +30,7 @@ public:
  	int add_child_inode(std::string filename, shared_ptr<inode> inode);
 	int delete_child_inode(std::string filename);
 
-	shared_ptr<inode> get_child_inode(std::string filename);
+	shared_ptr<inode> get_child_inode(std::string filename, ino_t for_get_dtable = 0);
 	ino_t check_child_inode(std::string filename);
 	int pull_child_metadata();
 

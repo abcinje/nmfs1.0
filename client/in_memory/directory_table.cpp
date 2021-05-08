@@ -43,10 +43,8 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 
 	std::scoped_lock scl{this->directory_table_mutex};
 	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(0);
-	shared_ptr<inode> parent_inode = root_inode;
-
+	shared_ptr<inode> target_inode = root_inode;
 	ino_t check_target_ino;
-	shared_ptr<inode> target_inode;
 
 	int start_name, end_name = -1;
 	int path_len = path.length();
@@ -64,27 +62,14 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 		if (check_target_ino == -1)
 			throw inode::no_entry("No such file or Directory: in path traversal");
 		else
-			target_inode = parent_dentry_table->get_child_inode(target_name);
+			target_inode = parent_dentry_table->get_child_inode(target_name, check_target_ino);
 
 		if(target_inode == nullptr)
 			throw std::runtime_error("Failed to make remote_inode in path_traversal()");
 
 		if(S_ISDIR(target_inode->get_mode()))
 			target_inode->permission_check(X_OK);
-
-		parent_inode = target_inode;
-		if(S_ISDIR(parent_inode->get_mode()))
 			parent_dentry_table = this->get_dentry_table(check_target_ino);
-	}
-
-	if(parent_dentry_table->get_loc() == LOCAL) {
-		global_logger.log(directory_table_ops, "Return Local Inode");
-		target_inode = parent_inode;
-	} else if(parent_dentry_table->get_loc() == REMOTE){
-		global_logger.log(directory_table_ops, "Return Remote Inode");
-		target_inode = parent_inode;
-		if(path != "/")
-			target_inode->set_ino(check_target_ino);
 	}
 
 	return target_inode;
