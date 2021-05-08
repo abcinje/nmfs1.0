@@ -91,14 +91,8 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 	global_logger.log(fuse_op, "Called getattr()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
-
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			local_getattr(i, stat);
@@ -119,14 +113,8 @@ int fuse_ops::access(const char *path, int mask) {
 	global_logger.log(fuse_op, "Called access()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
-
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			local_access(i, mask);
@@ -152,13 +140,17 @@ int fuse_ops::symlink(const char *src, const char *dst) {
 	try {
 		unique_ptr<std::string> dst_parent_name = get_parent_dir_path(dst);
 		shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_name);
+		shared_ptr<dentry_table> dst_parent_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
-		if (dst_parent_i->get_loc() == LOCAL) {
+		if (dst_parent_dentry_table->get_loc() == LOCAL) {
 			std::scoped_lock scl{atomic_mutex};
 			ret = local_symlink(dst_parent_i, src, dst);
-		} else if (dst_parent_i->get_loc() == REMOTE) {
+		} else if (dst_parent_dentry_table->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
-			ret = remote_symlink(std::dynamic_pointer_cast<remote_inode>(dst_parent_i), src, dst);
+			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(dst_parent_dentry_table->get_leader_ip(),
+																			   dst_parent_dentry_table->get_dir_ino(),
+																			   *dst_parent_name);
+			ret = remote_symlink(remote_i, src, dst);
 		}
 
 	} catch (inode::no_entry &e) {
@@ -175,14 +167,9 @@ int fuse_ops::readlink(const char *path, char *buf, size_t size) {
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	int ret = 0;
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			ret = local_readlink(i, buf, size);
@@ -204,15 +191,9 @@ int fuse_ops::opendir(const char *path, struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	int ret = 0;
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
 
 	try {
-
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			ret = local_opendir(i, file_info);
@@ -235,14 +216,7 @@ int fuse_ops::releasedir(const char *path, struct fuse_file_info *file_info) {
 
 	if (path != nullptr) {
 		global_logger.log(fuse_op, "path : " + std::string(path));
-
-		unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-		unique_ptr<std::string> file_name = get_filename_from_path(path);
-
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		ret = local_releasedir(i, file_info);
 
@@ -259,25 +233,19 @@ int fuse_ops::releasedir(const char *path, struct fuse_file_info *file_info) {
 }
 
 int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, off_t offset,
-		      struct fuse_file_info *file_info, enum fuse_readdir_flags readdir_flags) {
+					  struct fuse_file_info *file_info, enum fuse_readdir_flags readdir_flags) {
 	global_logger.log(fuse_op, "Called readdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
-
-	shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-	ino_t target_dir_ino = parent_dentry_table->check_child_inode(*file_name);
-	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_dir_ino);
+	shared_ptr<inode> i = indexing_table->path_traversal(path);
+	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(i->get_ino());
 
 	if (target_dentry_table->get_loc() == LOCAL) {
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
 		local_readdir(i, buffer, filler);
 	} else if (target_dentry_table->get_loc() == REMOTE) {
-		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(), target_dentry_table->get_dir_ino(), *file_name);
+		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(),
+																		   target_dentry_table->get_dir_ino(),
+																		   *(get_filename_from_path(path)));
 		remote_readdir(remote_i, buffer, filler);
 	}
 
@@ -288,19 +256,20 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 	global_logger.log(fuse_op, "Called mkdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	fuse_context *fuse_ctx = fuse_get_context();
-
 	try {
 		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		if (parent_i->get_loc() == LOCAL) {
+		if (parent_dentry_table->get_loc() == LOCAL) {
 			std::scoped_lock scl{atomic_mutex};
 			ino_t new_dir_ino = local_mkdir(parent_i, *get_filename_from_path(path), mode);
 			indexing_table->lease_dentry_table(new_dir_ino);
-		} else if (parent_i->get_loc() == REMOTE) {
+		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
-			ino_t new_dir_ino = remote_mkdir(std::dynamic_pointer_cast<remote_inode>(parent_i),
-							 *get_filename_from_path(path), mode);
+			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(),
+																			   parent_dentry_table->get_dir_ino(),
+																			   *(get_filename_from_path(path)));
+			ino_t new_dir_ino = remote_mkdir(remote_i, *get_filename_from_path(path), mode);
 			indexing_table->lease_dentry_table(new_dir_ino);
 		}
 
@@ -319,20 +288,23 @@ int fuse_ops::rmdir(const char *path) {
 	int ret = 0;
 
 	try {
+		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
+
 		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(
-			*(get_filename_from_path(path).get()));
+		ino_t target_ino = parent_dentry_table->check_child_inode(*target_name);
+		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(*(get_filename_from_path(path).get()), target_ino);
+		shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_i->get_ino());
 
-		if ((parent_i->get_loc() == LOCAL) && (target_i->get_loc() == LOCAL)) {
+		if ((parent_dentry_table->get_loc() == LOCAL) && (target_dentry_table->get_loc() == LOCAL)) {
 			std::scoped_lock scl{atomic_mutex};
-			ret = local_rmdir(parent_i, target_i, *get_filename_from_path(path));
-		} else if ((parent_i->get_loc() == LOCAL) && (target_i->get_loc() == REMOTE)) {
+			ret = local_rmdir(parent_i, target_i, *target_name);
+		} else if ((parent_dentry_table->get_loc() == LOCAL) && (target_dentry_table->get_loc() == REMOTE)) {
 			/* TODO */
-		} else if ((parent_i->get_loc() == REMOTE) && (target_i->get_loc() == LOCAL)) {
+		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == LOCAL)) {
 			/* TODO */
-		} else if ((parent_i->get_loc() == REMOTE) && (target_i->get_loc() == REMOTE)) {
+		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == REMOTE)) {
 			/* TODO */
 		}
 
@@ -359,30 +331,34 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 
 		if (*src_parent_path == *dst_parent_path) {
 			shared_ptr<inode> parent_i = indexing_table->path_traversal(*src_parent_path);
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-			if (parent_i->get_loc() == LOCAL) {
+			if (parent_dentry_table->get_loc() == LOCAL) {
 				std::scoped_lock scl{atomic_mutex};
 				ret = local_rename_same_parent(parent_i, old_path, new_path, flags);
-			} else if (parent_i->get_loc() == REMOTE) {
+			} else if (parent_dentry_table->get_loc() == REMOTE) {
 				std::scoped_lock scl{atomic_mutex};
 				ret = remote_rename_same_parent(std::dynamic_pointer_cast<remote_inode>(parent_i),
-								old_path, new_path, flags);
+												old_path, new_path, flags);
 			}
 
 
 		} else {
 			shared_ptr<inode> src_parent_i = indexing_table->path_traversal(*src_parent_path);
-			shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_path);
+			shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
 
-			if ((src_parent_i->get_loc() == LOCAL) && (dst_parent_i->get_loc() == LOCAL)) {
+			shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_path);
+			shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
+
+			if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == LOCAL)) {
 				std::scoped_lock scl{atomic_mutex};
 				ret = local_rename_not_same_parent(src_parent_i, dst_parent_i, old_path, new_path,
-								   flags);
-			} else if ((src_parent_i->get_loc() == LOCAL) && (dst_parent_i->get_loc() == REMOTE)) {
+												   flags);
+			} else if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == REMOTE)) {
 				/* TODO */
-			} else if ((src_parent_i->get_loc() == REMOTE) && (dst_parent_i->get_loc() == LOCAL)) {
+			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == LOCAL)) {
 				/* TODO */
-			} else if ((src_parent_i->get_loc() == REMOTE) && (dst_parent_i->get_loc() == REMOTE)) {
+			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
 				/* TODO */
 			}
 
@@ -431,14 +407,8 @@ int fuse_ops::open(const char *path, struct fuse_file_info *file_info) {
 	if (file_info->flags & O_PATH) throw std::runtime_error("O_PATH is ON");
 
 	int ret = 0;
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
-
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			ret = local_open(i, file_info);
@@ -461,13 +431,7 @@ int fuse_ops::release(const char *path, struct fuse_file_info *file_info) {
 	int ret = 0;
 	if (path != nullptr) {
 		global_logger.log(fuse_op, "path : " + std::string(path));
-		unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-		unique_ptr<std::string> file_name = get_filename_from_path(path);
-
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		ret = local_release(i, file_info);
 	} else {
@@ -488,15 +452,18 @@ int fuse_ops::create(const char *path, mode_t mode, struct fuse_file_info *file_
 		return -EISDIR;
 
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
 
-		if (parent_i->get_loc() == LOCAL) {
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+
+		if (parent_dentry_table->get_loc() == LOCAL) {
 			std::scoped_lock scl{atomic_mutex};
-			local_create(parent_i, *get_filename_from_path(path), mode, file_info);
-		} else if (parent_i->get_loc() == REMOTE) {
+			local_create(parent_i, *target_name, mode, file_info);
+		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
 			remote_create(std::dynamic_pointer_cast<remote_inode>(parent_i), *get_filename_from_path(path),
-				      mode, file_info);
+						  mode, file_info);
 		}
 
 	} catch (inode::no_entry &e) {
@@ -512,17 +479,18 @@ int fuse_ops::unlink(const char *path) {
 	global_logger.log(fuse_op, "Called unlink()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
+		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
 
-		if (parent_i->get_loc() == LOCAL) {
+		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+
+		if (parent_dentry_table->get_loc() == LOCAL) {
 			std::scoped_lock scl{atomic_mutex};
-			local_unlink(parent_i, *file_name);
-		} else if (parent_i->get_loc() == REMOTE) {
+			local_unlink(parent_i, *target_name);
+		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
-			remote_unlink(std::dynamic_pointer_cast<remote_inode>(parent_i), *file_name);
+			remote_unlink(std::dynamic_pointer_cast<remote_inode>(parent_i), *target_name);
 		}
 
 	} catch (inode::no_entry &e) {
@@ -536,21 +504,13 @@ int fuse_ops::unlink(const char *path) {
 int fuse_ops::read(const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "Called read()");
 	global_logger.log(fuse_op, "path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " +
-				   std::to_string(offset));
+							   std::to_string(offset));
 
 	size_t read_len = 0;
-
 	try {
-		unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-		unique_ptr<std::string> file_name = get_filename_from_path(path);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
-		/* TODO : i need inode number */
 		read_len = local_read(i, buffer, size, offset);
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -565,18 +525,12 @@ int fuse_ops::read(const char *path, char *buffer, size_t size, off_t offset, st
 int fuse_ops::write(const char *path, const char *buffer, size_t size, off_t offset, struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "Called write()");
 	global_logger.log(fuse_op, "path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " +
-				   std::to_string(offset));
+							   std::to_string(offset));
 
 	size_t written_len = 0;
 
 	try {
-		unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-		unique_ptr<std::string> file_name = get_filename_from_path(path);
-
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			std::scoped_lock scl{atomic_mutex};
@@ -584,7 +538,7 @@ int fuse_ops::write(const char *path, const char *buffer, size_t size, off_t off
 		} else if (i->get_loc() == REMOTE) {
 			std::scoped_lock scl{atomic_mutex};
 			written_len = remote_write(std::dynamic_pointer_cast<remote_inode>(i), buffer, size, offset,
-						   file_info->flags);
+									   file_info->flags);
 		}
 
 	} catch (inode::no_entry &e) {
@@ -600,13 +554,8 @@ int fuse_ops::chmod(const char *path, mode_t mode, struct fuse_file_info *file_i
 	global_logger.log(fuse_op, "Called chmod()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			local_chmod(i, mode);
@@ -627,13 +576,8 @@ int fuse_ops::chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_inf
 	global_logger.log(fuse_op, "Called chown()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			local_chown(i, uid, gid);
@@ -654,13 +598,8 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	global_logger.log(fuse_op, "Called utimens()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			local_utimens(i, tv);
@@ -682,13 +621,8 @@ int fuse_ops::truncate(const char *path, off_t offset, struct fuse_file_info *fi
 	global_logger.log(fuse_op, "path : " + std::string(path) + " offset : " + std::to_string(offset));
 
 	int ret = 0;
-	unique_ptr<std::string> parent_name = get_parent_dir_path(path);
-	unique_ptr<std::string> file_name = get_filename_from_path(path);
 	try {
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*parent_name);
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		shared_ptr<inode> i = parent_dentry_table->get_child_inode(*file_name);
+		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			ret = local_truncate(i, offset);
