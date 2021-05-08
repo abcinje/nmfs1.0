@@ -67,9 +67,10 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 		if(target_inode == nullptr)
 			throw std::runtime_error("Failed to make remote_inode in path_traversal()");
 
-		if(S_ISDIR(target_inode->get_mode()))
+		if(S_ISDIR(target_inode->get_mode())) {
 			target_inode->permission_check(X_OK);
 			parent_dentry_table = this->get_dentry_table(check_target_ino);
+		}
 	}
 
 	return target_inode;
