@@ -67,7 +67,7 @@ int dentry_table::delete_child_inode(std::string filename) {
 }
 
 shared_ptr<inode> dentry_table::get_child_inode(std::string filename, ino_t for_get_dtable){
-	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ")");
+	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ", " + std::to_string(for_get_dtable) + ")");
 	if(this->get_loc() == LOCAL) {
 		std::scoped_lock scl{this->dentry_table_mutex};
 		if(filename == "/")
