@@ -64,12 +64,12 @@ Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_commo
 	try {
 		std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(
 			request->dentry_table_ino());
-		std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+		i = parent_dentry_table->get_child_inode(request->filename());
 	} catch (inode::no_entry &e){
 		response->set_ret(-EACCES);
 		return Status::OK;
 	}
-	
+
 	response->set_i_mode(i->get_mode());
 	response->set_i_uid(i->get_uid());
 	response->set_i_gid(i->get_gid());
