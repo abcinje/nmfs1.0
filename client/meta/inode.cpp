@@ -101,7 +101,10 @@ unique_ptr<char> inode::serialize(void)
 	std::scoped_lock scl{this->inode_mutex};
 	unique_ptr<char> value(new char[REG_INODE_SIZE + this->link_target_len]);
 	memcpy(value.get(), this + VFTABLE_OFFSET, REG_INODE_SIZE);
-
+#ifdef DEBUG
+	hexdump(this, VFTABLE_OFFSET + REG_INODE_SIZE);
+	hexdump(value.get(), REG_INODE_SIZE);
+#endif
 	if(S_ISLNK(this->i_mode) && (this->link_target_len > 0)){
 		global_logger.log(inode_ops, "serialize symbolic link inode");
 		memcpy(value.get() + REG_INODE_SIZE, (this->link_target_name), this->link_target_len);
@@ -114,7 +117,10 @@ void inode::deserialize(const char *value)
 	global_logger.log(inode_ops, "Called inode.deserialize()");
 	std::scoped_lock scl{this->inode_mutex};
 	memcpy(this + VFTABLE_OFFSET, value, REG_INODE_SIZE);
-
+#ifdef DEBUG
+	hexdump(this, VFTABLE_OFFSET + REG_INODE_SIZE);
+	hexdump(const_cast<char *>(value), REG_INODE_SIZE);
+#endif
 	if(S_ISLNK(this->i_mode)){
 		char *raw = (char *)calloc(this->link_target_len + 1, sizeof(char));
 		meta_pool->read(INODE, std::to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);

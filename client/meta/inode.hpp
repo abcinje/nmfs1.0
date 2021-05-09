@@ -11,6 +11,7 @@
 #include "../../lib/logger/logger.hpp"
 #include "dentry.hpp"
 #include "../client/client.hpp"
+#include "../util.hpp"
 
 #define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
 #define VFTABLE_OFFSET 8
