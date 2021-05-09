@@ -94,7 +94,6 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-
 		if (std::string(path) == "/" || i->get_loc() == LOCAL) {
 			local_getattr(i, stat);
 		} else if (i->get_loc() == REMOTE) {
