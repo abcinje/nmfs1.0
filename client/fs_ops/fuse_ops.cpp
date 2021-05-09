@@ -345,7 +345,11 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 				ret = local_rename_same_parent(parent_i, old_path, new_path, flags);
 			} else if (parent_dentry_table->get_loc() == REMOTE) {
 				std::scoped_lock scl{atomic_mutex};
-				ret = remote_rename_same_parent(std::dynamic_pointer_cast<remote_inode>(parent_i),
+				shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
+					parent_dentry_table->get_leader_ip(),
+					parent_dentry_table->get_dir_ino(),
+					new_path);
+				ret = remote_rename_same_parent(remote_i,
 								old_path, new_path, flags);
 			}
 
