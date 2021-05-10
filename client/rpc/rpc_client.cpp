@@ -64,6 +64,9 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* s) {
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 
+		if(Output.ret() == -EACCES)
+			throw inode::no_entry("No such file or directory: rpc_client::getattr()");
+
 		s->st_mode	= Output.i_mode();
 		s->st_uid	= Output.i_uid();
 		s->st_gid	= Output.i_gid();

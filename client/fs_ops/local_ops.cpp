@@ -100,7 +100,7 @@ int local_rmdir(shared_ptr<inode> parent_i, shared_ptr<inode> target_i, std::str
 		throw std::runtime_error("directory table is corrupted : Can't find leaesd directory");
 	}
 
-	if(target_dentry_table->get_child_num() > 2)
+	if(target_dentry_table->get_child_num() > 0)
 		return -ENOTEMPTY;
 	meta_pool->remove(DENTRY, std::to_string(target_i->get_ino()));
 	meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
