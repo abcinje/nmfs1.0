@@ -26,13 +26,14 @@ std::mutex file_handler_mutex;
 
 thread *remote_server_thread;
 
+fuse_context *fuse_ctx;
 unsigned int fuse_capable;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	global_logger.log(fuse_op, "Called init()");
 
 	/* argument parsing */
-	fuse_context *fuse_ctx = fuse_get_context();
+	fuse_ctx = fuse_get_context();
 	std::string arg((char *) fuse_ctx->private_data);
 	size_t dot_pos = arg.find(',');
 	std::string manager_ip = arg.substr(0, dot_pos);
@@ -79,7 +80,6 @@ void fuse_ops::destroy(void *private_data) {
 
 	remote_handle->Shutdown();
 
-	fuse_context *fuse_ctx = fuse_get_context();
 	client *myself = (client *) (fuse_ctx->private_data);
 	delete myself;
 

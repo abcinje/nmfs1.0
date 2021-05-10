@@ -3,6 +3,8 @@
 using std::runtime_error;
 
 extern rados_io *meta_pool;
+extern fuse_context *fuse_ctx;
+
 std::recursive_mutex alloc_mutex;
 std::shared_ptr<inode> root_inode;
 inode::no_entry::no_entry(const string &msg) : runtime_error(msg)
@@ -143,7 +145,6 @@ void inode::permission_check(int mask){
 	bool ret = true;
 
 	mode_t target_mode;
-	fuse_context *fuse_ctx = fuse_get_context();
 
 	std::scoped_lock scl{this->inode_mutex};
 	if(fuse_ctx->uid == this->i_uid){
@@ -270,7 +271,6 @@ void inode::set_link_target_name(const char *name){
 ino_t alloc_new_ino() {
 	global_logger.log(inode_ops, "Called alloc_new_ino()");
 	std::scoped_lock{alloc_mutex};
-	fuse_context *fuse_ctx = fuse_get_context();
 	client *c = (client *) (fuse_ctx->private_data);
 	ino_t new_ino;
 	/* new_ino use client_id for first 24 bit and use ino_offset for next 40 bit, total 64bit(8bytes) */

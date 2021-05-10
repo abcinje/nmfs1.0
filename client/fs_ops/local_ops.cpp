@@ -7,6 +7,7 @@ extern directory_table *indexing_table;
 extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
 extern std::mutex file_handler_mutex;
 
+extern fuse_context *fuse_ctx;
 void local_getattr(shared_ptr<inode> i, struct stat* stat) {
 	global_logger.log(local_fs_op, "Called getattr()");
 	i->fill_stat(stat);
@@ -73,7 +74,6 @@ void local_readdir(shared_ptr<inode> i, void* buffer, fuse_fill_dir_t filler) {
 
 ino_t local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(local_fs_op, "Called mkdir()");
-	fuse_context *fuse_ctx = fuse_get_context();
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 	shared_ptr<inode> i = std::make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFDIR);
@@ -114,7 +114,6 @@ int local_rmdir(shared_ptr<inode> parent_i, shared_ptr<inode> target_i, std::str
 
 int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *dst) {
 	global_logger.log(local_fs_op, "Called symlink()");
-	fuse_context *fuse_ctx = fuse_get_context();
 	shared_ptr<dentry_table> dst_parent_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
 	unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
@@ -258,7 +257,6 @@ int local_release(ino_t ino, struct fuse_file_info* file_info){
 
 void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
 	global_logger.log(local_fs_op, "Called create()");
-	fuse_context *fuse_ctx = fuse_get_context();
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 	shared_ptr<inode> i = std::make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, mode | S_IFREG);
