@@ -318,13 +318,14 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
+	unique_ptr<std::string> old_name = get_filename_from_path(request->old_path());
 
 	std::shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	shared_ptr<inode> target_i = src_dentry_table->get_child_inode(request->old_path());
 	ino_t target_ino = target_i->get_ino();
 
 	if (request->flags() == 0) {
-		src_dentry_table->delete_child_inode(request->old_path());
+		src_dentry_table->delete_child_inode(*old_name);
 	} else {
 		response->set_ret(-ENOSYS);
 		return Status::OK;
@@ -346,6 +347,7 @@ Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context
 	unique_ptr<std::string> new_name = get_filename_from_path(request->new_path());
 
 	std::shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	/* TODO : need other method to use cache */
 	shared_ptr<inode> target_i = std::make_shared<inode>(request->target_ino());
 
 	if (request->flags() == 0) {

@@ -407,7 +407,7 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
 					src_dentry_table->get_leader_ip(),
 					src_dentry_table->get_dir_ino(),
-					new_path);
+					old_path);
 				ino_t target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
 				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
@@ -415,7 +415,7 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
 					src_dentry_table->get_leader_ip(),
 					src_dentry_table->get_dir_ino(),
-					new_path);
+					old_path);
 				ino_t target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
 				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
 					dst_dentry_table->get_leader_ip(),
