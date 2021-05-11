@@ -59,7 +59,7 @@ unique_ptr<char[]> dentry::serialize()
 
 	for(auto it = this->child_list.begin(); it != this->child_list.end(); it++){
 		/* serialiize name length */
-		int name_length = it->first.length();
+		int name_length = static_cast<int>(it->first.length());
 		memcpy(pointer, &(name_length), sizeof(int));
 		pointer += sizeof(int);
 
