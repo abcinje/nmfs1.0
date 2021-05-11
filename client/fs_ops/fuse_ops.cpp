@@ -392,10 +392,11 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 			shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(
 				dst_parent_i->get_ino());
 
+			ino_t check_dst_ino = dst_dentry_table->check_child_inode(*get_filename_from_path(new_path));
 			if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == LOCAL)) {
 				std::scoped_lock scl{atomic_mutex};
-				ret = local_rename_not_same_parent(src_parent_i, dst_parent_i, old_path, new_path,
-								   flags);
+				ino_t target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
+				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == REMOTE)) {
 				/* TODO */
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == LOCAL)) {

@@ -183,23 +183,35 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, c
 	return 0;
 }
 
-int local_rename_not_same_parent(shared_ptr<inode> src_parent_i, shared_ptr<inode> dst_parent_i, const char* old_path, const char* new_path, unsigned int flags){
-	global_logger.log(local_fs_op, "Called rename_not_same_parent()");
+ino_t local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char* old_path, unsigned int flags) {
+	global_logger.log(local_fs_op, "Called rename_not_same_parent_src()");
 	unique_ptr<std::string> old_name = get_filename_from_path(old_path);
-	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
 	shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
-	shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
-
 	shared_ptr<inode> target_i = src_dentry_table->get_child_inode(*old_name);
-	ino_t check_dst_ino = dst_dentry_table->check_child_inode(*new_name);
+	ino_t target_ino = target_i->get_ino();
+
+	if (flags == 0) {
+		src_dentry_table->delete_child_inode(*old_name);
+	} else {
+		return -ENOSYS;
+	}
+
+	return target_ino;
+}
+
+int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino, const char* new_path, unsigned int flags) {
+	global_logger.log(local_fs_op, "Called rename_not_same_parent()");
+	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
+
+	shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
+	shared_ptr<inode> target_i = std::make_shared<inode>(target_ino);
 
 	if (flags == 0) {
 		if(check_dst_ino != -1) {
 			dst_dentry_table->delete_child_inode(*new_name);
 			meta_pool->remove(obj_category::INODE, std::to_string(check_dst_ino));
 		}
-		src_dentry_table->delete_child_inode(*old_name);
 		dst_dentry_table->create_child_inode(*new_name, target_i);
 
 	} else {
