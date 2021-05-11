@@ -4,19 +4,19 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-static string get_prefix(enum obj_category category)
+static string get_prefix(obj_category category)
 {
 	switch (category) {
-	case INODE:
+	case obj_category::INODE:
 		return "i$";
-	case DENTRY:
+	case obj_category::DENTRY:
 		return "e$";
-	case DATA:
+	case obj_category::DATA:
 		return "d$";
-	case CLIENT:
+	case obj_category::CLIENT:
 		return "c$";
 	default:
-		throw logic_error("get_prefix() failed (unknown category " + std::to_string(category) + ")");
+		throw logic_error("get_prefix() failed (unknown category " + std::to_string(static_cast<int>(category)) + ")");
 	}
 }
 
@@ -67,7 +67,7 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 	return len;
 }
 
-void rados_io::zerofill(enum obj_category category, const string &key, size_t len, off_t offset)
+void rados_io::zerofill(obj_category category, const string &key, size_t len, off_t offset)
 {
 	char *zeros = new char[MAX(len, OBJ_SIZE)]();
 
@@ -156,7 +156,7 @@ rados_io::~rados_io(void)
 	global_logger.log(rados_io_ops, "Shut down the handle.");
 }
 
-size_t rados_io::read(enum obj_category category, const string &key, char *value, size_t len, off_t offset)
+size_t rados_io::read(obj_category category, const string &key, char *value, size_t len, off_t offset)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::read()");
 	global_logger.log(rados_io_ops, "key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
@@ -186,7 +186,7 @@ size_t rados_io::read(enum obj_category category, const string &key, char *value
 	return sum;
 }
 
-size_t rados_io::write(enum obj_category category, const string &key, const char *value, size_t len, off_t offset)
+size_t rados_io::write(obj_category category, const string &key, const char *value, size_t len, off_t offset)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::write()");
 	global_logger.log(rados_io_ops, "key : " + key + " length : " + std::to_string(len) + " offset : " + std::to_string(offset));
@@ -242,7 +242,7 @@ size_t rados_io::write(enum obj_category category, const string &key, const char
 	return sum;
 }
 
-bool rados_io::exist(enum obj_category category, const string &key)
+bool rados_io::exist(obj_category category, const string &key)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::exist()");
 	global_logger.log(rados_io_ops, "key : " + key);
@@ -266,7 +266,7 @@ bool rados_io::exist(enum obj_category category, const string &key)
 	}
 }
 
-bool rados_io::stat(enum obj_category category, const string &key, size_t &size)
+bool rados_io::stat(obj_category category, const string &key, size_t &size)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::stat()");
 	global_logger.log(rados_io_ops, "key : " + key);
@@ -296,7 +296,7 @@ bool rados_io::stat(enum obj_category category, const string &key, size_t &size)
 	}
 }
 
-void rados_io::remove(enum obj_category category, const string &key)
+void rados_io::remove(obj_category category, const string &key)
 {
 	global_logger.log(rados_io_ops, "Called rados_io::remove()");
 	global_logger.log(rados_io_ops, "key : " + key);
@@ -320,7 +320,7 @@ void rados_io::remove(enum obj_category category, const string &key)
 	}
 }
 
-int rados_io::truncate(enum obj_category category, const string &key, size_t offset){
+int rados_io::truncate(obj_category category, const string &key, size_t offset){
 	global_logger.log(rados_io_ops, "Called rados_io::truncate()");
 	global_logger.log(rados_io_ops, "key : " + key);
 

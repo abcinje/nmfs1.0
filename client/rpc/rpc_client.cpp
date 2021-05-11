@@ -368,7 +368,7 @@ size_t rpc_client::write(shared_ptr<remote_inode> i, const char* buffer, size_t 
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		size_t written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, Output.size(), Output.offset());
+		size_t written_len = data_pool->write(obj_category::DATA, std::to_string(i->get_ino()), buffer, Output.size(), Output.offset());
 		return written_len;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -458,7 +458,7 @@ int rpc_client::truncate(shared_ptr<remote_inode> i, off_t offset) {
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		int ret = data_pool->truncate(DATA, std::to_string(i->get_ino()), offset);
+		int ret = data_pool->truncate(obj_category::DATA, std::to_string(i->get_ino()), offset);
 		return ret;
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());

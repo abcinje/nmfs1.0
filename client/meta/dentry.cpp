@@ -7,7 +7,7 @@ dentry::dentry(ino_t ino) : this_ino(ino)
 	global_logger.log(dentry_ops, "Called dentry(" + std::to_string(ino) +")");
 	unique_ptr<char[]> raw_data = std::make_unique<char[]>(MAX_DENTRY_OBJ_SIZE);
 	try {
-		meta_pool->read(DENTRY, std::to_string(ino), raw_data.get(), MAX_DENTRY_OBJ_SIZE, 0);
+		meta_pool->read(obj_category::DENTRY, std::to_string(ino), raw_data.get(), MAX_DENTRY_OBJ_SIZE, 0);
 		this->deserialize(raw_data.get());
 	} catch(rados_io::no_such_object &e){
 		throw std::runtime_error("Dentry Corrupted: inode number " + std::to_string(ino));
@@ -116,7 +116,7 @@ void dentry::sync()
 	std::scoped_lock scl{this->dentry_mutex};
 	size_t raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
 	unique_ptr<char[]> raw = this->serialize();
-	meta_pool->write(DENTRY, std::to_string(this->this_ino), raw.get(), raw_size - 1, 0);
+	meta_pool->write(obj_category::DENTRY, std::to_string(this->this_ino), raw.get(), raw_size - 1, 0);
 }
 
 ino_t dentry::get_child_ino(std::string child_name)

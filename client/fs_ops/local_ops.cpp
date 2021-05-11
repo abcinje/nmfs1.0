@@ -102,8 +102,8 @@ int local_rmdir(shared_ptr<inode> parent_i, shared_ptr<inode> target_i, std::str
 
 	if(target_dentry_table->get_child_num() > 0)
 		return -ENOTEMPTY;
-	meta_pool->remove(DENTRY, std::to_string(target_i->get_ino()));
-	meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
+	meta_pool->remove(obj_category::DENTRY, std::to_string(target_i->get_ino()));
+	meta_pool->remove(obj_category::INODE, std::to_string(target_i->get_ino()));
 
 	parent_dentry_table->delete_child_inode(target_name);
 
@@ -160,7 +160,7 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, c
 	if (flags == 0) {
 		if(check_dst_ino != -1) {
 			parent_dentry_table->delete_child_inode(*new_name);
-			meta_pool->remove(INODE, std::to_string(check_dst_ino));
+			meta_pool->remove(obj_category::INODE, std::to_string(check_dst_ino));
 		}
 		parent_dentry_table->delete_child_inode(*old_name);
 		parent_dentry_table->create_child_inode(*new_name, target_i);
@@ -186,7 +186,7 @@ int local_rename_not_same_parent(shared_ptr<inode> src_parent_i, shared_ptr<inod
 	if (flags == 0) {
 		if(check_dst_ino != -1) {
 			dst_dentry_table->delete_child_inode(*new_name);
-			meta_pool->remove(INODE, std::to_string(check_dst_ino));
+			meta_pool->remove(obj_category::INODE, std::to_string(check_dst_ino));
 		}
 		src_dentry_table->delete_child_inode(*old_name);
 		dst_dentry_table->create_child_inode(*new_name, target_i);
@@ -284,10 +284,10 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 	nlink_t nlink = target_i->get_nlink() - 1;
 	if (nlink == 0) {
 		/* data */
-		data_pool->remove(DATA, std::to_string(target_i->get_ino()));
+		data_pool->remove(obj_category::DATA, std::to_string(target_i->get_ino()));
 
 		/* inode */
-		meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
+		meta_pool->remove(obj_category::INODE, std::to_string(target_i->get_ino()));
 
 		/* parent dentry */
 		parent_dentry_table->delete_child_inode(child_name);
@@ -302,7 +302,7 @@ size_t local_read(shared_ptr<inode> i, char* buffer, size_t size, off_t offset) 
 	global_logger.log(local_fs_op, "Called read()");
 	size_t read_len = 0;
 
-	read_len = data_pool->read(DATA, std::to_string(i->get_ino()), buffer, size, offset);
+	read_len = data_pool->read(obj_category::DATA, std::to_string(i->get_ino()), buffer, size, offset);
 	return read_len;
 }
 
@@ -314,7 +314,7 @@ size_t local_write(shared_ptr<inode> i, const char* buffer, size_t size, off_t o
 		offset = i->get_size();
 	}
 
-	written_len = data_pool->write(DATA, std::to_string(i->get_ino()), buffer, size, offset);
+	written_len = data_pool->write(obj_category::DATA, std::to_string(i->get_ino()), buffer, size, offset);
 
 	if (i->get_size() < offset + size) {
 		i->set_size(offset + size);
@@ -374,7 +374,7 @@ int local_truncate (const shared_ptr<inode> i, off_t offset) {
 		return -EISDIR;
 
 	int ret;
-	ret = data_pool->truncate(DATA, std::to_string(i->get_ino()), offset);
+	ret = data_pool->truncate(obj_category::DATA, std::to_string(i->get_ino()), offset);
 
 	i->set_size(offset);
 	i->sync();
