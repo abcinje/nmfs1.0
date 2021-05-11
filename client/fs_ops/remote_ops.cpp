@@ -42,10 +42,22 @@ ino_t remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name
 	return new_dir_ino;
 }
 
-int remote_rmdir(shared_ptr<remote_inode> parent_i, shared_ptr<remote_inode> target_i, std::string target_name) {
-	global_logger.log(remote_fs_op, "Called remote_rmdir()");
+int remote_rmdir_top(shared_ptr<remote_inode> target_i, std::string target_name) {
+	global_logger.log(remote_fs_op, "Called remote_rmdir_top()");
+	std::string remote_address(target_i->get_address());
+	std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
 
-	return -ENOSYS;
+	int ret = rc->rmdir_top(target_i, target_name);
+	return ret;
+}
+
+int remote_rmdir_down(shared_ptr<remote_inode> parent_i, ino_t target_ino, std::string target_name) {
+	global_logger.log(remote_fs_op, "Called remote_rmdir_down()");
+	std::string remote_address(parent_i->get_address());
+	std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
+
+	rc->rmdir_down(parent_i, target_ino, target_name);
+	return 0;
 }
 
 int remote_symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst) {

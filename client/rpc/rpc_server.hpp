@@ -36,7 +36,10 @@ public:
     Status rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_request *request,
 		     ::rpc_mkdir_respond *response) override;
 
-    Status rpc_rmdir(::grpc::ServerContext *context, const ::rpc_common_request *request,
+    Status rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmdir_request *request,
+		     ::rpc_common_respond *response) override;
+
+    Status rpc_rmdir_down(::grpc::ServerContext *context, const ::rpc_rmdir_request *request,
 		     ::rpc_common_respond *response) override;
 
     Status rpc_symlink(::grpc::ServerContext *context, const ::rpc_symlink_request *request,

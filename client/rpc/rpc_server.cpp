@@ -180,16 +180,53 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 	return Status::OK;
 }
 
-Status rpc_server::rpc_rmdir(::grpc::ServerContext *context, const ::rpc_common_request *request,
+Status rpc_server::rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmdir_request *request,
 							 ::rpc_common_respond *response) {
-	global_logger.log(rpc_server_ops, "Called rpc_rmdir()");
+	global_logger.log(rpc_server_ops, "Called rpc_rmdir_top()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
+	std::shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	if(target_dentry_table == nullptr) {
+		throw std::runtime_error("directory table is corrupted : Can't find leased directory");
+	}
 
-	return Service::rpc_rmdir(context, request, response);
+	if(target_dentry_table->get_child_num() > 0) {
+		response->set_ret(-ENOTEMPTY);
+		return Status::OK;
+	}
+
+	meta_pool->remove(DENTRY, std::to_string(request->target_ino()));
+	indexing_table->delete_dentry_table(request->target_ino());
+
+	response->set_ret(0);
+	return Status::OK;
 }
+
+Status rpc_server::rpc_rmdir_down(::grpc::ServerContext *context, const ::rpc_rmdir_request *request,
+			     ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_rmdir_down()");
+	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+		response->set_ret(-ENOTLEADER);
+		return Status::OK;
+	}
+	int ret = 0;
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	parent_dentry_table->delete_child_inode(request->target_name());
+
+	meta_pool->remove(INODE, std::to_string(request->target_ino()));
+
+	/* It may be failed if parent and child dir is located in same leader */
+	ret = indexing_table->delete_dentry_table(request->target_ino());
+	if(ret == -1) {
+		global_logger.log(rpc_server_ops, "this dentry table already removed in rpc_rmdir_top()");
+	}
+
+	response->set_ret(0);
+	return Status::OK;
+}
+
 
 Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symlink_request *request,
 							   ::rpc_common_respond *response) {

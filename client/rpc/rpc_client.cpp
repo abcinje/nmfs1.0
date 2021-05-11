@@ -189,8 +189,48 @@ ino_t rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child
 	}
 }
 
-int rpc_client::rmdir(shared_ptr<remote_inode> parent_i, shared_ptr<inode> target_i, std::string target_name) {
-	return -ENOSYS;
+int rpc_client::rmdir_top(shared_ptr<remote_inode> target_i, std::string target_name) {
+	global_logger.log(rpc_client_ops, "Called rmdir_top()");
+	ClientContext context;
+	rpc_rmdir_request Input;
+	rpc_common_respond Output;
+
+	/* prepare Input */
+	Input.set_dentry_table_ino(target_i->get_dentry_table_ino());
+	Input.set_target_name(target_name);
+	Input.set_target_ino(target_i->get_dentry_table_ino());
+
+	Status status = stub_->rpc_rmdir_top(&context, Input, &Output);
+	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
+		return Output.ret();
+	} else {
+		global_logger.log(rpc_client_ops, status.error_message());
+		throw std::runtime_error("rpc_client::rmdir_top() failed");
+	}
+}
+
+int rpc_client::rmdir_down(shared_ptr<remote_inode> parent_i, ino_t target_ino, std::string target_name) {
+	global_logger.log(rpc_client_ops, "Called rmdir_down()");
+	ClientContext context;
+	rpc_rmdir_request Input;
+	rpc_common_respond Output;
+
+	/* prepare Input */
+	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_target_name(target_name);
+	Input.set_target_ino(target_ino);
+
+	Status status = stub_->rpc_rmdir_down(&context, Input, &Output);
+	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
+		return Output.ret();
+	} else {
+		global_logger.log(rpc_client_ops, status.error_message());
+		throw std::runtime_error("rpc_client::rmdir_down() failed");
+	}
 }
 
 int rpc_client::symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst) {

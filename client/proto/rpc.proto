@@ -12,7 +12,8 @@ service remote_ops {
   rpc rpc_opendir(rpc_open_opendir_request) returns (rpc_common_respond) {}
   rpc rpc_readdir(rpc_readdir_request) returns (stream rpc_name_respond) {}
   rpc rpc_mkdir(rpc_mkdir_request) returns (rpc_mkdir_respond) {}
-  rpc rpc_rmdir(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_rmdir_top(rpc_rmdir_request) returns (rpc_common_respond) {}
+  rpc rpc_rmdir_down(rpc_rmdir_request) returns (rpc_common_respond) {}
   rpc rpc_symlink(rpc_symlink_request) returns (rpc_common_respond) {}
   rpc rpc_readlink(rpc_readlink_request) returns (rpc_name_respond) {}
   rpc rpc_rename_same_parent(rpc_rename_same_parent_request) returns (rpc_common_respond) {}
@@ -84,6 +85,11 @@ message rpc_mkdir_request {
 
   string new_dir_name = 2;
   uint32 new_mode = 3;
+}
+message rpc_rmdir_request {
+  uint64 dentry_table_ino = 1;
+  string target_name = 2;
+  uint64 target_ino = 3;
 }
 
 message rpc_symlink_request {
