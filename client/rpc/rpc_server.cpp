@@ -296,7 +296,7 @@ Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const 
 	if (request->flags() == 0) {
 		if(check_dst_ino != -1) {
 			parent_dentry_table->delete_child_inode(*new_name);
-			meta_pool->remove(INODE, std::to_string(check_dst_ino));
+			meta_pool->remove(obj_category::INODE, std::to_string(check_dst_ino));
 		}
 		parent_dentry_table->delete_child_inode(*old_name);
 		parent_dentry_table->create_child_inode(*new_name, target_i);
@@ -385,10 +385,10 @@ Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink
 	nlink_t nlink = target_i->get_nlink() - 1;
 	if (nlink == 0) {
 		/* data */
-		data_pool->remove(DATA, std::to_string(target_i->get_ino()));
+		data_pool->remove(obj_category::DATA, std::to_string(target_i->get_ino()));
 
 		/* inode */
-		meta_pool->remove(INODE, std::to_string(target_i->get_ino()));
+		meta_pool->remove(obj_category::INODE, std::to_string(target_i->get_ino()));
 
 		/* parent dentry */
 		parent_dentry_table->delete_child_inode(request->filename());

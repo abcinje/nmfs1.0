@@ -54,7 +54,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	global_logger.log(fuse_op, "Start Inode offset = " + std::to_string(this_client->get_per_client_ino_offset()));
 
 	/* root */
-	if (!meta_pool->exist(INODE, "0")) {
+	if (!meta_pool->exist(obj_category::INODE, "0")) {
 		inode i(0, fuse_ctx->gid, S_IFDIR | 0777, true);
 
 		dentry d(0, true);

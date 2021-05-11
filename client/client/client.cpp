@@ -24,5 +24,5 @@ uint64_t client::get_per_client_ino_offset() {
 void client::increase_ino_offset() {
 	this->per_client_ino_offset++;
 	uint64_t offset = per_client_ino_offset;
-	meta_pool->write(CLIENT, std::to_string(this->client_id), reinterpret_cast<const char *>(&offset), sizeof(uint64_t), 0);
+	meta_pool->write(obj_category::CLIENT, std::to_string(this->client_id), reinterpret_cast<const char *>(&offset), sizeof(uint64_t), 0);
 }

@@ -47,7 +47,7 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	ino_t check_target_ino;
 
 	int start_name, end_name = -1;
-	int path_len = path.length();
+	int path_len = static_cast<int>(path.length());
 
 	while(true){
 		// get new target name
