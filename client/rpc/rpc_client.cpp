@@ -305,8 +305,49 @@ int rpc_client::rename_same_parent(shared_ptr<remote_inode> parent_i, const char
 	}
 }
 
-int rpc_client::rename_not_same_parent(shared_ptr<remote_inode> src_parent_i, shared_ptr<inode> dst_parent_i, const char* old_path, const char* new_path, unsigned int flags) {
-	return -ENOSYS;
+ino_t rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
+	global_logger.log(rpc_client_ops, "Called remote_rename_not_same_parent_src()");
+	ClientContext context;
+	rpc_rename_not_same_parent_src_request Input;
+	rpc_rename_not_same_parent_src_respond Output;
+
+	Input.set_dentry_table_ino(src_parent_i->get_dentry_table_ino());
+	Input.set_old_path(old_path);
+	Input.set_flags(flags);
+
+	Status status = stub_->rpc_rename_not_same_parent_src(&context, Input, &Output);
+	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
+		/* TODO : if ret == -ENOSYS */
+		return Output.target_ino();
+	} else {
+		global_logger.log(rpc_client_ops, status.error_message());
+		throw std::runtime_error("rpc_client::remote_rename_not_same_parent_src() failed");
+	}
+}
+
+int rpc_client::rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino, const char* new_path, unsigned int flags) {
+	global_logger.log(rpc_client_ops, "Called remote_rename_not_same_parent_dst()");
+	ClientContext context;
+	rpc_rename_not_same_parent_dst_request Input;
+	rpc_common_respond Output;
+
+	Input.set_dentry_table_ino(dst_parent_i->get_dentry_table_ino());
+	Input.set_target_ino(target_ino);
+	Input.set_check_dst_ino(check_dst_ino);
+	Input.set_new_path(new_path);
+	Input.set_flags(flags);
+
+	Status status = stub_->rpc_rename_not_same_parent_dst(&context, Input, &Output);
+	if(status.ok()){
+		if(Output.ret() == -ENOTLEADER)
+			throw std::runtime_error("ACCESS IMPROPER LEADER");
+		return Output.ret();
+	} else {
+		global_logger.log(rpc_client_ops, status.error_message());
+		throw std::runtime_error("rpc_client::remote_rename_not_same_parent_src() failed");
+	}
 }
 
 int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {

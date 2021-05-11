@@ -378,19 +378,16 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					parent_dentry_table->get_leader_ip(),
 					parent_dentry_table->get_dir_ino(),
 					new_path);
-				ret = remote_rename_same_parent(remote_i,
-								old_path, new_path, flags);
+				ret = remote_rename_same_parent(remote_i, old_path, new_path, flags);
 			}
 
 
 		} else {
 			shared_ptr<inode> src_parent_i = indexing_table->path_traversal(*src_parent_path);
-			shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(
-				src_parent_i->get_ino());
+			shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
 
 			shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_path);
-			shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(
-				dst_parent_i->get_ino());
+			shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
 			ino_t check_dst_ino = dst_dentry_table->check_child_inode(*get_filename_from_path(new_path));
 			if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == LOCAL)) {
@@ -398,11 +395,33 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 				ino_t target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
 				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == REMOTE)) {
-				/* TODO */
+				std::scoped_lock scl{atomic_mutex};
+				ino_t target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
+				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
+					dst_dentry_table->get_leader_ip(),
+					dst_dentry_table->get_dir_ino(),
+					new_path);
+				ret = remote_rename_not_same_parent_dst(dst_remote_i, target_ino, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == LOCAL)) {
-				/* TODO */
+				std::scoped_lock scl{atomic_mutex};
+				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
+					src_dentry_table->get_leader_ip(),
+					src_dentry_table->get_dir_ino(),
+					new_path);
+				ino_t target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
+				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
-				/* TODO */
+				std::scoped_lock scl{atomic_mutex};
+				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
+					src_dentry_table->get_leader_ip(),
+					src_dentry_table->get_dir_ino(),
+					new_path);
+				ino_t target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
+				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
+					dst_dentry_table->get_leader_ip(),
+					dst_dentry_table->get_dir_ino(),
+					new_path);
+				ret = remote_rename_not_same_parent_dst(dst_remote_i, target_ino, check_dst_ino, new_path, flags);
 			}
 
 		}

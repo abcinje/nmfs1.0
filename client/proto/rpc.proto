@@ -17,7 +17,8 @@ service remote_ops {
   rpc rpc_symlink(rpc_symlink_request) returns (rpc_common_respond) {}
   rpc rpc_readlink(rpc_readlink_request) returns (rpc_name_respond) {}
   rpc rpc_rename_same_parent(rpc_rename_same_parent_request) returns (rpc_common_respond) {}
-  rpc rpc_rename_not_same_parent(rpc_common_request) returns (rpc_common_respond) {}
+  rpc rpc_rename_not_same_parent_src(rpc_rename_not_same_parent_src_request) returns (rpc_rename_not_same_parent_src_respond) {}
+  rpc rpc_rename_not_same_parent_dst(rpc_rename_not_same_parent_dst_request) returns (rpc_common_respond) {}
   rpc rpc_open(rpc_open_opendir_request) returns (rpc_common_respond) {}
   rpc rpc_create(rpc_create_request) returns (rpc_create_respond) {}
   rpc rpc_unlink(rpc_unlink_request) returns (rpc_common_respond) {}
@@ -115,6 +116,20 @@ message rpc_rename_same_parent_request {
   uint32 flags = 4;
 }
 
+message rpc_rename_not_same_parent_src_request {
+  uint64 dentry_table_ino = 1;
+
+  string old_path = 2;
+  uint32 flags = 3;
+}
+message rpc_rename_not_same_parent_dst_request {
+  uint64 dentry_table_ino = 1;
+
+  uint64 target_ino = 2;
+  uint64 check_dst_ino = 3;
+  string new_path = 4;
+  uint32 flags = 5;
+}
 message rpc_create_request {
   uint64 dentry_table_ino = 1;
 
@@ -210,6 +225,12 @@ message rpc_create_respond {
 
 message rpc_mkdir_respond {
   uint64 	new_dir_ino = 1;
+
+  sint32 ret = 2;
+}
+
+message rpc_rename_not_same_parent_src_respond {
+  uint64 	target_ino = 1;
 
   sint32 ret = 2;
 }

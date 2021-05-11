@@ -87,6 +87,24 @@ int remote_rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old
 	return ret;
 }
 
+ino_t remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
+	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_src()");
+	std::string remote_address(src_parent_i->get_address());
+	std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
+
+	ino_t target_ino = rc->rename_not_same_parent_src(src_parent_i, old_path, flags);
+	return target_ino;
+}
+
+int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino, const char* new_path, unsigned int flags) {
+	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_dst()");
+	std::string remote_address(dst_parent_i->get_address());
+	std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
+
+	int ret = rc->rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
+	return ret;
+}
+
 int remote_rename_not_same_parent(shared_ptr<remote_inode> src_parent_i, shared_ptr<remote_inode> dst_parent_i, const char* old_path, const char* new_path, unsigned int flags) {
 	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent()");
 

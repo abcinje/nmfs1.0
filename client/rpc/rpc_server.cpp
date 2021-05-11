@@ -310,16 +310,59 @@ Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const 
 	return Status::OK;
 }
 
-Status rpc_server::rpc_rename_not_same_parent(::grpc::ServerContext *context, const ::rpc_common_request *request,
-											  ::rpc_common_respond *response) {
-	global_logger.log(rpc_server_ops, "Called rpc_rename_not_same_parent()");
+Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context,
+						  const ::rpc_rename_not_same_parent_src_request *request,
+						  ::rpc_rename_not_same_parent_src_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_rename_not_same_parent_src()");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	return Service::rpc_rename_not_same_parent(context, request, response);
+	std::shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	shared_ptr<inode> target_i = src_dentry_table->get_child_inode(request->old_path());
+	ino_t target_ino = target_i->get_ino();
+
+	if (request->flags() == 0) {
+		src_dentry_table->delete_child_inode(request->old_path());
+	} else {
+		response->set_ret(-ENOSYS);
+		return Status::OK;
+	}
+
+	response->set_target_ino(target_ino);
+	response->set_ret(0);
+	return Status::OK;
 }
+
+Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context,
+						  const ::rpc_rename_not_same_parent_dst_request *request,
+						  ::rpc_common_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_rename_not_same_parent_dst()");
+	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+		response->set_ret(-ENOTLEADER);
+		return Status::OK;
+	}
+	unique_ptr<std::string> new_name = get_filename_from_path(request->new_path());
+
+	std::shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	shared_ptr<inode> target_i = std::make_shared<inode>(request->target_ino());
+
+	if (request->flags() == 0) {
+		if(request->check_dst_ino() != -1) {
+			dst_dentry_table->delete_child_inode(*new_name);
+			meta_pool->remove(obj_category::INODE, std::to_string(request->check_dst_ino()));
+		}
+		dst_dentry_table->create_child_inode(*new_name, target_i);
+	} else {
+		response->set_ret(-ENOSYS);
+		return Status::OK;
+	}
+
+	response->set_ret(0);
+	return Status::OK;
+}
+
 
 Status rpc_server::rpc_open(::grpc::ServerContext *context, const ::rpc_open_opendir_request *request,
 							::rpc_common_respond *response) {

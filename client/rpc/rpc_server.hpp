@@ -51,8 +51,11 @@ public:
     Status rpc_rename_same_parent(::grpc::ServerContext *context, const ::rpc_rename_same_parent_request *request,
 				  ::rpc_common_respond *response) override;
 
-    Status rpc_rename_not_same_parent(::grpc::ServerContext *context, const ::rpc_common_request *request,
-				      ::rpc_common_respond *response) override;
+    Status rpc_rename_not_same_parent_src(::grpc::ServerContext *context, const ::rpc_rename_not_same_parent_src_request *request,
+				      ::rpc_rename_not_same_parent_src_respond *response) override;
+
+    Status rpc_rename_not_same_parent_dst(::grpc::ServerContext *context, const ::rpc_rename_not_same_parent_dst_request *request,
+					  ::rpc_common_respond *response) override;
 
     Status rpc_open(::grpc::ServerContext *context, const ::rpc_open_opendir_request *request,
 		    ::rpc_common_respond *response) override;

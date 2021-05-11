@@ -17,7 +17,8 @@ int remote_rmdir_down(shared_ptr<remote_inode> parent_i, ino_t target_ino, std::
 int remote_symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst);
 int remote_readlink(shared_ptr<remote_inode> i, char *buf, size_t size);
 int remote_rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old_path, const char* new_path, unsigned int flags);
-int remote_rename_not_same_parent(shared_ptr<remote_inode> src_parent_i, shared_ptr<inode> dst_parent_i, const char* old_path, const char* new_path, unsigned int flags);
+ino_t remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags);
+int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino, const char* new_path, unsigned int flags);
 int remote_open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 void remote_create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);
 void remote_unlink(shared_ptr<remote_inode> parent_i, std::string child_name);
