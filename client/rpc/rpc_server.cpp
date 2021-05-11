@@ -197,7 +197,7 @@ Status rpc_server::rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmd
 		return Status::OK;
 	}
 
-	meta_pool->remove(DENTRY, std::to_string(request->target_ino()));
+	meta_pool->remove(obj_category::DENTRY, std::to_string(request->target_ino()));
 	indexing_table->delete_dentry_table(request->target_ino());
 
 	response->set_ret(0);
@@ -215,7 +215,7 @@ Status rpc_server::rpc_rmdir_down(::grpc::ServerContext *context, const ::rpc_rm
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	parent_dentry_table->delete_child_inode(request->target_name());
 
-	meta_pool->remove(INODE, std::to_string(request->target_ino()));
+	meta_pool->remove(obj_category::INODE, std::to_string(request->target_ino()));
 
 	/* It may be failed if parent and child dir is located in same leader */
 	ret = indexing_table->delete_dentry_table(request->target_ino());
