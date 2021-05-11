@@ -310,6 +310,15 @@ int fuse_ops::rmdir(const char *path) {
 				local_rmdir_down(parent_i, target_i->get_ino(), *target_name);
 		} else if ((parent_dentry_table->get_loc() == LOCAL) && (target_dentry_table->get_loc() == REMOTE)) {
 			std::scoped_lock scl{atomic_mutex};
+			shared_ptr<remote_inode> target_remote_i = std::make_shared<remote_inode>(
+				target_dentry_table->get_leader_ip(),
+				target_dentry_table->get_dir_ino(),
+				*target_name);
+			ret = remote_rmdir_top(target_remote_i, *target_name);
+			if(ret != -ENOTEMPTY)
+				local_rmdir_down(parent_i, target_i->get_ino(), *target_name);
+		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == LOCAL)) {
+			std::scoped_lock scl{atomic_mutex};
 			ret = local_rmdir_top(target_i, *target_name);
 			if(ret != -ENOTEMPTY) {
 				shared_ptr<remote_inode> parent_remote_i = std::make_shared<remote_inode>(
@@ -318,15 +327,6 @@ int fuse_ops::rmdir(const char *path) {
 					*target_name);
 				remote_rmdir_down(parent_remote_i, target_i->get_ino(), *target_name);
 			}
-		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == LOCAL)) {
-			std::scoped_lock scl{atomic_mutex};
-			shared_ptr<remote_inode> target_remote_i = std::make_shared<remote_inode>(
-				target_dentry_table->get_leader_ip(),
-				target_dentry_table->get_dir_ino(),
-				*target_name);
-			ret = remote_rmdir_top(target_remote_i, *target_name);
-			if(ret != -ENOTEMPTY)
-				local_rmdir_down(parent_i, target_i->get_ino(), *target_name);
 		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == REMOTE)) {
 			std::scoped_lock scl{atomic_mutex};
 			shared_ptr<remote_inode> target_remote_i = std::make_shared<remote_inode>(
