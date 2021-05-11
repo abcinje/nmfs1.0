@@ -321,7 +321,7 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 	unique_ptr<std::string> old_name = get_filename_from_path(request->old_path());
 
 	std::shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	shared_ptr<inode> target_i = src_dentry_table->get_child_inode(request->old_path());
+	shared_ptr<inode> target_i = src_dentry_table->get_child_inode(*old_name);
 	ino_t target_ino = target_i->get_ino();
 
 	if (request->flags() == 0) {
