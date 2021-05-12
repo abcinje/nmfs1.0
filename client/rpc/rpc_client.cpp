@@ -125,7 +125,7 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		{
+		else if(Output.ret() == 0) {
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
@@ -271,10 +271,12 @@ int rpc_client::readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		/* fill buffer */
-		size_t len = MIN(Output.filename().length(), size-1);
-		memcpy(buf, Output.filename().c_str(), len);
-		buf[len] = '\0';
+		else if(Output.ret() == 0) {
+			/* fill buffer */
+			size_t len = MIN(Output.filename().length(), size - 1);
+			memcpy(buf, Output.filename().c_str(), len);
+			buf[len] = '\0';
+		}
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
@@ -365,7 +367,7 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		{
+		else if(Output.ret() == 0) {
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
@@ -395,7 +397,7 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		{
+		else if(Output.ret() == 0) {
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(Output.new_ino());
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
@@ -449,8 +451,11 @@ size_t rpc_client::write(shared_ptr<remote_inode> i, const char* buffer, size_t 
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		size_t written_len = data_pool->write(obj_category::DATA, std::to_string(i->get_ino()), buffer, Output.size(), Output.offset());
-		return written_len;
+		else if(Output.ret() == 0) {
+			size_t written_len = data_pool->write(obj_category::DATA, std::to_string(i->get_ino()), buffer, Output.size(), Output.offset());
+			return written_len;
+		}
+		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::write() failed");
@@ -539,8 +544,11 @@ int rpc_client::truncate(shared_ptr<remote_inode> i, off_t offset) {
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		int ret = data_pool->truncate(obj_category::DATA, std::to_string(i->get_ino()), offset);
-		return ret;
+		else if(Output.ret() == 0) {
+			int ret = data_pool->truncate(obj_category::DATA, std::to_string(i->get_ino()), offset);
+			return ret;
+		}
+		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::truncate() failed");
