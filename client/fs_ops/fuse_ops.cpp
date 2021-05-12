@@ -27,6 +27,7 @@ std::mutex file_handler_mutex;
 thread *remote_server_thread;
 
 fuse_context *fuse_ctx;
+client *this_client;
 unsigned int fuse_capable;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
@@ -39,8 +40,6 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	std::string manager_ip = arg.substr(0, dot_pos);
 	std::string remote_handle_ip = arg.substr(dot_pos + 1);
 	global_logger.log(fuse_op, "manager IP: " + manager_ip + " remote_handle IP: " + remote_handle_ip);
-
-	client *this_client;
 
 	rados_io::conn_info ci = {"client.admin", "ceph", 0};
 	meta_pool = new rados_io(ci, META_POOL);
@@ -70,7 +69,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 
 	config->nullpath_ok = 0;
 	fuse_capable = info->capable;
-	return (void *) this_client;
+	return NULL;
 }
 
 void fuse_ops::destroy(void *private_data) {
@@ -80,8 +79,7 @@ void fuse_ops::destroy(void *private_data) {
 
 	remote_handle->Shutdown();
 
-	client *myself = (client *) (fuse_ctx->private_data);
-	delete myself;
+	delete this_client;
 
 	delete meta_pool;
 	delete data_pool;

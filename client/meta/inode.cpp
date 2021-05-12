@@ -6,6 +6,7 @@ using std::runtime_error;
 
 extern rados_io *meta_pool;
 extern fuse_context *fuse_ctx;
+extern client *this_client;
 
 std::recursive_mutex alloc_mutex;
 std::shared_ptr<inode> root_inode;
@@ -274,20 +275,15 @@ void inode::set_link_target_name(const char *name){
 
 ino_t alloc_new_ino() {
 	global_logger.log(inode_ops, "Called alloc_new_ino()");
-	std::scoped_lock{alloc_mutex};
-	client *c = (client *) (fuse_ctx->private_data);
+	std::scoped_lock scl{alloc_mutex};
+
 	ino_t new_ino;
 	/* new_ino use client_id for first 24 bit and use ino_offset for next 40 bit, total 64bit(8bytes) */
-	if (c != NULL) {
-		new_ino = (c->get_client_id()) << 40;
-		new_ino = new_ino + (c->get_per_client_ino_offset() & INO_OFFSET_MASK);
-		global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
-	} else { /* for very first client */
-		new_ino = (uint64_t)(1) << 40;
-		new_ino = new_ino + (c->get_per_client_ino_offset() & INO_OFFSET_MASK);
-		global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
-	}
+	new_ino = (this_client->get_client_id()) << 40;
+	new_ino = new_ino + (this_client->get_per_client_ino_offset() & INO_OFFSET_MASK);
+	global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
 
-	c->increase_ino_offset();
+
+	this_client->increase_ino_offset();
 	return new_ino;
 }
