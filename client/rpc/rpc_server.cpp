@@ -6,6 +6,7 @@ extern directory_table *indexing_table;
 
 extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
 extern std::mutex file_handler_mutex;
+extern std::mutex atomic_mutex;
 
 extern std::unique_ptr<Server> remote_handle;
 extern fuse_context *fuse_ctx;
@@ -142,7 +143,9 @@ Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_readd
 	}
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::recursive_mutex& dentry_table_mutex = parent_dentry_table->get_dentry_table_mutex();
 
+	std::scoped_lock scl{dentry_table_mutex};
 	std::map<std::string, shared_ptr<inode>>::iterator it;
 	response.set_filename(".");
 	writer->Write(response);
@@ -164,7 +167,7 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 		return Status::OK;
 	}
 
-	//fuse_context *fuse_ctx = fuse_get_context();
+	std::scoped_lock scl{atomic_mutex};
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	shared_ptr<inode> i = std::make_shared<inode>(0, 0, request->new_mode() | S_IFDIR);
 	parent_dentry_table->create_child_inode(request->new_dir_name(), i);
@@ -187,6 +190,8 @@ Status rpc_server::rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmd
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
+
+	std::scoped_lock scl{atomic_mutex};
 	std::shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	if(target_dentry_table == nullptr) {
 		throw std::runtime_error("directory table is corrupted : Can't find leased directory");
@@ -211,6 +216,8 @@ Status rpc_server::rpc_rmdir_down(::grpc::ServerContext *context, const ::rpc_rm
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
+
+	std::scoped_lock scl{atomic_mutex};
 	int ret = 0;
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	parent_dentry_table->delete_child_inode(request->target_name());
@@ -236,7 +243,7 @@ Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symli
 		return Status::OK;
 	}
 
-	//fuse_context *fuse_ctx = fuse_get_context();
+	std::scoped_lock scl{atomic_mutex};
 	shared_ptr<dentry_table> dst_parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 
 	std::unique_ptr<std::string> symlink_name = get_filename_from_path(request->dst());
@@ -285,6 +292,7 @@ Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const 
 		return Status::OK;
 	}
 
+	std::scoped_lock scl{atomic_mutex};
 	unique_ptr<std::string> old_name = get_filename_from_path(request->old_path());
 	unique_ptr<std::string> new_name = get_filename_from_path(request->new_path());
 
@@ -318,6 +326,8 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
+
+	std::scoped_lock scl{atomic_mutex};
 	unique_ptr<std::string> old_name = get_filename_from_path(request->old_path());
 
 	std::shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
@@ -344,6 +354,8 @@ Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
+
+	std::scoped_lock scl{atomic_mutex};
 	unique_ptr<std::string> new_name = get_filename_from_path(request->new_path());
 
 	std::shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
@@ -404,6 +416,7 @@ Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create
 		return Status::OK;
 	}
 
+	std::scoped_lock scl{atomic_mutex};
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	shared_ptr<inode> i = std::make_shared<inode>(0, 0, request->new_mode() | S_IFREG);
 
@@ -424,6 +437,7 @@ Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink
 		return Status::OK;
 	}
 
+	std::scoped_lock scl{atomic_mutex};
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(request->filename());
 
@@ -454,6 +468,7 @@ Status rpc_server::rpc_write(::grpc::ServerContext *context, const ::rpc_write_r
 		return Status::OK;
 	}
 
+	std::scoped_lock scl{atomic_mutex};
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
 
