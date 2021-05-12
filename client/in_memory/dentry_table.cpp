@@ -170,6 +170,10 @@ const string &dentry_table::get_leader_ip() const {
 	return leader_ip;
 }
 
+std::recursive_mutex &dentry_table::get_dentry_table_mutex() {
+	return dentry_table_mutex;
+}
+
 
 
 
