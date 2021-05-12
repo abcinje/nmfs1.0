@@ -90,9 +90,6 @@ ino_t local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 
 int local_rmdir_top(shared_ptr<inode> target_i, std::string target_name) {
 	global_logger.log(local_fs_op, "Called rmdir_top()");
-	if(!S_ISDIR(target_i->get_mode()))
-		return -ENOTDIR;
-
 	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_i->get_ino());
 
 	if(target_dentry_table == nullptr) {
