@@ -132,7 +132,7 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 	if (dst_parent_dentry_table->check_child_inode(symlink_name->data()) != -1)
 		return -EEXIST;
 
-	shared_ptr<inode> symlink_i = std::make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, std::string(src).length(), src);
+	shared_ptr<inode> symlink_i = std::make_shared<inode>(fuse_ctx->uid, fuse_ctx->gid, S_IFLNK | 0777, src);
 
 	symlink_i->set_size(std::string(src).length());
 

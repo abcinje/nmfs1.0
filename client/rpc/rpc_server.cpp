@@ -246,7 +246,7 @@ Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symli
 		return Status::OK;
 	}
 
-	shared_ptr<inode> symlink_i = std::make_shared<inode>(0, 0, S_IFLNK | 0777, request->src().length(), request->src().c_str());
+	shared_ptr<inode> symlink_i = std::make_shared<inode>(0, 0, S_IFLNK | 0777, request->src().c_str());
 
 	symlink_i->set_size(request->src().length());
 

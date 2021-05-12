@@ -1,5 +1,7 @@
 #include "inode.hpp"
 
+#include <cstring>
+
 using std::runtime_error;
 
 extern rados_io *meta_pool;
@@ -38,8 +40,10 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i
 
 
 /* TODO : allocated target name should be freed later */
-inode::inode(uid_t owner, gid_t group, mode_t mode, int link_target_len, const char *link_target_name) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0)
+inode::inode(uid_t owner, gid_t group, mode_t mode, const char *link_target_name) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0)
 {
+	int link_target_len = static_cast<int>(strlen(link_target_name));
+
 	global_logger.log(inode_ops,"Called inode(symlink)");
 	global_logger.log(inode_ops,"link_target_len : " + std::to_string(link_target_len) + " link_target_name : " + std::string(link_target_name));
 	struct timespec ts;
