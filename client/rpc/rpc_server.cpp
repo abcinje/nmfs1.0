@@ -52,6 +52,29 @@ Status rpc_server::rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inod
 	return Status::OK;
 }
 
+
+Status rpc_server::rpc_permission_check(::grpc::ServerContext *context, const ::rpc_inode_request *request,
+					::rpc_inode_respond *response) {
+	global_logger.log(rpc_server_ops, "Called rpc_permission_check()");
+	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+		response->set_ret(-ENOTLEADER);
+		return Status::OK;
+	}
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+
+	try{
+		i->permission_check(request->mask());
+	} catch(inode::permission_denied &e) {
+		response->set_ret(-EACCES);
+		return Status::OK;
+	}
+
+	response->set_ret(0);
+	return Status::OK;
+}
+
+
 Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_getattr_request *request,
 							   ::rpc_getattr_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_getattr(" + request->filename() + ")");

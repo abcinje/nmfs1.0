@@ -1,22 +1,5 @@
 #include "remote_ops.hpp"
 
-/* <address, channel> */
-std::map<std::string, std::shared_ptr<rpc_client>> rc_list;
-
-std::shared_ptr<rpc_client> get_rpc_client(const std::string& remote_address) {
-	global_logger.log(remote_fs_op, "Called  get_rpc_client()");
-	std::map<std::string, std::shared_ptr<rpc_client>>::iterator it;
-	it = rc_list.find(remote_address);
-
-	if(it != rc_list.end()){
-		return it->second;
-	} else {
-		std::shared_ptr<rpc_client> rc = std::make_shared<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
-		rc_list.insert(std::make_pair(remote_address,rc));
-		return rc;
-	}
-}
-
 void remote_getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 	global_logger.log(remote_fs_op, "Called remote_getattr()");
 	std::string remote_address(i->get_address());

@@ -7,8 +7,6 @@
 #include "../util.hpp"
 #include "../rpc/rpc_client.hpp"
 
-std::shared_ptr<rpc_client> get_rpc_client(const std::string& remote_address);
-
 void remote_getattr(shared_ptr<remote_inode> i, struct stat* stat);
 void remote_access(shared_ptr<remote_inode> i, int mask);
 int remote_opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);

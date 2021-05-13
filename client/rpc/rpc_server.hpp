@@ -21,6 +21,9 @@ public:
     Status rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inode_request *request,
 			::rpc_inode_respond *response) override;
 
+    Status rpc_permission_check(::grpc::ServerContext *context, const ::rpc_inode_request *request,
+				::rpc_inode_respond *response) override;
+
     Status rpc_getattr(::grpc::ServerContext *context, const ::rpc_getattr_request *request,
 		       ::rpc_getattr_respond *response) override;
 

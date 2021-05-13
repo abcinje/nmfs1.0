@@ -5,6 +5,8 @@
 
 class rpc_client;
 
+std::shared_ptr<rpc_client> get_rpc_client(const std::string& remote_address);
+
 class remote_inode : public inode {
 private :
     std::string leader_ip;
@@ -13,7 +15,7 @@ private :
 	std::string file_name;
 
 public:
-    remote_inode(std::string leader_ip, ino_t dentry_table_ino, std::string file_name);
+    	remote_inode(std::string leader_ip, ino_t dentry_table_ino, std::string file_name);
 
 	[[nodiscard]] const string &get_address() const;
 
@@ -21,6 +23,7 @@ public:
 	[[nodiscard]] const string &get_file_name() const;
 
 	mode_t get_mode() override;
+    	void permission_check(int mask) override;
 };
 
 

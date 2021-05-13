@@ -6,6 +6,7 @@ service remote_ops {
   rpc rpc_check_child_inode(rpc_dentry_table_request) returns (rpc_dentry_table_respond) {}
   /* INODE OPERATIONS */
   rpc rpc_get_mode(rpc_inode_request) returns (rpc_inode_respond) {}
+  rpc rpc_permission_check(rpc_inode_request) returns (rpc_inode_respond) {}
   /* FILE SYSTEM OPERATIONS */
   rpc rpc_getattr(rpc_getattr_request) returns (rpc_getattr_respond) {}
   rpc rpc_access(rpc_access_request) returns (rpc_common_respond) {}
@@ -44,6 +45,8 @@ message rpc_dentry_table_respond {
 message rpc_inode_request {
   uint64 dentry_table_ino = 1;
   string filename = 2;
+
+  int32 mask = 3;
 }
 
 message rpc_inode_respond {
