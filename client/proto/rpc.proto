@@ -46,7 +46,7 @@ message rpc_inode_request {
   uint64 dentry_table_ino = 1;
   string filename = 2;
 
-  int32 mask = 3;
+  sint32 mask = 3;
 }
 
 message rpc_inode_respond {
