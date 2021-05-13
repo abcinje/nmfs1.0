@@ -52,7 +52,7 @@ mode_t rpc_client::get_mode(ino_t dentry_table_ino, std::string filename){
 void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* s) {
 	global_logger.log(rpc_client_ops, "Called getattr()");
 	ClientContext context;
-	rpc_common_request Input;
+	rpc_getattr_request Input;
 	rpc_getattr_respond Output;
 
 	/* prepare Input */

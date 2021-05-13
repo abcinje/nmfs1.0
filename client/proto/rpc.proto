@@ -7,7 +7,7 @@ service remote_ops {
   /* INODE OPERATIONS */
   rpc rpc_get_mode(rpc_inode_request) returns (rpc_inode_respond) {}
   /* FILE SYSTEM OPERATIONS */
-  rpc rpc_getattr(rpc_common_request) returns (rpc_getattr_respond) {}
+  rpc rpc_getattr(rpc_getattr_request) returns (rpc_getattr_respond) {}
   rpc rpc_access(rpc_access_request) returns (rpc_common_respond) {}
   rpc rpc_opendir(rpc_open_opendir_request) returns (rpc_common_respond) {}
   rpc rpc_readdir(rpc_readdir_request) returns (stream rpc_name_respond) {}
@@ -53,21 +53,9 @@ message rpc_inode_respond {
 }
 
 /* FILE SYSTEM OPERATION REQUEST */
-message rpc_common_request {
+message rpc_getattr_request {
   uint64 dentry_table_ino = 1;
   string filename = 2;
-
-  uint64 	i_ino = 3;
-
-  uint32 	i_mode = 4;
-  uint32	i_uid = 5;
-  uint32 i_gid = 6;
-  uint64 i_nlink = 7;
-  int64 i_size = 8;
-  int64 a_sec = 9;
-  int64 a_nsec = 10;
-  int64 m_sec = 11;
-  int64 m_nsec = 12;
 }
 
 message rpc_access_request {

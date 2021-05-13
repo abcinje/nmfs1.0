@@ -52,7 +52,7 @@ Status rpc_server::rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inod
 	return Status::OK;
 }
 
-Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_common_request *request,
+Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_getattr_request *request,
 							   ::rpc_getattr_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_getattr(" + request->filename() + ")");
 	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
