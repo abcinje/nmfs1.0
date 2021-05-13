@@ -11,7 +11,7 @@
 #include "../meta/dentry.hpp"
 #include "../logger/logger.hpp"
 #include "../client/client.hpp"
-#include "../manager/lease_client.hpp"
+#include "../lease/lease_client.hpp"
 
 using std::shared_ptr;
 

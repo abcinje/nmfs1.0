@@ -29,7 +29,7 @@ public:
 	~lease_client(void) = default;
 
 	/*
-	 * access()
+	 * is_valid()
 	 *
 	 * Check whether the lease for the ino is valid.
 	 * Note(1) This routine treats LOCAL and REMOTE inode in the same manner.
@@ -38,10 +38,22 @@ public:
 	 *         Do not trust the content of the table.
 	 *         But you may trust the lease information about the client itself.
 	 *
-	 * This function returns false if the lease has been expired.
-	 * Otherwise, it returns true.
+	 * This function returns true if the lease is valid now.
+	 * Otherwise, it returns false.
 	 */
-	bool access(ino_t ino);
+	bool is_valid(ino_t ino);
+
+	/*
+	 * is_mine()
+	 *
+	 * Check whether the lease for the ino is valid *AND* the lease is mine.
+	 * The journal module may need to call this function before taking directory journals.
+	 *
+	 * This function returns true if the lease is valid
+	 * and I am the leader of the corresponding directory.
+	 * Otherwise, it returns false.
+	 */
+	bool is_mine(ino_t ino);
 
 	/*
 	 * acquire()
