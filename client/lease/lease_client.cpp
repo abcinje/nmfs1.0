@@ -8,7 +8,7 @@ lease_client::lease_client(std::shared_ptr<Channel> channel, const std::string &
 {
 }
 
-bool lease_client::access(ino_t ino)
+bool lease_client::is_owned(ino_t ino)
 {
 	return table.check(ino);
 }

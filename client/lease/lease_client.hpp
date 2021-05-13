@@ -29,7 +29,7 @@ public:
 	~lease_client(void) = default;
 
 	/*
-	 * access()
+	 * is_owned()
 	 *
 	 * Check whether the lease for the ino is valid.
 	 * Note(1) This routine treats LOCAL and REMOTE inode in the same manner.
@@ -41,7 +41,7 @@ public:
 	 * This function returns false if the lease has been expired.
 	 * Otherwise, it returns true.
 	 */
-	bool access(ino_t ino);
+	bool is_owned(ino_t ino);
 
 	/*
 	 * acquire()
