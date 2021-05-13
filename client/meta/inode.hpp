@@ -72,7 +72,6 @@ public:
 	/* parent constructor for remote_inode */
 	inode();
 
-	void copy(inode *src);
 	void fill_stat(struct stat *s);
 	unique_ptr<char> serialize(void);
 	void deserialize(const char *value);
