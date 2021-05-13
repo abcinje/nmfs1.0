@@ -86,9 +86,9 @@ add_executable(
   ${CMAKE_CURRENT_BINARY_DIR}/rpc.pb.cc
   ${CMAKE_CURRENT_BINARY_DIR}/rpc.grpc.pb.cc
 
-  # manager
-  manager/lease_client.cpp
-  manager/lease_table_client.cpp
+  # lease
+  lease/lease_client.cpp
+  lease/lease_table_client.cpp
 
   #rpc
   rpc/rpc_client.cpp
