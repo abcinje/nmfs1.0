@@ -30,7 +30,7 @@ std::tuple<system_clock::time_point, bool> lease_table_client::lease_entry::get_
 	return std::make_tuple(due, leader);
 }
 
-void lease_table_client::lease_entry::set_due(const system_clock::time_point &new_due, bool mine)
+void lease_table_client::lease_entry::set_info(const system_clock::time_point &new_due, bool mine)
 {
 	std::unique_lock lock(sm);
 	due = new_due;
@@ -111,7 +111,7 @@ void lease_table_client::update(ino_t ino, const system_clock::time_point &new_d
 	}
 
 	if (found) {
-		e->set_due(new_due, mine);
+		e->set_info(new_due, mine);
 		return;
 	}
 

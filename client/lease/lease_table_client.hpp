@@ -23,7 +23,7 @@ private:
 
 		system_clock::time_point get_due(void);
 		std::tuple<system_clock::time_point, bool> get_info(void);
-		void set_due(const system_clock::time_point &new_due, bool mine);
+		void set_info(const system_clock::time_point &new_due, bool mine);
 	};
 
 	std::shared_mutex sm;
