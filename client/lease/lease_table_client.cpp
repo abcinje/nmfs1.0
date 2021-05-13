@@ -14,7 +14,7 @@ std::string serializeTimePoint(const std::chrono::system_clock::time_point& time
 	return ss.str();
 }
 
-lease_table_client::lease_entry::lease_entry(const system_clock::time_point &new_due) : due(new_due)
+lease_table_client::lease_entry::lease_entry(const system_clock::time_point &new_due, bool mine) : due(new_due), leader(mine)
 {
 }
 
@@ -24,10 +24,17 @@ system_clock::time_point lease_table_client::lease_entry::get_due(void)
 	return due;
 }
 
-void lease_table_client::lease_entry::set_due(const system_clock::time_point &new_due)
+std::tuple<system_clock::time_point, bool> lease_table_client::lease_entry::get_info(void)
+{
+	std::shared_lock lock(sm);
+	return std::make_tuple(due, leader);
+}
+
+void lease_table_client::lease_entry::set_due(const system_clock::time_point &new_due, bool mine)
 {
 	std::unique_lock lock(sm);
 	due = new_due;
+	leader = mine;
 }
 
 lease_table_client::~lease_table_client(void)
@@ -37,9 +44,9 @@ lease_table_client::~lease_table_client(void)
 	exit(1);
 }
 
-bool lease_table_client::check(ino_t ino)
+bool lease_table_client::is_valid(ino_t ino)
 {
-	global_logger.log(lease_ops, "Called check(" + std::to_string(ino) + ")");
+	global_logger.log(lease_ops, "Called is_valid(" + std::to_string(ino) + ")");
 	lease_entry *e;
 
 	{
@@ -65,7 +72,28 @@ bool lease_table_client::check(ino_t ino)
 	return system_clock::now() < e->get_due();
 }
 
-void lease_table_client::update(ino_t ino, const system_clock::time_point &new_due)
+bool lease_table_client::is_mine(ino_t ino)
+{
+	global_logger.log(lease_ops, "Called is_mine(" + std::to_string(ino) + ")");
+	lease_entry *e;
+	system_clock::time_point latest_due;
+	bool mine;
+
+	{
+		std::shared_lock lock(sm);
+		auto it = map.find(ino);
+		if (it != map.end()) {
+			e = it->second;
+		} else {
+			return false;
+		}
+	}
+
+	std::tie(latest_due, mine) = e->get_info();
+	return mine && (system_clock::now() < latest_due);
+}
+
+void lease_table_client::update(ino_t ino, const system_clock::time_point &new_due, bool mine)
 {
 	global_logger.log(lease_ops, "Called update(" + std::to_string(ino) + ")");
 	global_logger.log(lease_ops, "new_due: " + serializeTimePoint(new_due, "UTC: %Y-%m-%d %H:%M:%S"));
@@ -83,7 +111,7 @@ void lease_table_client::update(ino_t ino, const system_clock::time_point &new_d
 	}
 
 	if (found) {
-		e->set_due(new_due);
+		e->set_due(new_due, mine);
 		return;
 	}
 
@@ -91,6 +119,6 @@ void lease_table_client::update(ino_t ino, const system_clock::time_point &new_d
 		std::unique_lock lock(sm);
 		auto ret = map.insert({ino, nullptr});
 		if (ret.second)
-			ret.first.value() = new lease_entry(new_due);
+			ret.first.value() = new lease_entry(new_due, mine);
 	}
 }

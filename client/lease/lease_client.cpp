@@ -8,9 +8,14 @@ lease_client::lease_client(std::shared_ptr<Channel> channel, const std::string &
 {
 }
 
-bool lease_client::is_owned(ino_t ino)
+bool lease_client::is_valid(ino_t ino)
 {
-	return table.check(ino);
+	return table.is_valid(ino);
+}
+
+bool lease_client::is_mine(ino_t ino)
+{
+	return table.is_mine(ino);
 }
 
 int lease_client::acquire(ino_t ino, std::string &remote_addr)
@@ -29,7 +34,7 @@ int lease_client::acquire(ino_t ino, std::string &remote_addr)
 		int ret = response.ret();
 
 		system_clock::time_point due{system_clock::duration{response.due()}};
-		table.update(ino, due);
+		table.update(ino, due, static_cast<bool>(!ret));
 
 		if (ret)
 			remote_addr = response.remote_addr();

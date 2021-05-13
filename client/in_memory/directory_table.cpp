@@ -107,8 +107,8 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 
 	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
 		global_logger.log(directory_table_ops, "dentry_table : HIT");
-		bool accessible = lc->is_owned(ino);
-		if(accessible) {
+		bool valid = lc->is_valid(ino);
+		if(valid) {
 			return it->second;
 		} else {
 			this->dentry_tables.erase(it);
