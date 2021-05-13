@@ -106,7 +106,7 @@ ino_t dentry_table::check_child_inode(std::string filename){
 		return it->second->get_ino();
 	} else if (this->loc == REMOTE) {
 		std::string remote_address(this->leader_ip);
-		std::unique_ptr<rpc_client> rc = std::make_unique<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
+		std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
 		ino_t ino = rc->check_child_inode(this->dir_ino, filename);
 		return ino;
