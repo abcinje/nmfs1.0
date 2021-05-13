@@ -75,12 +75,6 @@ inode::inode(){
 	loc = REMOTE;
 }
 
-void inode::copy(inode *src)
-{
-	global_logger.log(inode_ops, "Called inode.copy()");
-	std::scoped_lock scl{this->inode_mutex};
-	memcpy(this, src, REG_INODE_SIZE);
-}
 
 void inode::fill_stat(struct stat *s)
 {
