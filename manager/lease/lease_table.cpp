@@ -22,11 +22,14 @@ bool lease_table::lease_entry::cas(system_clock::time_point &latest_due, std::st
 		latest_due = due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
 		addr = remote_addr;
 		return true;
+	} else if (addr == remote_addr) {
+		latest_due = due;
+		return true;
+	} else {
+		latest_due = due;
+		remote_addr = addr;
+		return false;
 	}
-
-	latest_due = due;
-	remote_addr = addr;
-	return false;
 }
 
 lease_table::~lease_table(void)
@@ -39,6 +42,7 @@ lease_table::~lease_table(void)
 int lease_table::acquire(ino_t ino, system_clock::time_point &latest_due, std::string &remote_addr)
 {
 	lease_entry *e;
+	std::string addr;
 	bool found = false;
 
 	{
@@ -60,8 +64,8 @@ int lease_table::acquire(ino_t ino, system_clock::time_point &latest_due, std::s
 			ret.first.value() = new lease_entry(latest_due, remote_addr);
 			return 0;
 		} else {
-			std::tie(latest_due, remote_addr) = ret.first->second->get_info();
-			return -1;
+			std::tie(latest_due, addr) = ret.first->second->get_info();
+			return (addr == remote_addr) ? 0 : -1;
 		}
 	}
 }
