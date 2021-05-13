@@ -1,20 +1,7 @@
 #include "lease_table.hpp"
 
-#include "../../lib/logger/logger.hpp"
-
-#include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <string>
-
-static std::string TimepointToString(const std::chrono::system_clock::time_point& time, const std::string& format)
-{
-	std::time_t tt = std::chrono::system_clock::to_time_t(time);
-	std::tm tm = *std::gmtime(&tt); //GMT (UTC)
-	std::stringstream ss;
-	ss << std::put_time( &tm, format.c_str() );
-	return ss.str();
-}
 
 lease_table::lease_entry::lease_entry(system_clock::time_point &latest_due, const std::string &remote_addr) : due(system_clock::now() + milliseconds(LEASE_PERIOD_MS)), addr(remote_addr)
 {
@@ -29,21 +16,14 @@ std::tuple<system_clock::time_point, std::string> lease_table::lease_entry::get_
 
 bool lease_table::lease_entry::cas(system_clock::time_point &latest_due, std::string &remote_addr)
 {
-	global_logger.log(manager_lease, "CAS has been called. Current time is " + TimepointToString(due, "UTC: %Y-%m-%d %H:%M:%S"));
 	std::unique_lock lock(sm);
 
 	if (system_clock::now() >= due) {
-		global_logger.log(manager_lease, "CAS: success :)");
-		global_logger.log(manager_lease, "  (" + addr + ", " + TimepointToString(due, "UTC: %Y-%m-%d %H:%M:%S") + ")");
 		latest_due = due = system_clock::now() + milliseconds(LEASE_PERIOD_MS);
 		addr = remote_addr;
-		global_logger.log(manager_lease, "  -> (" + addr + ", " + TimepointToString(due, "UTC: %Y-%m-%d %H:%M:%S") + ")");
 		return true;
 	}
 
-	global_logger.log(manager_lease, "CAS: failure :(");
-	global_logger.log(manager_lease, "  (" + addr + ", " + TimepointToString(due, "UTC: %Y-%m-%d %H:%M:%S") + ")");
-	global_logger.log(manager_lease, "  -> Not expired yet");
 	latest_due = due;
 	remote_addr = addr;
 	return false;
