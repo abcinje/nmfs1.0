@@ -33,8 +33,10 @@ std::tuple<system_clock::time_point, bool> lease_table_client::lease_entry::get_
 void lease_table_client::lease_entry::set_info(const system_clock::time_point &new_due, bool mine)
 {
 	std::unique_lock lock(sm);
-	due = new_due;
-	leader = mine;
+	if (new_due > due) {
+		due = new_due;
+		leader = mine;
+	}
 }
 
 lease_table_client::~lease_table_client(void)
