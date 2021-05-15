@@ -79,7 +79,7 @@ add_executable(
   in_memory/dentry_table.cpp
 
   # journal
-  journal/queue.cpp
+  journal/mqueue.cpp
   journal/transaction.cpp
 
   # protobuf

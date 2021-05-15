@@ -1,5 +1,5 @@
-#ifndef _QUEUE_HPP_
-#define _QUEUE_HPP_
+#ifndef _MQUEUE_HPP_
+#define _MQUEUE_HPP_
 
 #include <condition_variable>
 #include <memory>
@@ -18,4 +18,4 @@ public:
 	T dispatch(void);
 };
 
-#endif /* _QUEUE_HPP_ */
+#endif /* _MQUEUE_HPP_ */
