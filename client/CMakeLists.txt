@@ -78,6 +78,10 @@ add_executable(
   in_memory/directory_table.cpp
   in_memory/dentry_table.cpp
 
+  # journal
+  journal/queue.cpp
+  journal/transaction.cpp
+
   # protobuf
   ${CMAKE_CURRENT_BINARY_DIR}/lease.pb.cc
   ${CMAKE_CURRENT_BINARY_DIR}/lease.grpc.pb.cc
