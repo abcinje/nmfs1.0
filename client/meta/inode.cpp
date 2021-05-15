@@ -28,6 +28,24 @@ const char *inode::permission_denied::what(void)
 	return runtime_error::what();
 }
 
+inode::inode(const inode &copy)
+{
+	i_mode		= copy.i_mode;
+	i_uid		= copy.i_uid;
+	i_gid		= copy.i_gid;
+	i_ino		= copy.i_ino;
+	i_nlink		= copy.i_nlink;
+	i_size		= copy.i_size;
+
+	i_atime		= copy.i_atime;
+	i_mtime		= copy.i_mtime;
+	i_ctime		= copy.i_ctime;
+
+	link_target_len		= copy.link_target_len;
+	link_target_name	= reinterpret_cast<char *>(malloc(link_target_len + 1));
+	memcpy(link_target_name, copy.link_target_name, link_target_len + 1);
+}
+
 inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0), link_target_len(0), link_target_name(NULL)
 {
 	global_logger.log(inode_ops, "Called inode(new file)");
@@ -38,7 +56,6 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i
 	loc = LOCAL;
 	i_ino = root ? 0 : alloc_new_ino();
 }
-
 
 /* TODO : allocated target name should be freed later */
 inode::inode(uid_t owner, gid_t group, mode_t mode, const char *link_target_name) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0)

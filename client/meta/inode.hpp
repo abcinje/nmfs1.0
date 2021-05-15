@@ -62,6 +62,8 @@ public:
 		const char *what(void);
 	};
 
+	inode(const inode &copy);
+
 	//inode(uid_t owner, gid_t group, mode_t mode);
 	inode(uid_t owner, gid_t group, mode_t mode, bool root = false);
 	/* for symlink */
