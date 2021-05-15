@@ -103,6 +103,7 @@ public:
 	void set_size(off_t size);
 	void set_atime(struct timespec atime);
 	void set_mtime(struct timespec mtime);
+	void set_ctime(struct timespec ctime);
 
 	void set_loc(uint64_t loc);
 	void set_link_target_len(int len);

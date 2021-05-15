@@ -252,6 +252,10 @@ void inode::set_mtime(struct timespec mtime){
 	std::scoped_lock scl{this->inode_mutex};
 	this->i_mtime = mtime;
 }
+void inode::set_ctime(struct timespec ctime){
+	std::scoped_lock scl{this->inode_mutex};
+	this->i_ctime = ctime;
+}
 
 void inode::set_loc(uint64_t loc) {
 	std::scoped_lock scl{this->inode_mutex};
