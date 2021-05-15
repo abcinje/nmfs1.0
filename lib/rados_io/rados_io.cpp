@@ -15,6 +15,8 @@ static string get_prefix(obj_category category)
 		return "d$";
 	case obj_category::CLIENT:
 		return "c$";
+	case obj_category::JOURNAL:
+		return "j$";
 	default:
 		throw logic_error("get_prefix() failed (unknown category " + std::to_string(static_cast<int>(category)) + ")");
 	}

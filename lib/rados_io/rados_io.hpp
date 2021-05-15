@@ -18,6 +18,7 @@ enum class obj_category {
 	DENTRY,
 	DATA,
 	CLIENT,
+	JOURNAL,
 };
 
 class rados_io {
