@@ -20,6 +20,9 @@ bool lease_client::is_mine(ino_t ino)
 
 int lease_client::acquire(ino_t ino, std::string &remote_addr)
 {
+	if (table.is_mine(ino))
+		return 0;
+
 	lease_request request;
 	request.set_ino(ino);
 	request.set_remote_addr(remote);
