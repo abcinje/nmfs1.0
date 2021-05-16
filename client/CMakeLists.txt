@@ -79,6 +79,7 @@ add_executable(
   in_memory/dentry_table.cpp
 
   # journal
+  journal/journal_table.cpp
   journal/mqueue.cpp
   journal/transaction.cpp
 
