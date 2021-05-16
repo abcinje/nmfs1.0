@@ -161,10 +161,10 @@ ino_t dentry_table::get_dir_ino(){
 }
 
 shared_ptr<inode> dentry_table::get_this_dir_inode() {
+	global_logger.log(dentry_table_ops, "Called get_this_dir_inode(" + std::to_string(this->dir_ino) + ")");
 	if(this->loc == LOCAL)
 		return this->this_dir_inode;
 	else if (this->loc == REMOTE){
-		/* TODO */
 		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(this->leader_ip, this->dir_ino, "");
 		remote_i->inode::set_ino(this->dir_ino);
 		remote_i->set_loc(REMOTE);
