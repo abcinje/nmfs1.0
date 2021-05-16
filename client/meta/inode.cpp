@@ -5,7 +5,6 @@
 using std::runtime_error;
 
 extern rados_io *meta_pool;
-extern fuse_context *fuse_ctx;
 extern client *this_client;
 
 std::recursive_mutex alloc_mutex;
@@ -146,9 +145,9 @@ void inode::permission_check(int mask){
 	mode_t target_mode;
 
 	std::scoped_lock scl{this->inode_mutex};
-	if(fuse_ctx->uid == this->i_uid){
+	if(this_client->get_client_uid() == this->i_uid){
 		target_mode = (this->i_mode & S_IRWXU) >> 6;
-	} else if (fuse_ctx->gid == this->i_gid){
+	} else if (this_client->get_client_gid() == this->i_gid){
 		target_mode = (this->i_mode & S_IRWXG) >> 3;
 	} else {
 		target_mode = this->i_mode & S_IRWXO;

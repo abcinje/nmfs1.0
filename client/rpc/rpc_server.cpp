@@ -5,7 +5,6 @@ extern rados_io *data_pool;
 extern directory_table *indexing_table;
 
 extern std::unique_ptr<Server> remote_handle;
-extern fuse_context *fuse_ctx;
 
 std::mutex remote_atomic_mutex;
 
@@ -216,7 +215,7 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 
 	std::scoped_lock scl{remote_atomic_mutex};
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	shared_ptr<inode> i = std::make_shared<inode>(0, 0, request->new_mode() | S_IFDIR);
+	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFDIR);
 	parent_dentry_table->create_child_inode(request->new_dir_name(), i);
 
 	i->set_size(DIR_INODE_SIZE);
@@ -300,7 +299,7 @@ Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symli
 		return Status::OK;
 	}
 
-	shared_ptr<inode> symlink_i = std::make_shared<inode>(0, 0, S_IFLNK | 0777, request->src().c_str());
+	shared_ptr<inode> symlink_i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), S_IFLNK | 0777, request->src().c_str());
 
 	symlink_i->set_size(request->src().length());
 
@@ -465,7 +464,7 @@ Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create
 
 	std::scoped_lock scl{remote_atomic_mutex};
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	shared_ptr<inode> i = std::make_shared<inode>(0, 0, request->new_mode() | S_IFREG);
+	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFREG);
 
 	i->sync();
 

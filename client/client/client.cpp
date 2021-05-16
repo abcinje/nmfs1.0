@@ -26,3 +26,19 @@ void client::increase_ino_offset() {
 	uint64_t offset = per_client_ino_offset;
 	meta_pool->write(obj_category::CLIENT, std::to_string(this->client_id), reinterpret_cast<const char *>(&offset), sizeof(uint64_t), 0);
 }
+
+uid_t client::get_client_uid() const {
+	return client_uid;
+}
+
+gid_t client::get_client_gid() const {
+	return client_gid;
+}
+
+void client::set_client_uid(uid_t client_uid) {
+	client::client_uid = client_uid;
+}
+
+void client::set_client_gid(gid_t client_gid) {
+	client::client_gid = client_gid;
+}

@@ -26,7 +26,6 @@ std::mutex file_handler_mutex;
 
 thread *remote_server_thread;
 
-fuse_context *fuse_ctx;
 client *this_client;
 unsigned int fuse_capable;
 
@@ -34,7 +33,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	global_logger.log(fuse_op, "Called init()");
 
 	/* argument parsing */
-	fuse_ctx = fuse_get_context();
+	fuse_context *fuse_ctx = fuse_get_context();
 	std::string arg((char *) fuse_ctx->private_data);
 	size_t dot_pos = arg.find(',');
 	std::string manager_ip = arg.substr(0, dot_pos);
@@ -48,13 +47,15 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	auto channel = grpc::CreateChannel(manager_ip, grpc::InsecureChannelCredentials());
 	lc = std::make_unique<lease_client>(channel, remote_handle_ip);
 	this_client = new client(channel);
+	this_client->set_client_uid(fuse_ctx->uid);
+	this_client->set_client_gid(fuse_ctx->gid);
 
 	global_logger.log(fuse_op, "Client(ID=" + std::to_string(this_client->get_client_id()) + ") is mounted");
 	global_logger.log(fuse_op, "Start Inode offset = " + std::to_string(this_client->get_per_client_ino_offset()));
 
 	/* root */
 	if (!meta_pool->exist(obj_category::INODE, "0")) {
-		inode i(0, fuse_ctx->gid, S_IFDIR | 0777, true);
+		inode i(this_client->get_client_uid(), this_client->get_client_gid(), S_IFDIR | 0777, true);
 
 		dentry d(0, true);
 
