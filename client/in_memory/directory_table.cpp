@@ -1,7 +1,7 @@
 #include "directory_table.hpp"
 
 extern std::unique_ptr<lease_client> lc;
-extern std::shared_ptr<inode> root_inode;
+
 static int set_name_bound(int &start_name, int &end_name, const std::string &path, int path_len){
 	start_name = end_name + 2;
 	if(start_name >= path_len)
@@ -22,11 +22,6 @@ static int set_name_bound(int &start_name, int &end_name, const std::string &pat
 
 directory_table::directory_table() {
 	shared_ptr<dentry_table> root_dentry_table = this->get_dentry_table(0);
-	root_inode  = std::make_shared<inode>(0);
-	if(root_dentry_table->get_loc() == LOCAL)
-		root_inode->set_loc(LOCAL);
-	else
-		root_inode->set_loc(REMOTE);
 }
 
 directory_table::~directory_table() {
@@ -43,7 +38,7 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 
 	std::scoped_lock scl{this->directory_table_mutex};
 	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(0);
-	shared_ptr<inode> target_inode = root_inode;
+	shared_ptr<inode> target_inode = parent_dentry_table->get_this_dir_inode();;
 	ino_t check_target_ino;
 
 	int start_name, end_name = -1;
@@ -62,14 +57,18 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 		if (check_target_ino == -1)
 			throw inode::no_entry("No such file or Directory: in path traversal");
 		else
+			/* if target is dir, this child is just for checking mode.
+			 * if target is reg, this child is actual inode */
 			target_inode = parent_dentry_table->get_child_inode(target_name, check_target_ino);
 
 		if(target_inode == nullptr)
 			throw std::runtime_error("Failed to make remote_inode in path_traversal()");
 
 		if(S_ISDIR(target_inode->get_mode())) {
-			target_inode->permission_check(X_OK);
-			parent_dentry_table = this->get_dentry_table(check_target_ino);
+				parent_dentry_table = this->get_dentry_table(check_target_ino);
+				target_inode = parent_dentry_table->get_this_dir_inode();
+				/* TODO : remote permission check is not work properly */
+				target_inode->permission_check(X_OK);
 		}
 	}
 
@@ -92,7 +91,7 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(ino_t ino){
 		global_logger.log(directory_table_ops, "Leader Address: " + temp_address);
 		/* Fail to acquire lease, this dir already has the leader */
 		new_dentry_table = std::make_shared<dentry_table>(ino, REMOTE);
-		new_dentry_table->set_leader_id(temp_address);
+		new_dentry_table->set_leader_ip(temp_address);
 		this->add_dentry_table(ino, new_dentry_table);
 	}
 
@@ -117,10 +116,6 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 		}
 	}
 	else { /* UNKNOWN */
-		/*
-		 * if the directory has no leader, make local dentry_table
-		 * if the directory already has leader, make remote dentry_table and fill loc and leader_ip
-		 */
 		global_logger.log(directory_table_ops, "dentry_table : MISS");
 		shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
 		return new_dentry_table;
