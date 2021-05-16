@@ -62,10 +62,13 @@ Status rpc_server::rpc_permission_check(::grpc::ServerContext *context, const ::
 	}
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i;
-	if(request->target_is_parent())
-		i = parent_dentry_table->get_child_inode(request->filename());
-	else
+	if(request->target_is_parent()) {
+		global_logger.log(rpc_server_ops, "target is parent");
 		i = parent_dentry_table->get_this_dir_inode();
+	} else {
+		global_logger.log(rpc_server_ops, "target is child");
+		i = parent_dentry_table->get_child_inode(request->filename());
+	}
 
 	try{
 		i->permission_check(request->mask());
