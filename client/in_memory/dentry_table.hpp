@@ -13,6 +13,7 @@ using std::shared_ptr;
 class dentry_table {
 private:
 	ino_t dir_ino;
+	shared_ptr<inode> this_dir_inode;
 
 	shared_ptr<dentry> dentries;
 	std::map<std::string, shared_ptr<inode>> child_inodes;
@@ -36,11 +37,11 @@ public:
 
 	enum meta_location get_loc();
 
-	ino_t get_dir_ino() const;
-	const string &get_leader_ip() const;
+	ino_t get_dir_ino();
+	shared_ptr<inode> get_this_dir_inode();
+	const string &get_leader_ip();
 
-	void set_leader_id(std::string leader_ip);
-	void set_dentries(shared_ptr<dentry> dentries);
+	void set_leader_ip(std::string new_leader_ip);
 
 	/* wrapper of dentry class member functions */
 	void fill_filler(void *buffer, fuse_fill_dir_t filler);

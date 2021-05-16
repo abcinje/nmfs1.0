@@ -1,8 +1,8 @@
 #include "dentry_table.hpp"
 
-extern std::shared_ptr<inode> root_inode;
-
 dentry_table::dentry_table(ino_t dir_ino, enum meta_location loc) : dir_ino(dir_ino), loc(loc){
+	if(loc == LOCAL)
+		this->this_dir_inode = std::make_shared<inode>(dir_ino);
 	/*
 	 * if LOCAL : pull_child_metadata() right after return to caller if dentry object exist
 	 * if REMOTE : don't call pull_child_metadata(), just add REMOTE info
@@ -70,8 +70,6 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename, ino_t for_
 	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ", " + std::to_string(for_get_dtable) + ")");
 	if(this->get_loc() == LOCAL) {
 		std::scoped_lock scl{this->dentry_table_mutex};
-		if(filename == "/")
-			return root_inode;
 		std::map<std::string, shared_ptr<inode>>::iterator it;
 		it = this->child_inodes.find(filename);
 
@@ -96,14 +94,8 @@ ino_t dentry_table::check_child_inode(std::string filename){
 		std::scoped_lock scl{this->dentry_table_mutex};
 		if(filename == "/")
 			return 0;
-		std::map<std::string, shared_ptr<inode>>::iterator it;
-		it = this->child_inodes.find(filename);
 
-		if(it == this->child_inodes.end()) {
-			return -1;
-		}
-
-		return it->second->get_ino();
+		return this->dentries->get_child_ino(filename);
 	} else if (this->loc == REMOTE) {
 		std::string remote_address(this->leader_ip);
 		std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
@@ -122,7 +114,14 @@ int dentry_table::pull_child_metadata() {
 
 	std::map<std::string, ino_t>::iterator it;
 	for(it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
-		this->add_child_inode(it->first, std::make_shared<inode>(it->second));
+		shared_ptr<inode> child_i = std::make_shared<inode>(it->second);
+		if(S_ISDIR(child_i->get_mode())){
+			child_i->set_loc(UNKNOWN);
+		} else {
+			/* TODO : S_ISLINK? */
+			child_i->set_loc(LOCAL);
+		}
+		this->add_child_inode(it->first, child_i);
 	}
 
 	return 0;
@@ -134,14 +133,9 @@ enum meta_location dentry_table::get_loc() {
 	return this->loc;
 }
 
-void dentry_table::set_leader_id(std::string leader_ip) {
+void dentry_table::set_leader_ip(std::string new_leader_ip) {
 	std::scoped_lock scl{this->dentry_table_mutex};
-	this->leader_ip = leader_ip;
-}
-
-void dentry_table::set_dentries(shared_ptr<dentry> dentries) {
-	std::scoped_lock scl{this->dentry_table_mutex};
-	this->dentries = dentries;
+	this->leader_ip = new_leader_ip;
 }
 
 void dentry_table::fill_filler(void *buffer, fuse_fill_dir_t filler) {
@@ -162,17 +156,30 @@ std::map<std::string, shared_ptr<inode>>::iterator dentry_table::get_child_inode
 	return this->child_inodes.end();
 }
 
-ino_t dentry_table::get_dir_ino() const {
-	return dir_ino;
+ino_t dentry_table::get_dir_ino(){
+	return this->dir_ino;
 }
 
-const string &dentry_table::get_leader_ip() const {
-	return leader_ip;
+shared_ptr<inode> dentry_table::get_this_dir_inode() {
+	if(this->loc == LOCAL)
+		return this->this_dir_inode;
+	else if (this->loc == REMOTE){
+		/* TODO */
+		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(this->leader_ip, this->dir_ino, "");
+		remote_i->inode::set_ino(this->dir_ino);
+		remote_i->set_loc(REMOTE);
+		return std::dynamic_pointer_cast<inode>(remote_i);
+	}
+}
+
+const string &dentry_table::get_leader_ip(){
+	return this->leader_ip;
 }
 
 std::recursive_mutex &dentry_table::get_dentry_table_mutex() {
-	return dentry_table_mutex;
+	return this->dentry_table_mutex;
 }
+
 
 
 
