@@ -92,7 +92,7 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (std::string(path) == "/" || i->get_loc() == LOCAL) {
+		if (i->get_loc() == LOCAL) {
 			local_getattr(i, stat);
 		} else if (i->get_loc() == REMOTE) {
 			remote_getattr(std::dynamic_pointer_cast<remote_inode>(i), stat);
@@ -114,7 +114,7 @@ int fuse_ops::access(const char *path, int mask) {
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (std::string(path) == "/" || i->get_loc() == LOCAL) {
+		if (i->get_loc() == LOCAL) {
 			local_access(i, mask);
 		} else if (i->get_loc() == REMOTE) {
 			remote_access(std::dynamic_pointer_cast<remote_inode>(i), mask);
@@ -195,7 +195,7 @@ int fuse_ops::opendir(const char *path, struct fuse_file_info *file_info) {
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (std::string(path) == "/" || i->get_loc() == LOCAL) {
+		if (i->get_loc() == LOCAL) {
 			ret = local_opendir(i, file_info);
 		} else if (i->get_loc() == REMOTE) {
 			ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);

@@ -1,8 +1,10 @@
 #include "dentry_table.hpp"
 
 dentry_table::dentry_table(ino_t dir_ino, enum meta_location loc) : dir_ino(dir_ino), loc(loc){
-	if(loc == LOCAL)
+	if(loc == LOCAL) {
 		this->this_dir_inode = std::make_shared<inode>(dir_ino);
+		this->this_dir_inode->set_loc(LOCAL);
+	}
 	/*
 	 * if LOCAL : pull_child_metadata() right after return to caller if dentry object exist
 	 * if REMOTE : don't call pull_child_metadata(), just add REMOTE info
@@ -162,9 +164,9 @@ ino_t dentry_table::get_dir_ino(){
 
 shared_ptr<inode> dentry_table::get_this_dir_inode() {
 	global_logger.log(dentry_table_ops, "Called get_this_dir_inode(" + std::to_string(this->dir_ino) + ")");
-	if(this->loc == LOCAL)
+	if(this->loc == LOCAL) {
 		return this->this_dir_inode;
-	else if (this->loc == REMOTE){
+	} else if (this->loc == REMOTE){
 		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(this->leader_ip, this->dir_ino, "", true);
 		remote_i->inode::set_ino(this->dir_ino);
 		remote_i->set_loc(REMOTE);
