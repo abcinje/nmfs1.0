@@ -9,7 +9,7 @@ extern fuse_context *fuse_ctx;
 extern client *this_client;
 
 std::recursive_mutex alloc_mutex;
-std::shared_ptr<inode> root_inode;
+
 inode::no_entry::no_entry(const string &msg) : runtime_error(msg)
 {
 }
