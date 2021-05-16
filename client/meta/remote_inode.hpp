@@ -9,9 +9,10 @@ std::shared_ptr<rpc_client> get_rpc_client(const std::string& remote_address);
 
 class remote_inode : public inode {
 private :
-    std::string leader_ip;
-
+    	std::string leader_ip;
 	ino_t dentry_table_ino;
+
+	/* not necessary */
 	std::string file_name;
 
 public:
