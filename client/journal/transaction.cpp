@@ -1,19 +1,27 @@
 #include "transaction.hpp"
 
-transaction::transaction(void) : d_inode(nullptr)
+transaction::transaction(void) : committed(false), d_inode(nullptr)
 {
 }
 
-void transaction::set_inode(std::shared_ptr<inode> i)
+int transaction::set_inode(std::shared_ptr<inode> i)
 {
 	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
 
 	d_inode = std::make_unique<inode>(*i);
+
+	return 0;
 }
 
-void transaction::mkdir(const std::string &d_name, const struct timespec &time)
+int transaction::mkdir(const std::string &d_name, const struct timespec &time)
 {
 	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
 
 	auto dentries_ret = dentries.insert({d_name, true});
 	if (!dentries_ret.second) {
@@ -26,11 +34,16 @@ void transaction::mkdir(const std::string &d_name, const struct timespec &time)
 
 	d_inode->set_mtime(time);
 	d_inode->set_ctime(time);
+
+	return 0;
 }
 
-void transaction::rmdir(const std::string &d_name, const struct timespec &time)
+int transaction::rmdir(const std::string &d_name, const struct timespec &time)
 {
 	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
 
 	auto dentries_ret = dentries.insert({d_name, false});
 	if (!dentries_ret.second) {
@@ -43,11 +56,16 @@ void transaction::rmdir(const std::string &d_name, const struct timespec &time)
 
 	d_inode->set_mtime(time);
 	d_inode->set_ctime(time);
+
+	return 0;
 }
 
-void transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> i)
+int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> i)
 {
 	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
 
 	auto dentries_ret = dentries.insert({f_name, true});
 	if (!dentries_ret.second) {
@@ -67,11 +85,16 @@ void transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> i)
 	} else {
 		throw std::logic_error("transaction::mkreg() failed (file already exists)");
 	}
+
+	return 0;
 }
 
-void transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> i, const struct timespec &time)
+int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> i, const struct timespec &time)
 {
 	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
 
 	auto dentries_ret = dentries.insert({f_name, false});
 	if (!dentries_ret.second) {
@@ -88,4 +111,6 @@ void transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> i, con
 	auto f_inodes_ret = f_inodes.insert({i->get_ino(), nullptr});
 	if (!f_inodes_ret.second && !f_inodes_ret.first->second)
 		throw std::logic_error("transaction::rmreg() failed (file doesn't exist)");
+
+	return 0;
 }

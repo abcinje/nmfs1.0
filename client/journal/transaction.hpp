@@ -10,6 +10,7 @@
 class transaction {
 private:
 	std::mutex m;
+	bool committed;
 	std::unique_ptr<inode> d_inode;
 
 	/* The boolean value is true if the entry has been added and false if the entry has been deleted. */
@@ -22,11 +23,11 @@ public:
 	transaction(void);
 	~transaction(void) = default;
 
-	void set_inode(std::shared_ptr<inode> i);
-	void mkdir(const std::string &d_name, const struct timespec &time);
-	void rmdir(const std::string &d_name, const struct timespec &time);
-	void mkreg(const std::string &f_name, std::shared_ptr<inode> i);
-	void rmreg(const std::string &f_name, std::shared_ptr<inode> i, const struct timespec &time);
+	int set_inode(std::shared_ptr<inode> i);
+	int mkdir(const std::string &d_name, const struct timespec &time);
+	int rmdir(const std::string &d_name, const struct timespec &time);
+	int mkreg(const std::string &f_name, std::shared_ptr<inode> i);
+	int rmreg(const std::string &f_name, std::shared_ptr<inode> i, const struct timespec &time);
 };
 
 #endif /* _TRANSACTION_HPP_ */
