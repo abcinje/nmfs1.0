@@ -48,7 +48,7 @@ mode_t rpc_client::get_mode(ino_t dentry_table_ino, std::string filename){
 	}
 }
 
-void rpc_client::permission_check(ino_t dentry_table_ino, std::string filename, int mask){
+void rpc_client::permission_check(ino_t dentry_table_ino, std::string filename, int mask, bool target_is_parent){
 	global_logger.log(rpc_client_ops, "Called permission_check()");
 	ClientContext context;
 	rpc_inode_request Input;
@@ -57,6 +57,7 @@ void rpc_client::permission_check(ino_t dentry_table_ino, std::string filename, 
 	Input.set_dentry_table_ino(dentry_table_ino);
 	Input.set_filename(filename);
 	Input.set_mask(mask);
+	Input.set_target_is_parent(target_is_parent);
 
 	Status status = stub_->rpc_permission_check(&context, Input, &Output);
 	if(status.ok()){
@@ -81,6 +82,7 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* s) {
 	/* prepare Input */
 	Input.set_dentry_table_ino(i->get_dentry_table_ino());
 	Input.set_filename(i->get_file_name());
+	Input.set_target_is_parent(i->get_target_is_parent());
 
 	Status status = stub_->rpc_getattr(&context, Input, &Output);
 	if(status.ok()){
@@ -120,6 +122,7 @@ void rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 	Input.set_dentry_table_ino(i->get_dentry_table_ino());
 	Input.set_filename(i->get_file_name());
 	Input.set_mask(mask);
+	Input.set_target_is_parent(i->get_target_is_parent());
 
 	Status status = stub_->rpc_access(&context, Input, &Output);
 	if(status.ok()){
@@ -143,6 +146,7 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 	/* prepare Input */
 	Input.set_dentry_table_ino(i->get_dentry_table_ino());
 	Input.set_filename(i->get_file_name());
+	Input.set_target_is_parent(i->get_target_is_parent());
 
 	Status status = stub_->rpc_opendir(&context, Input, &Output);
 	if(status.ok()){
@@ -517,6 +521,7 @@ void rpc_client::chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 	Input.set_filename(i->get_file_name());
 	Input.set_uid(uid);
 	Input.set_gid(gid);
+	Input.set_target_is_parent(i->get_target_is_parent());
 
 	Status status = stub_->rpc_chown(&context, Input, &Output);
 	if(status.ok()){
@@ -541,6 +546,7 @@ void rpc_client::utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]
 	Input.set_a_nsec(tv[0].tv_nsec);
 	Input.set_m_sec(tv[1].tv_sec);
 	Input.set_m_nsec(tv[1].tv_nsec);
+	Input.set_target_is_parent(i->get_target_is_parent());
 
 	Status status = stub_->rpc_utimens(&context, Input, &Output);
 	if(status.ok()){
@@ -562,6 +568,7 @@ int rpc_client::truncate(shared_ptr<remote_inode> i, off_t offset) {
 	Input.set_dentry_table_ino(i->get_dentry_table_ino());
 	Input.set_filename(i->get_file_name());
 	Input.set_offset(offset);
+	Input.set_target_is_parent(i->get_target_is_parent());
 
 	Status status = stub_->rpc_truncate(&context, Input, &Output);
 	if(status.ok()){

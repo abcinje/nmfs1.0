@@ -18,8 +18,8 @@ std::shared_ptr<rpc_client> get_rpc_client(const std::string& remote_address) {
 	}
 }
 
-remote_inode::remote_inode(std::string leader_ip, ino_t dentry_table_ino, std::string file_name) \
-: inode(), leader_ip(leader_ip), dentry_table_ino(dentry_table_ino), file_name(file_name) {
+remote_inode::remote_inode(std::string leader_ip, ino_t dentry_table_ino, std::string file_name, bool target_is_parent ) \
+: inode(), leader_ip(leader_ip), dentry_table_ino(dentry_table_ino), file_name(file_name), target_is_parent(target_is_parent ) {
 }
 
 const string &remote_inode::get_address() const {
@@ -32,6 +32,10 @@ ino_t remote_inode::get_dentry_table_ino() const {
 
 const string &remote_inode::get_file_name() const {
 	return file_name;
+}
+
+bool remote_inode::get_target_is_parent() const {
+	return target_is_parent;
 }
 
 mode_t remote_inode::get_mode() {
@@ -50,6 +54,6 @@ void remote_inode::permission_check(int mask) {
 	std::string remote_address(this->leader_ip);
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->permission_check(this->dentry_table_ino, this->file_name, mask);
+	rc->permission_check(this->dentry_table_ino, this->file_name, mask, this->target_is_parent);
 }
 

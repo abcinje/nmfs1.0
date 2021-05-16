@@ -1,5 +1,5 @@
 #include "rpc_server.hpp"
-/* TODO : thread cannot read fuse_ctx */
+/* TODO : thread cannot read fuse_ctx, so only work with root uid and gid*/
 extern rados_io *meta_pool;
 extern rados_io *data_pool;
 extern directory_table *indexing_table;
@@ -61,7 +61,11 @@ Status rpc_server::rpc_permission_check(::grpc::ServerContext *context, const ::
 		return Status::OK;
 	}
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+	std::shared_ptr<inode> i;
+	if(request->target_is_parent())
+		i = parent_dentry_table->get_child_inode(request->filename());
+	else
+		i = parent_dentry_table->get_this_dir_inode();
 
 	try{
 		i->permission_check(request->mask());
@@ -87,7 +91,10 @@ Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_getat
 	try {
 		std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(
 			request->dentry_table_ino());
-		i = parent_dentry_table->get_child_inode(request->filename());
+		if(request->target_is_parent())
+			i = parent_dentry_table->get_child_inode(request->filename());
+		else
+			i = parent_dentry_table->get_this_dir_inode();
 	} catch (inode::no_entry &e){
 		response->set_ret(-EACCES);
 		return Status::OK;
@@ -120,7 +127,11 @@ Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_access
 	}
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+	std::shared_ptr<inode> i;
+	if(request->target_is_parent())
+		i = parent_dentry_table->get_child_inode(request->filename());
+	else
+		i = parent_dentry_table->get_this_dir_inode();
 
 	try{
 		i->permission_check(request->mask());
@@ -142,7 +153,11 @@ Status rpc_server::rpc_opendir(::grpc::ServerContext *context, const ::rpc_open_
 	}
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+	std::shared_ptr<inode> i;
+	if(request->target_is_parent())
+		i = parent_dentry_table->get_child_inode(request->filename());
+	else
+		i = parent_dentry_table->get_this_dir_inode();
 
 	if(!S_ISDIR(i->get_mode())) {
 		response->set_ret(-ENOTDIR);
@@ -520,7 +535,11 @@ Status rpc_server::rpc_chmod(::grpc::ServerContext *context, const ::rpc_chmod_r
 	}
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+	std::shared_ptr<inode> i;
+	if(request->target_is_parent())
+		i = parent_dentry_table->get_child_inode(request->filename());
+	else
+		i = parent_dentry_table->get_this_dir_inode();
 
 	mode_t type = i->get_mode() & S_IFMT;
 
@@ -540,7 +559,11 @@ Status rpc_server::rpc_chown(::grpc::ServerContext *context, const ::rpc_chown_r
 	}
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+	std::shared_ptr<inode> i;
+	if(request->target_is_parent())
+		i = parent_dentry_table->get_child_inode(request->filename());
+	else
+		i = parent_dentry_table->get_this_dir_inode();
 
 	if (((int32_t) request->uid()) >= 0)
 		i->set_uid(request->uid());
@@ -563,7 +586,11 @@ Status rpc_server::rpc_utimens(::grpc::ServerContext *context, const ::rpc_utime
 	}
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+	std::shared_ptr<inode> i;
+	if(request->target_is_parent())
+		i = parent_dentry_table->get_child_inode(request->filename());
+	else
+		i = parent_dentry_table->get_this_dir_inode();
 
 	if (request->a_nsec() == UTIME_NOW) {
 		struct timespec ts;
@@ -606,7 +633,16 @@ Status rpc_server::rpc_truncate(::grpc::ServerContext *context, const ::rpc_trun
 	}
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
-	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
+	std::shared_ptr<inode> i;
+	if(request->target_is_parent())
+		i = parent_dentry_table->get_child_inode(request->filename());
+	else
+		i = parent_dentry_table->get_this_dir_inode();
+
+	if(S_ISDIR(i->get_mode())){
+		response->set_ret(-EISDIR);
+		return Status::OK;
+	}
 
 	i->set_size(request->offset());
 	i->sync();

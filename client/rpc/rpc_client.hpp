@@ -26,7 +26,7 @@ public:
 
 	/* inode operations */
 	mode_t get_mode(ino_t dentry_table_ino, std::string filename);
-	void permission_check(ino_t dentry_table_ino, std::string filename, int mask);
+	void permission_check(ino_t dentry_table_ino, std::string filename, int mask, bool target_is_parent);
 	/* file system operations */
 	void getattr(shared_ptr<remote_inode> i, struct stat* s);
 	void access(shared_ptr<remote_inode> i, int mask);
