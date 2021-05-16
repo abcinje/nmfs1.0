@@ -89,12 +89,14 @@ Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_getat
 
 	std::shared_ptr<inode> i;
 	try {
-		std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(
-			request->dentry_table_ino());
-		if(request->target_is_parent())
-			i = parent_dentry_table->get_child_inode(request->filename());
-		else
+		std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+		if(request->target_is_parent()) {
+			global_logger.log(rpc_server_ops, "target is parent");
 			i = parent_dentry_table->get_this_dir_inode();
+		} else {
+			global_logger.log(rpc_server_ops, "target is child");
+			i = parent_dentry_table->get_child_inode(request->filename());
+		}
 	} catch (inode::no_entry &e){
 		response->set_ret(-EACCES);
 		return Status::OK;
@@ -128,10 +130,13 @@ Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_access
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i;
-	if(request->target_is_parent())
-		i = parent_dentry_table->get_child_inode(request->filename());
-	else
+	if(request->target_is_parent()) {
+		global_logger.log(rpc_server_ops, "target is parent");
 		i = parent_dentry_table->get_this_dir_inode();
+	} else {
+		global_logger.log(rpc_server_ops, "target is child");
+		i = parent_dentry_table->get_child_inode(request->filename());
+	}
 
 	try{
 		i->permission_check(request->mask());
@@ -154,10 +159,13 @@ Status rpc_server::rpc_opendir(::grpc::ServerContext *context, const ::rpc_open_
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i;
-	if(request->target_is_parent())
-		i = parent_dentry_table->get_child_inode(request->filename());
-	else
+	if(request->target_is_parent()) {
+		global_logger.log(rpc_server_ops, "target is parent");
 		i = parent_dentry_table->get_this_dir_inode();
+	} else {
+		global_logger.log(rpc_server_ops, "target is child");
+		i = parent_dentry_table->get_child_inode(request->filename());
+	}
 
 	if(!S_ISDIR(i->get_mode())) {
 		response->set_ret(-ENOTDIR);
@@ -536,10 +544,13 @@ Status rpc_server::rpc_chmod(::grpc::ServerContext *context, const ::rpc_chmod_r
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i;
-	if(request->target_is_parent())
-		i = parent_dentry_table->get_child_inode(request->filename());
-	else
+	if(request->target_is_parent()) {
+		global_logger.log(rpc_server_ops, "target is parent");
 		i = parent_dentry_table->get_this_dir_inode();
+	} else {
+		global_logger.log(rpc_server_ops, "target is child");
+		i = parent_dentry_table->get_child_inode(request->filename());
+	}
 
 	mode_t type = i->get_mode() & S_IFMT;
 
@@ -560,10 +571,13 @@ Status rpc_server::rpc_chown(::grpc::ServerContext *context, const ::rpc_chown_r
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i;
-	if(request->target_is_parent())
-		i = parent_dentry_table->get_child_inode(request->filename());
-	else
+	if(request->target_is_parent()) {
+		global_logger.log(rpc_server_ops, "target is parent");
 		i = parent_dentry_table->get_this_dir_inode();
+	} else {
+		global_logger.log(rpc_server_ops, "target is child");
+		i = parent_dentry_table->get_child_inode(request->filename());
+	}
 
 	if (((int32_t) request->uid()) >= 0)
 		i->set_uid(request->uid());
@@ -587,10 +601,13 @@ Status rpc_server::rpc_utimens(::grpc::ServerContext *context, const ::rpc_utime
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i;
-	if(request->target_is_parent())
-		i = parent_dentry_table->get_child_inode(request->filename());
-	else
+	if(request->target_is_parent()) {
+		global_logger.log(rpc_server_ops, "target is parent");
 		i = parent_dentry_table->get_this_dir_inode();
+	} else {
+		global_logger.log(rpc_server_ops, "target is child");
+		i = parent_dentry_table->get_child_inode(request->filename());
+	}
 
 	if (request->a_nsec() == UTIME_NOW) {
 		struct timespec ts;
@@ -634,10 +651,13 @@ Status rpc_server::rpc_truncate(::grpc::ServerContext *context, const ::rpc_trun
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	std::shared_ptr<inode> i;
-	if(request->target_is_parent())
-		i = parent_dentry_table->get_child_inode(request->filename());
-	else
+	if(request->target_is_parent()) {
+		global_logger.log(rpc_server_ops, "target is parent");
 		i = parent_dentry_table->get_this_dir_inode();
+	} else {
+		global_logger.log(rpc_server_ops, "target is child");
+		i = parent_dentry_table->get_child_inode(request->filename());
+	}
 
 	if(S_ISDIR(i->get_mode())){
 		response->set_ret(-EISDIR);
