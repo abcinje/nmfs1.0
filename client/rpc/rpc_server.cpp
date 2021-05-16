@@ -5,6 +5,7 @@ extern rados_io *data_pool;
 extern directory_table *indexing_table;
 
 extern std::unique_ptr<Server> remote_handle;
+extern client *this_client;
 
 std::mutex remote_atomic_mutex;
 
