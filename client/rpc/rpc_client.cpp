@@ -216,16 +216,15 @@ ino_t rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child
 	}
 }
 
-int rpc_client::rmdir_top(shared_ptr<remote_inode> target_i, std::string target_name) {
+int rpc_client::rmdir_top(shared_ptr<remote_inode> target_i, ino_t target_ino) {
 	global_logger.log(rpc_client_ops, "Called rmdir_top()");
 	ClientContext context;
 	rpc_rmdir_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(target_i->get_dentry_table_ino());
-	Input.set_target_name(target_name);
-	Input.set_target_ino(target_i->get_dentry_table_ino());
+	Input.set_dentry_table_ino(target_ino);
+	Input.set_target_ino(target_ino);
 
 	Status status = stub_->rpc_rmdir_top(&context, Input, &Output);
 	if(status.ok()){

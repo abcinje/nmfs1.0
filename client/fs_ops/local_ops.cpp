@@ -88,9 +88,9 @@ ino_t local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 	return i->get_ino();
 }
 
-int local_rmdir_top(shared_ptr<inode> target_i, std::string target_name) {
+int local_rmdir_top(shared_ptr<inode> target_i, ino_t target_ino) {
 	global_logger.log(local_fs_op, "Called rmdir_top()");
-	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_i->get_ino());
+	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_ino);
 
 	if(target_dentry_table == nullptr) {
 		throw std::runtime_error("directory table is corrupted : Can't find leased directory");
@@ -98,8 +98,8 @@ int local_rmdir_top(shared_ptr<inode> target_i, std::string target_name) {
 
 	if(target_dentry_table->get_child_num() > 0)
 		return -ENOTEMPTY;
-	meta_pool->remove(obj_category::DENTRY, std::to_string(target_i->get_ino()));
-	indexing_table->delete_dentry_table(target_i->get_ino());
+	meta_pool->remove(obj_category::DENTRY, std::to_string(target_ino));
+	indexing_table->delete_dentry_table(target_ino);
 
 	return 0;
 }

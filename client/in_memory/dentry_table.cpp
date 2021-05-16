@@ -68,8 +68,8 @@ int dentry_table::delete_child_inode(std::string filename) {
 	return 0;
 }
 
-shared_ptr<inode> dentry_table::get_child_inode(std::string filename, ino_t for_get_dtable){
-	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ", " + std::to_string(for_get_dtable) + ")");
+shared_ptr<inode> dentry_table::get_child_inode(std::string filename){
+	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ")");
 	if(this->get_loc() == LOCAL) {
 		std::scoped_lock scl{this->dentry_table_mutex};
 		std::map<std::string, shared_ptr<inode>>::iterator it;
@@ -82,7 +82,6 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename, ino_t for_
 		return it->second;
 	} else if (this->get_loc() == REMOTE) {
 		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(this->leader_ip, this->dir_ino, filename);
-		remote_i->inode::set_ino(for_get_dtable);
 		remote_i->set_loc(REMOTE);
 		return std::dynamic_pointer_cast<inode>(remote_i);
 	}

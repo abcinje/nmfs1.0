@@ -42,12 +42,12 @@ ino_t remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name
 	return new_dir_ino;
 }
 
-int remote_rmdir_top(shared_ptr<remote_inode> target_i, std::string target_name) {
+int remote_rmdir_top(shared_ptr<remote_inode> target_i, ino_t target_ino) {
 	global_logger.log(remote_fs_op, "Called remote_rmdir_top()");
 	std::string remote_address(target_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	int ret = rc->rmdir_top(target_i, target_name);
+	int ret = rc->rmdir_top(target_i, target_ino);
 	return ret;
 }
 

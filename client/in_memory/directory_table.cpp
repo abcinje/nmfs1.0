@@ -59,7 +59,7 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 		else
 			/* if target is dir, this child is just for checking mode.
 			 * if target is reg, this child is actual inode */
-			target_inode = parent_dentry_table->get_child_inode(target_name, check_target_ino);
+			target_inode = parent_dentry_table->get_child_inode(target_name);
 
 		if(target_inode == nullptr)
 			throw std::runtime_error("Failed to make remote_inode in path_traversal()");
@@ -67,7 +67,6 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 		if(S_ISDIR(target_inode->get_mode())) {
 				parent_dentry_table = this->get_dentry_table(check_target_ino);
 				target_inode = parent_dentry_table->get_this_dir_inode();
-				/* TODO : remote permission check is not work properly */
 				target_inode->permission_check(X_OK);
 		}
 	}
