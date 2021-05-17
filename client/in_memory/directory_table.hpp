@@ -19,8 +19,9 @@ class directory_table {
 private:
 	std::map<ino_t, shared_ptr<dentry_table>> dentry_tables;
 
-	std::recursive_mutex directory_table_mutex;
 public:
+	std::recursive_mutex directory_table_mutex;
+
 	directory_table();
 	~directory_table();
 	int add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable);

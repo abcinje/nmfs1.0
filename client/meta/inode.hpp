@@ -48,8 +48,8 @@ private:
 	int link_target_len;
 	char *link_target_name;
 
-	std::recursive_mutex inode_mutex;
 public:
+	std::recursive_mutex inode_mutex;
 	class no_entry : public runtime_error {
 	public:
 		no_entry(const string &msg);

@@ -21,8 +21,6 @@ private:
 	uint64_t total_name_length;
 	std::map<std::string, ino_t> child_list;
 
-	std::recursive_mutex dentry_mutex;
-
 public:
 	dentry(ino_t ino);
 	dentry(ino_t ino, bool flag);

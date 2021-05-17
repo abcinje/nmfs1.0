@@ -21,8 +21,10 @@ private:
 	enum meta_location loc;
 	std::string leader_ip;
 
-	std::recursive_mutex dentry_table_mutex;
 public:
+	std::recursive_mutex dentry_list_mutex;
+	std::recursive_mutex inode_list_mutex;
+
 	explicit dentry_table(ino_t dir_ino, enum meta_location loc);
 	~dentry_table();
 
@@ -48,7 +50,6 @@ public:
 	uint64_t get_child_num();
 
 	/* only used in rpc_readdir */
-	std::recursive_mutex& get_dentry_table_mutex();
 	std::map<std::string, shared_ptr<inode>>::iterator get_child_inode_begin();
 	std::map<std::string, shared_ptr<inode>>::iterator get_child_inode_end();
 };
