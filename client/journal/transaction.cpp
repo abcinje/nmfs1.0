@@ -4,6 +4,56 @@ transaction::transaction(void) : committed(false), d_inode(nullptr)
 {
 }
 
+std::vector<char> transaction::serialize(void)
+{
+	std::unique_lock lock(m);
+
+	if (committed)
+		return std::vector<char>();
+	committed = true;
+
+	std::vector<char> vec;
+
+	/* valid bit */
+	vec.push_back(1);
+
+	/* d_inode */
+	auto d_inode_vec = d_inode->serialize();
+	uint32_t d_inode_size = static_cast<uint32_t>(d_inode_vec.size());
+	vec.push_back(static_cast<char>(d_inode_size & 0xff));
+	vec.push_back(static_cast<char>((d_inode_size >> 8) & 0xff));
+	vec.push_back(static_cast<char>((d_inode_size >> 16) & 0xff));
+	vec.push_back(static_cast<char>((d_inode_size >> 24) & 0xff));
+	vec.insert(vec.end(), d_inode_vec.begin(), d_inode_vec.end());
+
+	/* dentries */
+	for (auto &d : dentries) {
+		vec.push_back(d.second ? 1 : 0);
+		uint32_t dentry_size = static_cast<uint32_t>(d.first.size());
+		vec.push_back(static_cast<char>(dentry_size & 0xff));
+		vec.push_back(static_cast<char>((dentry_size >> 8) & 0xff));
+		vec.push_back(static_cast<char>((dentry_size >> 16) & 0xff));
+		vec.push_back(static_cast<char>((dentry_size >> 24) & 0xff));
+		vec.insert(vec.end(), d.first.begin(), d.first.end());
+	}
+	vec.push_back(-1);
+
+	/* f_inodes */
+	for (auto &i : f_inodes) {
+		auto f_inode_vec = i.second->serialize();
+		uint32_t f_inode_size = static_cast<uint32_t>(f_inode_vec.size());
+		vec.push_back(static_cast<char>(f_inode_size & 0xff));
+		vec.push_back(static_cast<char>((f_inode_size >> 8) & 0xff));
+		vec.push_back(static_cast<char>((f_inode_size >> 16) & 0xff));
+		vec.push_back(static_cast<char>((f_inode_size >> 24) & 0xff));
+		vec.insert(vec.end(), f_inode_vec.begin(), f_inode_vec.end());
+	}
+	for (int i = 0; i < 4; i++)
+		vec.push_back(-1);
+
+	return vec;
+}
+
 int transaction::set_inode(std::shared_ptr<inode> i)
 {
 	std::unique_lock lock(m);
