@@ -189,7 +189,7 @@ Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_readd
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 
-	std::shared_lock scl{parent_dentry_table->dentry_table_mutex};
+	std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 	std::map<std::string, shared_ptr<inode>>::iterator it;
 	response.set_filename(".");
 	writer->Write(response);
