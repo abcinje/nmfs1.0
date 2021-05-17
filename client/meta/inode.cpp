@@ -113,18 +113,18 @@ void inode::fill_stat(struct stat *s)
 	s->st_ctim.tv_sec	= i_ctime.tv_nsec;
 }
 /* TODO : what is difference this + VFTABLE_OFFSET and &i_mode */
-unique_ptr<char> inode::serialize(void)
+std::vector<char> inode::serialize(void)
 {
 	global_logger.log(inode_ops, "Called inode.serialize()");
 	std::scoped_lock scl{this->inode_mutex};
-	unique_ptr<char> value(new char[REG_INODE_SIZE + this->link_target_len]);
-	memcpy(value.get(), &i_mode, REG_INODE_SIZE);
+	std::vector<char> value(REG_INODE_SIZE + this->link_target_len);
+	memcpy(value.data(), &i_mode, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->i_mode) && (this->link_target_len > 0)){
 		global_logger.log(inode_ops, "serialize symbolic link inode");
-		memcpy(value.get() + REG_INODE_SIZE, (this->link_target_name), this->link_target_len);
+		memcpy(value.data() + REG_INODE_SIZE, (this->link_target_name), this->link_target_len);
 	}
-	return std::move(value);
+	return value;
 }
 
 void inode::deserialize(const char *value)
@@ -149,8 +149,8 @@ void inode::sync()
 	global_logger.log(inode_ops, "Called inode.sync()");
 
 	std::scoped_lock scl{this->inode_mutex};
-	unique_ptr<char> raw = this->serialize();
-	meta_pool->write(obj_category::INODE, std::to_string(this->i_ino), raw.get(), REG_INODE_SIZE + this->link_target_len, 0);
+	std::vector<char> raw = this->serialize();
+	meta_pool->write(obj_category::INODE, std::to_string(this->i_ino), raw.data(), REG_INODE_SIZE + this->link_target_len, 0);
 }
 
 void inode::permission_check(int mask){

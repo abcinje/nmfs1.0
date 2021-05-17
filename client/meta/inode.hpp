@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include <mutex>
 #include "../fs_ops/fuse_ops.hpp"
 #include "../../lib/rados_io/rados_io.hpp"
@@ -75,7 +76,7 @@ public:
 	inode();
 
 	void fill_stat(struct stat *s);
-	unique_ptr<char> serialize(void);
+	std::vector<char> serialize(void);
 	void deserialize(const char *value);
 	void sync();
 	virtual void permission_check(int mask);
