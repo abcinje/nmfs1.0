@@ -22,8 +22,7 @@ private:
 	std::string leader_ip;
 
 public:
-	std::recursive_mutex dentry_list_mutex;
-	std::recursive_mutex inode_list_mutex;
+	std::recursive_mutex dentry_table_mutex;
 
 	explicit dentry_table(ino_t dir_ino, enum meta_location loc);
 	~dentry_table();

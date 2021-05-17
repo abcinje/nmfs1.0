@@ -79,7 +79,6 @@ void inode::fill_stat(struct stat *s)
 {
 	global_logger.log(inode_ops, "Called inode.fill_stat()");
 
-	std::scoped_lock scl{this->inode_mutex};
 	s->st_mode	= i_mode;
 	s->st_uid	= i_uid;
 	s->st_gid	= i_gid;
@@ -98,7 +97,6 @@ void inode::fill_stat(struct stat *s)
 unique_ptr<char> inode::serialize(void)
 {
 	global_logger.log(inode_ops, "Called inode.serialize()");
-	std::scoped_lock scl{this->inode_mutex};
 	unique_ptr<char> value(new char[REG_INODE_SIZE + this->link_target_len]);
 	memcpy(value.get(), &i_mode, REG_INODE_SIZE);
 
@@ -112,7 +110,6 @@ unique_ptr<char> inode::serialize(void)
 void inode::deserialize(const char *value)
 {
 	global_logger.log(inode_ops, "Called inode.deserialize()");
-	std::scoped_lock scl{this->inode_mutex};
 	memcpy(&i_mode, value, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->i_mode)){
@@ -130,7 +127,6 @@ void inode::sync()
 {
 	global_logger.log(inode_ops, "Called inode.sync()");
 
-	std::scoped_lock scl{this->inode_mutex};
 	unique_ptr<char> raw = this->serialize();
 	meta_pool->write(obj_category::INODE, std::to_string(this->i_ino), raw.get(), REG_INODE_SIZE + this->link_target_len, 0);
 }
@@ -144,7 +140,6 @@ void inode::permission_check(int mask){
 
 	mode_t target_mode;
 
-	std::scoped_lock scl{this->inode_mutex};
 	if(this_client->get_client_uid() == this->i_uid){
 		target_mode = (this->i_mode & S_IRWXU) >> 6;
 	} else if (this_client->get_client_gid() == this->i_gid){
@@ -169,106 +164,82 @@ void inode::permission_check(int mask){
 
 // getter
 mode_t inode::get_mode(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_mode;
 }
 uid_t inode::get_uid(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_uid;
 }
 gid_t inode::get_gid(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_gid;
 }
 ino_t inode::get_ino() {
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_ino;
 }
 nlink_t inode::get_nlink() {
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_nlink;
 }
 off_t inode::get_size(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_size;
 }
 struct timespec inode::get_atime(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_atime;
 }
 struct timespec inode::get_mtime(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_mtime;
 }
 struct timespec inode::get_ctime(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->i_ctime;
 }
 
 uint64_t inode::get_loc() {
-	std::scoped_lock scl{this->inode_mutex};
 	return this->loc;
 }
 int inode::get_link_target_len(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->link_target_len;
 }
 char *inode::get_link_target_name(){
-	std::scoped_lock scl{this->inode_mutex};
 	return this->link_target_name;
 }
 
 // setter
 void inode::set_mode(mode_t mode){
-	std::scoped_lock scl{this->inode_mutex};
 	this->i_mode = mode;
 }
 void inode::set_uid(uid_t uid){
-	std::scoped_lock scl{this->inode_mutex};
 	this->i_uid = uid;
 }
 void inode::set_gid(gid_t gid){
-	std::scoped_lock scl{this->inode_mutex};
 	this->i_gid = gid;
 }
 void inode::set_ino(ino_t ino){
-	std::scoped_lock scl{this->inode_mutex};
 	this->i_ino = ino;
 }
 void inode::set_nlink(nlink_t nlink){
-	std::scoped_lock scl{this->inode_mutex};
 	this->i_nlink = nlink;
 }
 void inode::set_size(off_t size){
-	std::scoped_lock scl{this->inode_mutex};
 	this->i_size = size;
 }
 void inode::set_atime(struct timespec atime){
-	std::scoped_lock scl{this->inode_mutex};
 	this->i_atime = atime;
 }
 void inode::set_mtime(struct timespec mtime){
-	std::scoped_lock scl{this->inode_mutex};
 	this->i_mtime = mtime;
 }
 
 void inode::set_loc(uint64_t loc) {
-	std::scoped_lock scl{this->inode_mutex};
 	this->loc = loc;
 }
 void inode::set_link_target_len(int len){
-	std::scoped_lock scl{this->inode_mutex};
 	this->link_target_len = len;
 }
 void inode::set_link_target_name(const char *name){
-	std::scoped_lock scl{this->inode_mutex};
 	this->link_target_name = (char *)calloc(this->link_target_len + 1, sizeof(char));
 	memcpy(this->link_target_name, name, this->link_target_len);
 }
 
 ino_t alloc_new_ino() {
 	global_logger.log(inode_ops, "Called alloc_new_ino()");
-	std::scoped_lock scl{alloc_mutex};
 
 	ino_t new_ino;
 	/* new_ino use client_id for first 24 bit and use ino_offset for next 40 bit, total 64bit(8bytes) */
