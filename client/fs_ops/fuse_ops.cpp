@@ -416,6 +416,8 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
 		return -EACCES;
+	} catch (std::runtime_error &e) {
+		return -ENOSYS;
 	}
 
 	return ret;

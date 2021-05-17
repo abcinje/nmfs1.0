@@ -223,7 +223,7 @@ ino_t local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const cha
 			/* TODO : is it okay to delete inode which is locked? */
 			src_dentry_table->delete_child_inode(*old_name);
 		} else {
-			return -ENOSYS;
+			throw std::runtime_error("NOT IMPLEMENTED");
 		}
 	}
 	return target_ino;
@@ -246,7 +246,7 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, ino_t targe
 			}
 			dst_dentry_table->create_child_inode(*new_name, target_i);
 		} else {
-			return -ENOSYS;
+			throw std::runtime_error("NOT IMPLEMENTED");
 		}
 	}
 	return 0;
