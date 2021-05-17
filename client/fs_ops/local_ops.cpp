@@ -8,7 +8,7 @@ extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
 extern std::mutex file_handler_mutex;
 extern client *this_client;
 
-void local_getattr(shared_ptr<inode> i, struct stat* stat) {
+void local_getattr(shared_ptr<inode> i, struct stat *stat) {
 	global_logger.log(local_fs_op, "Called getattr()");
 	{
 		std::scoped_lock scl{i->inode_mutex};
@@ -24,7 +24,7 @@ void local_access(shared_ptr<inode> i, int mask) {
 	}
 }
 
-int local_opendir(shared_ptr<inode> i, struct fuse_file_info* file_info) {
+int local_opendir(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called opendir()");
 	{
 		std::scoped_lock scl{i->inode_mutex};
@@ -43,7 +43,7 @@ int local_opendir(shared_ptr<inode> i, struct fuse_file_info* file_info) {
 	return 0;
 }
 
-int local_releasedir(shared_ptr<inode> i, struct fuse_file_info* file_info) {
+int local_releasedir(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called releasedir(class inode)");
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 	{
@@ -58,7 +58,7 @@ int local_releasedir(shared_ptr<inode> i, struct fuse_file_info* file_info) {
 	return 0;
 }
 
-int local_releasedir(ino_t ino, struct fuse_file_info* file_info){
+int local_releasedir(ino_t ino, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called releasedir(ino_t)");
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 	{
@@ -74,7 +74,7 @@ int local_releasedir(ino_t ino, struct fuse_file_info* file_info){
 	return 0;
 }
 
-void local_readdir(shared_ptr<inode> i, void* buffer, fuse_fill_dir_t filler) {
+void local_readdir(shared_ptr<inode> i, void *buffer, fuse_fill_dir_t filler) {
 	global_logger.log(local_fs_op, "Called readdir()");
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(i->get_ino());
 	{
@@ -87,7 +87,7 @@ ino_t local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 	global_logger.log(local_fs_op, "Called mkdir()");
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), mode | S_IFDIR);
+	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFDIR);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->create_child_inode(new_child_name, i);
@@ -104,10 +104,10 @@ ino_t local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 int local_rmdir_top(shared_ptr<inode> target_i, ino_t target_ino) {
 	global_logger.log(local_fs_op, "Called rmdir_top()");
 	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_ino);
-
-	if(target_dentry_table == nullptr) {
+	if (target_dentry_table == nullptr) {
 		throw std::runtime_error("directory table is corrupted : Can't find leased directory");
 	}
+
 	{
 		std::scoped_lock scl{target_dentry_table->dentry_table_mutex};
 		if (target_dentry_table->get_child_num() > 0)
@@ -123,7 +123,7 @@ int local_rmdir_down(shared_ptr<inode> parent_i, ino_t target_ino, std::string t
 	global_logger.log(local_fs_op, "Called rmdir_down()");
 	int ret = 0;
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	if(parent_dentry_table == nullptr) {
+	if (parent_dentry_table == nullptr) {
 		throw std::runtime_error("directory table is corrupted : Can't find leased directory");
 	}
 	{
@@ -149,15 +149,16 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 	unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 	{
 		std::scoped_lock scl{dst_parent_dentry_table->dentry_table_mutex};
-		if (dst_parent_dentry_table->check_child_inode(symlink_name->data()) != -1)
+		if (dst_parent_dentry_table->check_child_inode(*symlink_name) != -1)
 			return -EEXIST;
 
 		shared_ptr<inode> symlink_i = std::make_shared<inode>(this_client->get_client_uid(),
-															  this_client->get_client_gid(), S_IFLNK | 0777, src);
+								      this_client->get_client_gid(), S_IFLNK | 0777,
+								      src);
 
-		symlink_i->set_size(std::string(src).length());
+		symlink_i->set_size(static_cast<off_t>(std::string(src).length()));
 
-		dst_parent_dentry_table->create_child_inode(symlink_name->data(), symlink_i);
+		dst_parent_dentry_table->create_child_inode(*symlink_name, symlink_i);
 		symlink_i->sync();
 	}
 	return 0;
@@ -177,10 +178,10 @@ int local_readlink(shared_ptr<inode> i, char *buf, size_t size) {
 	return 0;
 }
 
-int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, const char* new_path, unsigned int flags){
+int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, const char *new_path, unsigned int flags) {
 	global_logger.log(local_fs_op, "Called rename_same_parent()");
 	size_t paradox_check = std::string(new_path).find(old_path);
-	if((paradox_check == 0) && (std::string(new_path).at(std::string(old_path).length()) == '/'))
+	if ((paradox_check == 0) && (std::string(new_path).at(std::string(old_path).length()) == '/'))
 		return -EINVAL;
 
 	unique_ptr<std::string> old_name = get_filename_from_path(old_path);
@@ -189,7 +190,7 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, c
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 	shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(*old_name);
 	{
-		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		ino_t check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
 		if (flags == 0) {
@@ -207,13 +208,13 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, c
 	return 0;
 }
 
-ino_t local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char* old_path, unsigned int flags) {
+ino_t local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char *old_path, unsigned int flags) {
 	global_logger.log(local_fs_op, "Called rename_not_same_parent_src()");
 	unique_ptr<std::string> old_name = get_filename_from_path(old_path);
 
+	ino_t target_ino;
 	shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
 	shared_ptr<inode> target_i = src_dentry_table->get_child_inode(*old_name);
-	ino_t target_ino;
 	{
 		std::scoped_lock scl{src_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		target_ino = target_i->get_ino();
@@ -228,7 +229,8 @@ ino_t local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const cha
 	return target_ino;
 }
 
-int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino, const char* new_path, unsigned int flags) {
+int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino,
+				     const char *new_path, unsigned int flags) {
 	global_logger.log(local_fs_op, "Called rename_not_same_parent_dst()");
 	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
@@ -250,7 +252,7 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, ino_t targe
 	return 0;
 }
 
-int local_open(shared_ptr<inode> i, struct fuse_file_info* file_info) {
+int local_open(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called open()");
 	{
 		std::scoped_lock scl{i->inode_mutex};
@@ -277,7 +279,7 @@ int local_open(shared_ptr<inode> i, struct fuse_file_info* file_info) {
 	return 0;
 }
 
-int local_release(shared_ptr<inode> i, struct fuse_file_info* file_info) {
+int local_release(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called release(class inode)");
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 	{
@@ -293,7 +295,7 @@ int local_release(shared_ptr<inode> i, struct fuse_file_info* file_info) {
 	return 0;
 }
 
-int local_release(ino_t ino, struct fuse_file_info* file_info){
+int local_release(ino_t ino, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called release(ino_t)");
 	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
 	{
@@ -309,11 +311,11 @@ int local_release(ino_t ino, struct fuse_file_info* file_info){
 	return 0;
 }
 
-void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
+void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called create()");
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), mode | S_IFREG);
+	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFREG);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		i->sync();
@@ -334,10 +336,9 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 	global_logger.log(local_fs_op, "Called unlink()");
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-	shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(child_name);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(child_name);
 		nlink_t nlink = target_i->get_nlink() - 1;
 		if (nlink == 0) {
 			/* data */
@@ -355,7 +356,7 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 	}
 }
 
-size_t local_read(shared_ptr<inode> i, char* buffer, size_t size, off_t offset) {
+size_t local_read(shared_ptr<inode> i, char *buffer, size_t size, off_t offset) {
 	global_logger.log(local_fs_op, "Called read()");
 	size_t read_len = 0;
 
@@ -363,7 +364,7 @@ size_t local_read(shared_ptr<inode> i, char* buffer, size_t size, off_t offset) 
 	return read_len;
 }
 
-size_t local_write(shared_ptr<inode> i, const char* buffer, size_t size, off_t offset, int flags) {
+size_t local_write(shared_ptr<inode> i, const char *buffer, size_t size, off_t offset, int flags) {
 	global_logger.log(local_fs_op, "Called write()");
 	size_t written_len = 0;
 
@@ -393,6 +394,7 @@ void local_chmod(shared_ptr<inode> i, mode_t mode) {
 		i->sync();
 	}
 }
+
 void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid) {
 	global_logger.log(local_fs_op, "Called chown()");
 	{
@@ -406,14 +408,15 @@ void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid) {
 		i->sync();
 	}
 }
-void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]){
+
+void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]) {
 	global_logger.log(local_fs_op, "Called utimens()");
 	{
 		std::scoped_lock scl{i->inode_mutex};
 		if (tv[0].tv_nsec == UTIME_NOW) {
-			struct timespec ts;
+			struct timespec ts{};
 			if (!timespec_get(&ts, TIME_UTC))
-				runtime_error("timespec_get() failed");
+				throw runtime_error("timespec_get() failed");
 			i->set_atime(ts);
 		} else if (tv[0].tv_nsec == UTIME_OMIT) { ;
 		} else {
@@ -421,9 +424,9 @@ void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]){
 		}
 
 		if (tv[1].tv_nsec == UTIME_NOW) {
-			struct timespec ts;
+			struct timespec ts{};
 			if (!timespec_get(&ts, TIME_UTC))
-				runtime_error("timespec_get() failed");
+				throw runtime_error("timespec_get() failed");
 			i->set_mtime(ts);
 		} else if (tv[1].tv_nsec == UTIME_OMIT) { ;
 		} else {
@@ -434,7 +437,7 @@ void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]){
 	}
 }
 
-int local_truncate (const shared_ptr<inode> i, off_t offset) {
+int local_truncate(const shared_ptr<inode> i, off_t offset) {
 	global_logger.log(local_fs_op, "Called truncate()");
 	/*TODO : clear setuid, setgid*/
 	int ret;
