@@ -35,8 +35,6 @@ directory_table::~directory_table() {
 
 shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	global_logger.log(directory_table_ops, "Called path_traverse(" + path + ")");
-
-	std::scoped_lock scl{this->directory_table_mutex};
 	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(0);
 	shared_ptr<inode> target_inode = parent_dentry_table->get_this_dir_inode();;
 	ino_t check_target_ino;
@@ -51,23 +49,26 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 
 		std::string target_name = path.substr(start_name, end_name - start_name + 1);
 		global_logger.log(directory_table_ops, "Check target: " + target_name);
-
-		check_target_ino = parent_dentry_table->check_child_inode(target_name);
-		/* TODO : ino_t cannot be -1 */
-		if (check_target_ino == -1)
-			throw inode::no_entry("No such file or Directory: in path traversal");
-		else
-			/* if target is dir, this child is just for checking mode.
-			 * if target is reg, this child is actual inode */
-			target_inode = parent_dentry_table->get_child_inode(target_name, check_target_ino);
-
+		{
+			std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+			check_target_ino = parent_dentry_table->check_child_inode(target_name);
+			/* TODO : ino_t cannot be -1 */
+			if (check_target_ino == -1)
+				throw inode::no_entry("No such file or Directory: in path traversal");
+			else
+				/* if target is dir, this child is just for checking mode.
+				 * if target is reg, this child is actual inode */
+				target_inode = parent_dentry_table->get_child_inode(target_name, check_target_ino);
+		}
 		if(target_inode == nullptr)
 			throw std::runtime_error("Failed to make remote_inode in path_traversal()");
-
-		if(S_ISDIR(target_inode->get_mode())) {
+		{
+			std::scoped_lock scl{target_inode->inode_mutex};
+			if (S_ISDIR(target_inode->get_mode())) {
 				parent_dentry_table = this->get_dentry_table(check_target_ino);
 				target_inode = parent_dentry_table->get_this_dir_inode();
 				target_inode->permission_check(X_OK);
+			}
 		}
 	}
 
@@ -76,6 +77,7 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 
 shared_ptr<dentry_table> directory_table::lease_dentry_table(ino_t ino){
 	global_logger.log(directory_table_ops, "Called lease_dentry_table(" + std::to_string(ino) + ")");
+	std::scoped_lock scl{this->directory_table_mutex};
 	std::string temp_address;
 	int ret = lc->acquire(ino, temp_address);
 	shared_ptr<dentry_table> new_dentry_table;
@@ -154,8 +156,8 @@ int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable
 
 int directory_table::delete_dentry_table(ino_t ino){
 	global_logger.log(directory_table_ops, "Called delete_dentry_table(" + std::to_string(ino) + ")");
-	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
 	std::scoped_lock scl{this->directory_table_mutex};
+	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 
 	if(it == this->dentry_tables.end()) {
