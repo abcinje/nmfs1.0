@@ -151,7 +151,7 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			shared_ptr<file_handler> fh = std::make_shared<file_handler>(i->get_ino());
 			fh->set_loc(REMOTE);
 			fh->set_remote_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
@@ -393,7 +393,7 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			shared_ptr<file_handler> fh = std::make_shared<file_handler>(i->get_ino());
 			fh->set_loc(REMOTE);
 			fh->set_remote_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
@@ -424,7 +424,7 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			shared_ptr<file_handler> fh = std::make_unique<file_handler>(Output.new_ino());
+			shared_ptr<file_handler> fh = std::make_shared<file_handler>(Output.new_ino());
 			fh->set_loc(REMOTE);
 			std::shared_ptr<remote_inode> open_remote_i = std::make_shared<remote_inode>(parent_i->get_address(), parent_i->get_dentry_table_ino(), new_child_name);
 			open_remote_i->inode::set_ino(Output.new_ino());

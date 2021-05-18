@@ -29,7 +29,7 @@ int local_opendir(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 		if (!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
 
-		shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		shared_ptr<file_handler> fh = std::make_shared<file_handler>(i->get_ino());
 		fh->set_loc(LOCAL);
 		fh->set_i(i);
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
@@ -251,7 +251,7 @@ int local_open(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 			i->sync();
 		}
 
-		shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		shared_ptr<file_handler> fh = std::make_shared<file_handler>(i->get_ino());
 		fh->set_loc(LOCAL);
 		fh->set_i(i);
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
@@ -280,7 +280,7 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 
 		parent_dentry_table->create_child_inode(new_child_name, i);
 
-		shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		shared_ptr<file_handler> fh = std::make_shared<file_handler>(i->get_ino());
 		fh->set_loc(LOCAL);
 		fh->set_i(i);
 		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
