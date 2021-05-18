@@ -188,7 +188,12 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(*old_name);
+	shared_ptr<inode> target_i;
+	{
+		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		target_i = parent_dentry_table->get_child_inode(*old_name);
+	}
+
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		ino_t check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
@@ -214,7 +219,12 @@ ino_t local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const cha
 
 	ino_t target_ino;
 	shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
-	shared_ptr<inode> target_i = src_dentry_table->get_child_inode(*old_name);
+	shared_ptr<inode> target_i;
+	{
+		std::scoped_lock scl{src_dentry_table->dentry_table_mutex};
+		target_i = src_dentry_table->get_child_inode(*old_name);
+	}
+
 	{
 		std::scoped_lock scl{src_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		target_ino = target_i->get_ino();
