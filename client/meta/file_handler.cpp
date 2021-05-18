@@ -13,6 +13,7 @@ ino_t  file_handler::get_ino() {
 }
 
 std::shared_ptr<inode> file_handler::get_open_inode_info() {
+	global_logger.log(file_handler_ops, "Called get_open_inode_info()");
 	if(this->loc == LOCAL){
 		return this->i;
 	} else if (this->loc == REMOTE) {
@@ -35,11 +36,19 @@ void file_handler::set_remote_i(const std::shared_ptr<remote_inode> &open_remote
 }
 
 void file_handler_list::add_file_handler(uint64_t key, std::shared_ptr<file_handler> fh) {
+	global_logger.log(file_handler_ops, "Called add_file_handler()");
 	std::scoped_lock scl{this->file_handler_mutex};
-	fh_list.insert(std::make_pair(key, std::move(fh)));
+	auto ret = fh_list.insert(std::make_pair(key, nullptr));
+	if(ret.second) {
+		ret.first->second = fh;
+	} else {
+		throw std::runtime_error("file_handler is corrupted : cannot add file_handler to list");
+
+	}
 }
 
 std::shared_ptr<file_handler> file_handler_list::get_file_handler(uint64_t key) {
+	global_logger.log(file_handler_ops, "Called get_file_handler()");
 	std::scoped_lock scl{this->file_handler_mutex};
 	std::map<uint64_t , std::shared_ptr<file_handler>>::iterator it;
 	it = fh_list.find(key);
@@ -51,6 +60,7 @@ std::shared_ptr<file_handler> file_handler_list::get_file_handler(uint64_t key) 
 }
 
 int file_handler_list::delete_file_handler(uint64_t key) {
+	global_logger.log(file_handler_ops, "Called delete_file_handler()");
 	std::scoped_lock scl{this->file_handler_mutex};
 	std::map<uint64_t , std::shared_ptr<file_handler>>::iterator it;
 	it = fh_list.find(key);

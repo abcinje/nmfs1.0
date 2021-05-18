@@ -18,6 +18,7 @@ enum code_location {
 	rpc_server_ops,
 	manager_lease,
 	manager_session,
+	file_handler_ops
 };
 
 

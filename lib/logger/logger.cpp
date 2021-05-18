@@ -49,6 +49,9 @@ void logger::log(enum code_location location, std::string message)
 		case manager_session:
 			location_str = "manager_session";
 			break;
+		case file_handler_ops:
+			location_str = "file_handler";
+			break;
 		default:
 			location_str = "Unknown";
 	}
