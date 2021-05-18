@@ -431,7 +431,9 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(Output.new_ino());
 			fh->set_loc(REMOTE);
-			fh->set_remote_i(std::make_shared<remote_inode>(parent_i->get_address(), parent_i->get_dentry_table_ino(), new_child_name));
+			std::shared_ptr<remote_inode> open_remote_i = std::make_shared<remote_inode>(parent_i->get_address(), parent_i->get_dentry_table_ino(), new_child_name);
+			open_remote_i->inode::set_ino(Output.new_ino());
+			fh->set_remote_i(open_remote_i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 			fh->set_fhno((void *) file_info->fh);
