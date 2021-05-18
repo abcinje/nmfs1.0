@@ -114,7 +114,6 @@ void inode::fill_stat(struct stat *s)
 std::vector<char> inode::serialize(void)
 {
 	global_logger.log(inode_ops, "Called inode.serialize()");
-	std::scoped_lock scl{this->inode_mutex};
 	std::vector<char> value(REG_INODE_SIZE + this->link_target_len);
 	memcpy(value.data(), &i_mode, REG_INODE_SIZE);
 
