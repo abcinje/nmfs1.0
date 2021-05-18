@@ -9,7 +9,7 @@
 
 using namespace std::chrono;
 
-#define LEASE_PERIOD_MS 10000
+#define LEASE_PERIOD_MS 200000000
 
 class lease_table {
 private:

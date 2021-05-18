@@ -1,3 +1,4 @@
+add_definitions(-DDEBUG)
 # logger
 add_library(log SHARED logger/logger.cpp)
 
