@@ -19,9 +19,7 @@ std::unique_ptr<Server> remote_handle;
 std::unique_ptr<lease_client> lc;
 
 directory_table *indexing_table;
-
-std::map<ino_t, unique_ptr<file_handler>> fh_list;
-std::mutex file_handler_mutex;
+std::unique_ptr<file_handler_list> open_context;
 
 thread *remote_server_thread;
 
@@ -92,8 +90,8 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
-			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-			i = handle->get_open_inode_info();
+			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+			i = handler->get_open_inode_info();
 		} else {
 			i = indexing_table->path_traversal(path);
 		}
@@ -225,8 +223,8 @@ int fuse_ops::releasedir(const char *path, struct fuse_file_info *file_info) {
 	int ret = 0;
 	shared_ptr<inode> i;
 	if(file_info){
-		file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-		i = handle->get_open_inode_info();
+		shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+		i = handler->get_open_inode_info();
 	} else {
 		i = indexing_table->path_traversal(path);
 	}
@@ -242,8 +240,8 @@ int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 
 	shared_ptr<inode> i;
 	if(file_info){
-		file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-		i = handle->get_open_inode_info();
+		shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+		i = handler->get_open_inode_info();
 	} else {
 		i = indexing_table->path_traversal(path);
 	}
@@ -497,8 +495,8 @@ int fuse_ops::release(const char *path, struct fuse_file_info *file_info) {
 	int ret = 0;
 	shared_ptr<inode> i;
 	if(file_info){
-		file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-		i = handle->get_open_inode_info();
+		shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+		i = handler->get_open_inode_info();
 	} else {
 		i = indexing_table->path_traversal(path);
 	}
@@ -578,8 +576,8 @@ int fuse_ops::read(const char *path, char *buffer, size_t size, off_t offset, st
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
-			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-			i = handle->get_open_inode_info();
+			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+			i = handler->get_open_inode_info();
 		} else {
 			i = indexing_table->path_traversal(path);
 		}
@@ -606,8 +604,8 @@ int fuse_ops::write(const char *path, const char *buffer, size_t size, off_t off
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
-			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-			i = handle->get_open_inode_info();
+			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+			i = handler->get_open_inode_info();
 		} else {
 			i = indexing_table->path_traversal(path);
 		}
@@ -635,8 +633,8 @@ int fuse_ops::chmod(const char *path, mode_t mode, struct fuse_file_info *file_i
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
-			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-			i = handle->get_open_inode_info();
+			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+			i = handler->get_open_inode_info();
 		} else {
 			i = indexing_table->path_traversal(path);
 		}
@@ -663,8 +661,8 @@ int fuse_ops::chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_inf
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
-			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-			i = handle->get_open_inode_info();
+			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+			i = handler->get_open_inode_info();
 		} else {
 			i = indexing_table->path_traversal(path);
 		}
@@ -691,8 +689,8 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
-			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-			i = handle->get_open_inode_info();
+			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+			i = handler->get_open_inode_info();
 		} else {
 			i = indexing_table->path_traversal(path);
 		}
@@ -720,8 +718,8 @@ int fuse_ops::truncate(const char *path, off_t offset, struct fuse_file_info *fi
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
-			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
-			i = handle->get_open_inode_info();
+			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+			i = handler->get_open_inode_info();
 		} else {
 			i = indexing_table->path_traversal(path);
 		}

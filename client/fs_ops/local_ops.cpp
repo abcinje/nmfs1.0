@@ -3,10 +3,8 @@
 extern rados_io *meta_pool;
 extern rados_io *data_pool;
 extern directory_table *indexing_table;
-
-extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
-extern std::mutex file_handler_mutex;
 extern client *this_client;
+extern std::unique_ptr<file_handler_list> open_context;
 
 void local_getattr(shared_ptr<inode> i, struct stat *stat) {
 	global_logger.log(local_fs_op, "Called getattr()");
@@ -31,33 +29,23 @@ int local_opendir(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 		if (!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
 
-		{
-			std::scoped_lock<std::mutex> lock{file_handler_mutex};
-			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
-			fh->set_loc(LOCAL);
-			fh->set_i(i);
-			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+		shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		fh->set_loc(LOCAL);
+		fh->set_i(i);
+		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+		fh->set_fhno(file_info->fh);
 
-			fh->set_fhno((void *) file_info->fh);
-			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
-		}
+		open_context->add_file_handler(file_info->fh, fh);
+
 	}
 	return 0;
 }
 
 int local_releasedir(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called releasedir(class inode)");
-	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-	{
-		std::scoped_lock<std::mutex> lock{file_handler_mutex};
-		it = fh_list.find(i->get_ino());
+	int ret = open_context->delete_file_handler(file_info->fh);
 
-		if (it == fh_list.end())
-			return -EIO;
-
-		fh_list.erase(it);
-	}
-	return 0;
+	return ret;
 }
 
 void local_readdir(shared_ptr<inode> i, void *buffer, fuse_fill_dir_t filler) {
@@ -263,34 +251,22 @@ int local_open(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 			i->sync();
 		}
 
-		{
-			std::scoped_lock<std::mutex> lock{file_handler_mutex};
-			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
-			fh->set_loc(LOCAL);
-			fh->set_i(i);
-			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+		shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		fh->set_loc(LOCAL);
+		fh->set_i(i);
+		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+		fh->set_fhno(file_info->fh);
 
-			fh->set_fhno((void *) file_info->fh);
-			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
-		}
+		open_context->add_file_handler(file_info->fh, fh);
 	}
 	return 0;
 }
 
 int local_release(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called release(class inode)");
-	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-	{
-		std::scoped_lock<std::mutex> lock{file_handler_mutex};
-		it = fh_list.find(i->get_ino());
+	int ret = open_context->delete_file_handler(file_info->fh);
 
-		if (it == fh_list.end())
-			return -EIO;
-
-		fh_list.erase(it);
-	}
-
-	return 0;
+	return ret;
 }
 
 void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info *file_info) {
@@ -304,16 +280,13 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 
 		parent_dentry_table->create_child_inode(new_child_name, i);
 
-		{
-			std::scoped_lock<std::mutex> lock{file_handler_mutex};
-			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
-			fh->set_loc(LOCAL);
-			fh->set_i(i);
-			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+		shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+		fh->set_loc(LOCAL);
+		fh->set_i(i);
+		file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+		fh->set_fhno(file_info->fh);
 
-			fh->set_fhno((void *) file_info->fh);
-			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
-		}
+		open_context->add_file_handler(file_info->fh, fh);
 	}
 }
 

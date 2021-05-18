@@ -1,8 +1,6 @@
 #include "rpc_client.hpp"
 extern rados_io *data_pool;
-
-extern std::map<ino_t, unique_ptr<file_handler>> fh_list;
-extern std::mutex file_handler_mutex;
+extern std::unique_ptr<file_handler_list> open_context;
 
 rpc_client::rpc_client(std::shared_ptr<Channel> channel) : stub_(remote_ops::NewStub(channel)){}
 /* TODO : Handle -ENOTLEADER */
@@ -153,14 +151,13 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			std::scoped_lock<std::mutex> lock{file_handler_mutex};
-			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 			fh->set_loc(REMOTE);
 			fh->set_remote_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+			fh->set_fhno(file_info->fh);
 
-			fh->set_fhno((void *) file_info->fh);
-			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+			open_context->add_file_handler(file_info->fh, fh);
 		}
 		return Output.ret();
 	} else {
@@ -396,14 +393,13 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			std::scoped_lock<std::mutex> lock{file_handler_mutex};
-			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			shared_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
 			fh->set_loc(REMOTE);
 			fh->set_remote_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+			fh->set_fhno(file_info->fh);
 
-			fh->set_fhno((void *) file_info->fh);
-			fh_list.insert(std::make_pair(i->get_ino(), std::move(fh)));
+			open_context->add_file_handler(file_info->fh, fh);
 		}
 		return Output.ret();
 	} else {
@@ -428,16 +424,15 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			std::scoped_lock<std::mutex> lock{file_handler_mutex};
-			unique_ptr<file_handler> fh = std::make_unique<file_handler>(Output.new_ino());
+			shared_ptr<file_handler> fh = std::make_unique<file_handler>(Output.new_ino());
 			fh->set_loc(REMOTE);
 			std::shared_ptr<remote_inode> open_remote_i = std::make_shared<remote_inode>(parent_i->get_address(), parent_i->get_dentry_table_ino(), new_child_name);
 			open_remote_i->inode::set_ino(Output.new_ino());
 			fh->set_remote_i(open_remote_i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
+			fh->set_fhno(file_info->fh);
 
-			fh->set_fhno((void *) file_info->fh);
-			fh_list.insert(std::make_pair(Output.new_ino(), std::move(fh)));
+			open_context->add_file_handler(file_info->fh, fh);
 		}
 		return;
 	} else {
