@@ -27,6 +27,24 @@ const char *inode::permission_denied::what(void)
 	return runtime_error::what();
 }
 
+inode::inode(const inode &copy)
+{
+	i_mode		= copy.i_mode;
+	i_uid		= copy.i_uid;
+	i_gid		= copy.i_gid;
+	i_ino		= copy.i_ino;
+	i_nlink		= copy.i_nlink;
+	i_size		= copy.i_size;
+
+	i_atime		= copy.i_atime;
+	i_mtime		= copy.i_mtime;
+	i_ctime		= copy.i_ctime;
+
+	link_target_len		= copy.link_target_len;
+	link_target_name	= reinterpret_cast<char *>(malloc(link_target_len + 1));
+	memcpy(link_target_name, copy.link_target_name, link_target_len + 1);
+}
+
 inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0), link_target_len(0), link_target_name(NULL)
 {
 	global_logger.log(inode_ops, "Called inode(new file)");
@@ -37,7 +55,6 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i
 	loc = LOCAL;
 	i_ino = root ? 0 : alloc_new_ino();
 }
-
 
 /* TODO : allocated target name should be freed later */
 inode::inode(uid_t owner, gid_t group, mode_t mode, const char *link_target_name) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0)
@@ -94,17 +111,18 @@ void inode::fill_stat(struct stat *s)
 	s->st_ctim.tv_sec	= i_ctime.tv_nsec;
 }
 /* TODO : what is difference this + VFTABLE_OFFSET and &i_mode */
-unique_ptr<char> inode::serialize(void)
+std::vector<char> inode::serialize(void)
 {
 	global_logger.log(inode_ops, "Called inode.serialize()");
-	unique_ptr<char> value(new char[REG_INODE_SIZE + this->link_target_len]);
-	memcpy(value.get(), &i_mode, REG_INODE_SIZE);
+	std::scoped_lock scl{this->inode_mutex};
+	std::vector<char> value(REG_INODE_SIZE + this->link_target_len);
+	memcpy(value.data(), &i_mode, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->i_mode) && (this->link_target_len > 0)){
 		global_logger.log(inode_ops, "serialize symbolic link inode");
-		memcpy(value.get() + REG_INODE_SIZE, (this->link_target_name), this->link_target_len);
+		memcpy(value.data() + REG_INODE_SIZE, (this->link_target_name), this->link_target_len);
 	}
-	return std::move(value);
+	return value;
 }
 
 void inode::deserialize(const char *value)
@@ -126,9 +144,8 @@ void inode::deserialize(const char *value)
 void inode::sync()
 {
 	global_logger.log(inode_ops, "Called inode.sync()");
-
-	unique_ptr<char> raw = this->serialize();
-	meta_pool->write(obj_category::INODE, std::to_string(this->i_ino), raw.get(), REG_INODE_SIZE + this->link_target_len, 0);
+	std::vector<char> raw = this->serialize();
+	meta_pool->write(obj_category::INODE, std::to_string(this->i_ino), raw.data(), REG_INODE_SIZE + this->link_target_len, 0);
 }
 
 void inode::permission_check(int mask){
@@ -225,6 +242,9 @@ void inode::set_atime(struct timespec atime){
 }
 void inode::set_mtime(struct timespec mtime){
 	this->i_mtime = mtime;
+}
+void inode::set_ctime(struct timespec ctime){
+	this->i_ctime = ctime;
 }
 
 void inode::set_loc(uint64_t loc) {
