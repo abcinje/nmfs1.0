@@ -64,7 +64,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	remote_server_thread = new thread(run_rpc_server, remote_handle_ip);
 
 	indexing_table = new directory_table();
-
+	open_context = std::make_unique<file_handler_list>();
 	config->nullpath_ok = 0;
 	fuse_capable = info->capable;
 	return NULL;
