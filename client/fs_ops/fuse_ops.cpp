@@ -216,22 +216,21 @@ int fuse_ops::opendir(const char *path, struct fuse_file_info *file_info) {
 
 int fuse_ops::releasedir(const char *path, struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "Called releasedir()");
-	int ret = 0;
-
 	if (path != nullptr) {
 		global_logger.log(fuse_op, "path : " + std::string(path));
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
-
-		ret = local_releasedir(i, file_info);
-
 	} else {
 		global_logger.log(fuse_op, "path : nullpath");
-		file_handler *fh = reinterpret_cast<file_handler *>(file_info->fh);
-		ino_t ino = fh->get_ino();
-
-		ret = local_releasedir(ino, file_info);
-
 	}
+
+	int ret = 0;
+	shared_ptr<inode> i;
+	if(file_info){
+		file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+		i = handle->get_open_inode_info();
+	} else {
+		i = indexing_table->path_traversal(path);
+	}
+	ret = local_releasedir(i, file_info);
 
 	return ret;
 }
@@ -489,20 +488,23 @@ int fuse_ops::open(const char *path, struct fuse_file_info *file_info) {
 
 int fuse_ops::release(const char *path, struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "Called release()");
-
-	int ret = 0;
 	if (path != nullptr) {
 		global_logger.log(fuse_op, "path : " + std::string(path));
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
-
-		ret = local_release(i, file_info);
 	} else {
 		global_logger.log(fuse_op, "path : nullpath");
-		file_handler *fh = reinterpret_cast<file_handler *>(file_info->fh);
-		ino_t ino = fh->get_ino();
-
-		ret = local_release(ino, file_info);
 	}
+
+	int ret = 0;
+	shared_ptr<inode> i;
+	if(file_info){
+		file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+		i = handle->get_open_inode_info();
+	} else {
+		i = indexing_table->path_traversal(path);
+	}
+
+	ret = local_release(i, file_info);
+
 	return ret;
 }
 

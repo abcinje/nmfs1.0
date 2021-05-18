@@ -60,22 +60,6 @@ int local_releasedir(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	return 0;
 }
 
-int local_releasedir(ino_t ino, struct fuse_file_info *file_info) {
-	global_logger.log(local_fs_op, "Called releasedir(ino_t)");
-	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-	{
-		std::scoped_lock<std::mutex> lock{file_handler_mutex};
-		it = fh_list.find(ino);
-
-		if (it == fh_list.end())
-			return -EIO;
-
-		fh_list.erase(it);
-	}
-
-	return 0;
-}
-
 void local_readdir(shared_ptr<inode> i, void *buffer, fuse_fill_dir_t filler) {
 	global_logger.log(local_fs_op, "Called readdir()");
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(i->get_ino());
@@ -299,22 +283,6 @@ int local_release(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	{
 		std::scoped_lock<std::mutex> lock{file_handler_mutex};
 		it = fh_list.find(i->get_ino());
-
-		if (it == fh_list.end())
-			return -EIO;
-
-		fh_list.erase(it);
-	}
-
-	return 0;
-}
-
-int local_release(ino_t ino, struct fuse_file_info *file_info) {
-	global_logger.log(local_fs_op, "Called release(ino_t)");
-	std::map<ino_t, unique_ptr<file_handler>>::iterator it;
-	{
-		std::scoped_lock<std::mutex> lock{file_handler_mutex};
-		it = fh_list.find(ino);
 
 		if (it == fh_list.end())
 			return -EIO;
