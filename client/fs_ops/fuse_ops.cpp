@@ -90,7 +90,13 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		shared_ptr<inode> i;
+		if(file_info){
+			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+			i = handle->get_open_inode_info();
+		} else {
+			i = indexing_table->path_traversal(path);
+		}
 
 		if (i->get_loc() == LOCAL) {
 			local_getattr(i, stat);
@@ -235,7 +241,13 @@ int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	global_logger.log(fuse_op, "Called readdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	shared_ptr<inode> i = indexing_table->path_traversal(path);
+	shared_ptr<inode> i;
+	if(file_info){
+		file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+		i = handle->get_open_inode_info();
+	} else {
+		i = indexing_table->path_traversal(path);
+	}
 	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(i->get_ino());
 
 	if (target_dentry_table->get_loc() == LOCAL) {
@@ -562,7 +574,13 @@ int fuse_ops::read(const char *path, char *buffer, size_t size, off_t offset, st
 
 	size_t read_len = 0;
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		shared_ptr<inode> i;
+		if(file_info){
+			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+			i = handle->get_open_inode_info();
+		} else {
+			i = indexing_table->path_traversal(path);
+		}
 
 		read_len = local_read(i, buffer, size, offset);
 	} catch (inode::no_entry &e) {
@@ -584,7 +602,13 @@ int fuse_ops::write(const char *path, const char *buffer, size_t size, off_t off
 	size_t written_len = 0;
 
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		shared_ptr<inode> i;
+		if(file_info){
+			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+			i = handle->get_open_inode_info();
+		} else {
+			i = indexing_table->path_traversal(path);
+		}
 
 		if (i->get_loc() == LOCAL) {
 			written_len = local_write(i, buffer, size, offset, file_info->flags);
@@ -607,7 +631,13 @@ int fuse_ops::chmod(const char *path, mode_t mode, struct fuse_file_info *file_i
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		shared_ptr<inode> i;
+		if(file_info){
+			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+			i = handle->get_open_inode_info();
+		} else {
+			i = indexing_table->path_traversal(path);
+		}
 
 		if (i->get_loc() == LOCAL) {
 			local_chmod(i, mode);
@@ -629,7 +659,13 @@ int fuse_ops::chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_inf
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		shared_ptr<inode> i;
+		if(file_info){
+			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+			i = handle->get_open_inode_info();
+		} else {
+			i = indexing_table->path_traversal(path);
+		}
 
 		if (i->get_loc() == LOCAL) {
 			local_chown(i, uid, gid);
@@ -651,7 +687,13 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		shared_ptr<inode> i;
+		if(file_info){
+			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+			i = handle->get_open_inode_info();
+		} else {
+			i = indexing_table->path_traversal(path);
+		}
 
 		if (i->get_loc() == LOCAL) {
 			local_utimens(i, tv);
@@ -668,13 +710,19 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	return 0;
 }
 
-int fuse_ops::truncate(const char *path, off_t offset, struct fuse_file_info *fi) {
+int fuse_ops::truncate(const char *path, off_t offset, struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "Called truncate()");
 	global_logger.log(fuse_op, "path : " + std::string(path) + " offset : " + std::to_string(offset));
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		shared_ptr<inode> i;
+		if(file_info){
+			file_handler *handle = reinterpret_cast<file_handler *>(file_info->fh);
+			i = handle->get_open_inode_info();
+		} else {
+			i = indexing_table->path_traversal(path);
+		}
 
 		if (i->get_loc() == LOCAL) {
 			ret = local_truncate(i, offset);

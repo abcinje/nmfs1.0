@@ -65,14 +65,13 @@ public:
 
 	inode(const inode &copy);
 
-	//inode(uid_t owner, gid_t group, mode_t mode);
+	/* for normal reg file and directory */
 	inode(uid_t owner, gid_t group, mode_t mode, bool root = false);
 	/* for symlink */
 	inode(uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
-
+	/* for pull metadata */
 	inode(ino_t ino);
-
-	/* parent constructor for remote_inode */
+	/* parent constructor for remote_inode and dummy_inode which used with file_handler */
 	inode();
 
 	void fill_stat(struct stat *s);

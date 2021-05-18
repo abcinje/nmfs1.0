@@ -155,6 +155,8 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 		else if(Output.ret() == 0) {
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			fh->set_loc(REMOTE);
+			fh->set_remote_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 			fh->set_fhno((void *) file_info->fh);
@@ -396,6 +398,8 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 		else if(Output.ret() == 0) {
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			fh->set_loc(REMOTE);
+			fh->set_remote_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 			fh->set_fhno((void *) file_info->fh);
@@ -426,6 +430,8 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 		else if(Output.ret() == 0) {
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(Output.new_ino());
+			fh->set_loc(REMOTE);
+			fh->set_remote_i(std::make_shared<remote_inode>(parent_i->get_address(), parent_i->get_dentry_table_ino(), new_child_name));
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 			fh->set_fhno((void *) file_info->fh);

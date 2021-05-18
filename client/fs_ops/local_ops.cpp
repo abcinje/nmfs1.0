@@ -34,6 +34,8 @@ int local_opendir(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 		{
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			fh->set_loc(LOCAL);
+			fh->set_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 			fh->set_fhno((void *) file_info->fh);
@@ -280,6 +282,8 @@ int local_open(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 		{
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			fh->set_loc(LOCAL);
+			fh->set_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 			fh->set_fhno((void *) file_info->fh);
@@ -335,6 +339,8 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 		{
 			std::scoped_lock<std::mutex> lock{file_handler_mutex};
 			unique_ptr<file_handler> fh = std::make_unique<file_handler>(i->get_ino());
+			fh->set_loc(LOCAL);
+			fh->set_i(i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 
 			fh->set_fhno((void *) file_info->fh);
