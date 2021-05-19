@@ -1,6 +1,5 @@
 #include "fuse_ops.hpp"
 #include "../in_memory/directory_table.hpp"
-#include "../util.hpp"
 #include "local_ops.hpp"
 #include "remote_ops.hpp"
 #include "../rpc/rpc_server.hpp"
@@ -19,6 +18,7 @@ std::unique_ptr<Server> remote_handle;
 std::unique_ptr<lease_client> lc;
 
 directory_table *indexing_table;
+std::unique_ptr<uuid_controller> ino_controller;
 std::unique_ptr<file_handler_list> open_context;
 
 thread *remote_server_thread;
@@ -64,6 +64,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	remote_server_thread = new thread(run_rpc_server, remote_handle_ip);
 
 	indexing_table = new directory_table();
+	ino_controller = std::make_unique<uuid_controller>();
 	open_context = std::make_unique<file_handler_list>();
 	config->nullpath_ok = 0;
 	fuse_capable = info->capable;
