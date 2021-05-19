@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 #include "../fs_ops/fuse_ops.hpp"
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../../lib/logger/logger.hpp"
@@ -23,12 +26,25 @@
 using std::unique_ptr;
 using std::runtime_error;
 using std::string;
+using namespace boost::uuids;
 
 enum meta_location {
     LOCAL = 0,
     REMOTE,
     UNKNOWN,
     NOBODY /* temporaly status */
+};
+
+class uuid_controller {
+private:
+    random_generator generator;
+public:
+    uuid_controller();
+
+    uuid alloc_new_uuid();
+    uint64_t get_least_from_uuid(uuid id);
+    uint64_t get_most_from_uuid(uuid id);
+    std::string uuid_to_string(uuid id);
 };
 
 class inode {
