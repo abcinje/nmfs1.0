@@ -5,7 +5,7 @@
 #include <shared_mutex>
 #include <tuple>
 #include <tsl/robin_map.h>
-#include "../meta/inode.hpp"
+#include "../meta/uuid_controller.hpp"
 #include "../../lib/logger/logger.hpp"
 
 using namespace std::chrono;
@@ -29,7 +29,7 @@ private:
 	};
 
 	std::shared_mutex sm;
-	tsl::robin_map<uuid, lease_entry *> map;
+	tsl::robin_map<std::string, lease_entry *> map;
 
 public:
 	lease_table_client(void) = default;

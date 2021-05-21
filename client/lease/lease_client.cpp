@@ -24,7 +24,8 @@ int lease_client::acquire(uuid ino, std::string &remote_addr)
 		return 0;
 
 	lease_request request;
-	request.set_ino(ino);
+	request.set_ino_prefix(uuid_controller::get_prefix_from_uuid(ino));
+	request.set_ino_postfix(uuid_controller::get_postfix_from_uuid(ino));
 	request.set_remote_addr(remote);
 
 	lease_response response;

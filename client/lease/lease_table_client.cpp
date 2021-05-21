@@ -53,7 +53,7 @@ bool lease_table_client::is_valid(uuid ino)
 
 	{
 		std::shared_lock lock(sm);
-		auto it = map.find(ino);
+		auto it = map.find(uuid_to_string(ino));
 		if (it != map.end()) {
 			global_logger.log(lease_ops, "Find lease in the table!");
 			e = it->second;
@@ -83,7 +83,7 @@ bool lease_table_client::is_mine(uuid ino)
 
 	{
 		std::shared_lock lock(sm);
-		auto it = map.find(ino);
+		auto it = map.find(uuid_to_string(ino));
 		if (it != map.end()) {
 			e = it->second;
 		} else {
@@ -105,7 +105,7 @@ void lease_table_client::update(uuid ino, const system_clock::time_point &new_du
 
 	{
 		std::shared_lock lock(sm);
-		auto it = map.find(ino);
+		auto it = map.find(uuid_to_string(ino));
 		if (it != map.end()) {
 			found = true;
 			e = it->second;
@@ -119,7 +119,7 @@ void lease_table_client::update(uuid ino, const system_clock::time_point &new_du
 
 	{
 		std::unique_lock lock(sm);
-		auto ret = map.insert({ino, nullptr});
+		auto ret = map.insert({uuid_to_string(ino), nullptr});
 		if (ret.second) {
 			ret.first.value() = new lease_entry(new_due, mine);
 		} else {

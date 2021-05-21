@@ -129,7 +129,7 @@ int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> i)
 	d_inode->set_mtime(i->get_mtime());
 	d_inode->set_ctime(i->get_ctime());
 
-	auto f_inodes_ret = f_inodes.insert({i->get_ino(), nullptr});
+	auto f_inodes_ret = f_inodes.insert({uuid_to_string(i->get_ino()), nullptr});
 	if (f_inodes_ret.second || !f_inodes_ret.first->second) {
 		f_inodes_ret.first.value() = std::make_unique<inode>(*i);
 	} else {
@@ -158,7 +158,7 @@ int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> i, cons
 	d_inode->set_mtime(time);
 	d_inode->set_ctime(time);
 
-	auto f_inodes_ret = f_inodes.insert({i->get_ino(), nullptr});
+	auto f_inodes_ret = f_inodes.insert({uuid_to_string(i->get_ino()), nullptr});
 	if (!f_inodes_ret.second && !f_inodes_ret.first->second)
 		throw std::logic_error("transaction::rmreg() failed (file doesn't exist)");
 

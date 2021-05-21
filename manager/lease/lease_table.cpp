@@ -1,8 +1,5 @@
 #include "lease_table.hpp"
 
-#include <iostream>
-#include <string>
-
 lease_table::lease_entry::lease_entry(system_clock::time_point &latest_due, const std::string &remote_addr) : due(system_clock::now() + milliseconds(LEASE_PERIOD_MS)), addr(remote_addr)
 {
 	latest_due = due;
@@ -47,7 +44,7 @@ int lease_table::acquire(uuid ino, system_clock::time_point &latest_due, std::st
 
 	{
 		std::shared_lock lock(sm);
-		auto it = map.find(ino);
+		auto it = map.find(uuid_to_string(ino));
 		if (it != map.end()) {
 			found = true;
 			e = it->second;
@@ -59,7 +56,7 @@ int lease_table::acquire(uuid ino, system_clock::time_point &latest_due, std::st
 
 	{
 		std::unique_lock lock(sm);
-		auto ret = map.insert({ino, nullptr});
+		auto ret = map.insert({uuid_to_string(ino), nullptr});
 		if (ret.second) {
 			ret.first.value() = new lease_entry(latest_due, remote_addr);
 			return 0;

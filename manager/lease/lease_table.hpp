@@ -9,7 +9,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <iostream>
 #include <string>
-#include "../../client/meta/inode.hpp"
+#include "../../client/meta/uuid_controller.hpp"
 
 using namespace std::chrono;
 using namespace boost::uuids;
