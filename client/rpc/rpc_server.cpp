@@ -3,6 +3,8 @@
 extern rados_io *meta_pool;
 extern rados_io *data_pool;
 extern directory_table *indexing_table;
+extern std::unique_ptr<uuid_controller> ino_controller;
+
 
 extern std::unique_ptr<Server> remote_handle;
 extern client *this_client;
@@ -20,19 +22,21 @@ void run_rpc_server(const std::string& remote_address){
 Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const ::rpc_dentry_table_request *request,
 										 ::rpc_dentry_table_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_check_child_inode()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
 	uuid check_target_ino;
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		check_target_ino = parent_dentry_table->check_child_inode(request->filename());
 	}
 	/* TODO : uuid cannot be -1 */
-	response->set_checked_ino(check_target_ino);
+	response->set_checked_ino_prefix(ino_controller->get_prefix_from_uuid(check_target_ino));
+	response->set_checked_ino_postfix(ino_controller->get_postfix_from_uuid(check_target_ino));
 	response->set_ret(0);
 	return Status::OK;
 }
@@ -40,12 +44,13 @@ Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const :
 Status rpc_server::rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inode_request *request,
 								::rpc_inode_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_get_mode()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -64,12 +69,13 @@ Status rpc_server::rpc_get_mode(::grpc::ServerContext *context, const ::rpc_inod
 Status rpc_server::rpc_permission_check(::grpc::ServerContext *context, const ::rpc_inode_request *request,
 					::rpc_inode_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_permission_check()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -98,12 +104,13 @@ Status rpc_server::rpc_permission_check(::grpc::ServerContext *context, const ::
 Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_getattr_request *request,
 							   ::rpc_getattr_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_getattr(" + request->filename() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	try {
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -124,7 +131,8 @@ Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_getat
 		response->set_i_mode(i->get_mode());
 		response->set_i_uid(i->get_uid());
 		response->set_i_gid(i->get_gid());
-		response->set_i_ino(i->get_ino());
+		response->set_i_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_ino()));
+		response->set_i_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_ino()));
 		response->set_i_nlink(i->get_nlink());
 		response->set_i_size(i->get_size());
 
@@ -142,12 +150,13 @@ Status rpc_server::rpc_getattr(::grpc::ServerContext *context, const ::rpc_getat
 Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_access_request *request,
 							  ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_access(" + request->filename() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -175,12 +184,13 @@ Status rpc_server::rpc_access(::grpc::ServerContext *context, const ::rpc_access
 Status rpc_server::rpc_opendir(::grpc::ServerContext *context, const ::rpc_open_opendir_request *request,
 							   ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_opendir(" + request->filename() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -208,13 +218,14 @@ Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_readd
 							   ::grpc::ServerWriter<::rpc_name_respond> *writer) {
 	global_logger.log(rpc_server_ops, "Called rpc_readdir()");
 	rpc_name_respond response;
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response.set_ret(-ENOTLEADER);
 		writer->Write(response);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		std::map<std::string, shared_ptr<inode>>::iterator it;
@@ -233,12 +244,13 @@ Status rpc_server::rpc_readdir(::grpc::ServerContext *context, const ::rpc_readd
 Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_request *request,
 							 ::rpc_mkdir_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_mkdir(" + request->new_dir_name() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFDIR);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -250,7 +262,8 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 		shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
 		new_d->sync();
 
-		response->set_new_dir_ino(i->get_ino());
+		response->set_new_dir_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_ino()));
+		response->set_new_dir_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_ino()));
 	}
 	response->set_ret(0);
 	return Status::OK;
@@ -259,16 +272,18 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 Status rpc_server::rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmdir_request *request,
 							 ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_rmdir_top()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	if(target_dentry_table == nullptr) {
 		throw std::runtime_error("directory table is corrupted : Can't find leased directory");
 	}
 
+	uuid target_ino = ino_controller->splice_prefix_and_postfix(request->target_ino_prefix(), request->target_ino_postfix());
 	{
 		std::scoped_lock scl{target_dentry_table->dentry_table_mutex};
 		if (target_dentry_table->get_child_num() > 0) {
@@ -276,8 +291,8 @@ Status rpc_server::rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmd
 			return Status::OK;
 		}
 
-		meta_pool->remove(obj_category::DENTRY, std::to_string(request->target_ino()));
-		indexing_table->delete_dentry_table(request->target_ino());
+		meta_pool->remove(obj_category::DENTRY, uuid_to_string(target_ino));
+		indexing_table->delete_dentry_table(target_ino);
 	}
 	response->set_ret(0);
 	return Status::OK;
@@ -286,21 +301,23 @@ Status rpc_server::rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmd
 Status rpc_server::rpc_rmdir_down(::grpc::ServerContext *context, const ::rpc_rmdir_request *request,
 			     ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_rmdir_down()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
 	int ret = 0;
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
+	uuid target_ino = ino_controller->splice_prefix_and_postfix(request->target_ino_prefix(), request->target_ino_postfix());
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->delete_child_inode(request->target_name());
 
-		meta_pool->remove(obj_category::INODE, std::to_string(request->target_ino()));
+		meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
 
 		/* It may be failed if parent and child dir is located in same leader */
-		ret = indexing_table->delete_dentry_table(request->target_ino());
+		ret = indexing_table->delete_dentry_table(target_ino);
 		if (ret == -1) {
 			global_logger.log(rpc_server_ops, "this dentry table already removed in rpc_rmdir_top()");
 		}
@@ -313,16 +330,17 @@ Status rpc_server::rpc_rmdir_down(::grpc::ServerContext *context, const ::rpc_rm
 Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symlink_request *request,
 							   ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_symlink()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	shared_ptr<dentry_table> dst_parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	shared_ptr<dentry_table> dst_parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::unique_ptr<std::string> symlink_name = get_filename_from_path(request->dst());
 	{
 		std::scoped_lock scl{dst_parent_dentry_table->dentry_table_mutex};
-		if (dst_parent_dentry_table->check_child_inode(*symlink_name) != -1) {
+		if (!dst_parent_dentry_table->check_child_inode(*symlink_name).is_nil()) {
 			response->set_ret(-EEXIST);
 			return Status::OK;
 		}
@@ -341,11 +359,12 @@ Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symli
 Status rpc_server::rpc_readlink(::grpc::ServerContext *context, const ::rpc_readlink_request *request,
 								::rpc_name_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_readlink()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -368,7 +387,8 @@ Status rpc_server::rpc_readlink(::grpc::ServerContext *context, const ::rpc_read
 Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const ::rpc_rename_same_parent_request *request,
 										  ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_rename_same_parent()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
@@ -376,7 +396,7 @@ Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const 
 	unique_ptr<std::string> old_name = get_filename_from_path(request->old_path());
 	unique_ptr<std::string> new_name = get_filename_from_path(request->new_path());
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	shared_ptr<inode> target_i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -388,9 +408,9 @@ Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const 
 		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
 		if (request->flags() == 0) {
-			if (check_dst_ino != -1) {
+			if (!check_dst_ino.is_nil()) {
 				parent_dentry_table->delete_child_inode(*new_name);
-				meta_pool->remove(obj_category::INODE, std::to_string(check_dst_ino));
+				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
 			}
 			parent_dentry_table->delete_child_inode(*old_name);
 			parent_dentry_table->create_child_inode(*new_name, target_i);
@@ -408,7 +428,8 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 						  const ::rpc_rename_not_same_parent_src_request *request,
 						  ::rpc_rename_not_same_parent_src_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_rename_not_same_parent_src()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
@@ -416,7 +437,7 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 	unique_ptr<std::string> old_name = get_filename_from_path(request->old_path());
 
 	uuid target_ino;
-	std::shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	shared_ptr<inode> target_i;
 	{
 		std::scoped_lock scl{src_dentry_table->dentry_table_mutex};
@@ -434,7 +455,8 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 			return Status::OK;
 		}
 	}
-	response->set_target_ino(target_ino);
+	response->set_target_ino_prefix(ino_controller->get_prefix_from_uuid(target_ino));
+	response->set_target_ino_postfix(ino_controller->get_postfix_from_uuid(target_ino));
 	response->set_ret(0);
 	return Status::OK;
 }
@@ -443,22 +465,25 @@ Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context
 						  const ::rpc_rename_not_same_parent_dst_request *request,
 						  ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_rename_not_same_parent_dst()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
 	unique_ptr<std::string> new_name = get_filename_from_path(request->new_path());
+	uuid target_ino = ino_controller->splice_prefix_and_postfix(request->target_ino_prefix(), request->target_ino_postfix());
+	uuid check_dst_ino = ino_controller->splice_prefix_and_postfix(request->check_dst_ino_prefix(), request->check_dst_ino_postfix());
 
-	std::shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	/* TODO : need other method to use cache */
-	shared_ptr<inode> target_i = std::make_shared<inode>(request->target_ino());
+	shared_ptr<inode> target_i = std::make_shared<inode>(target_ino);
 	{
 		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		if (request->flags() == 0) {
-			if (request->check_dst_ino() != -1) {
+			if (!check_dst_ino.is_nil()) {
 				dst_dentry_table->delete_child_inode(*new_name);
-				meta_pool->remove(obj_category::INODE, std::to_string(request->check_dst_ino()));
+				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
 			}
 			dst_dentry_table->create_child_inode(*new_name, target_i);
 		} else {
@@ -474,12 +499,13 @@ Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context
 Status rpc_server::rpc_open(::grpc::ServerContext *context, const ::rpc_open_opendir_request *request,
 							::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_open()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -510,12 +536,13 @@ Status rpc_server::rpc_open(::grpc::ServerContext *context, const ::rpc_open_ope
 Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create_request *request,
 							  ::rpc_create_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_create(" + request->new_file_name() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFREG);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -523,7 +550,8 @@ Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create
 
 		parent_dentry_table->create_child_inode(request->new_file_name(), i);
 
-		response->set_new_ino(i->get_ino());
+		response->set_new_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_ino()));
+		response->set_new_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_ino()));
 	}
 	response->set_ret(0);
 	return Status::OK;
@@ -532,22 +560,24 @@ Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create
 Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink_request *request,
 							  ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_unlink(" + request->filename() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		std::shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(request->filename());
 		nlink_t nlink = target_i->get_nlink() - 1;
 		if (nlink == 0) {
+			uuid target_ino = target_i->get_ino();
 			/* data */
-			data_pool->remove(obj_category::DATA, std::to_string(target_i->get_ino()));
+			data_pool->remove(obj_category::DATA, uuid_to_string(target_ino));
 
 			/* inode */
-			meta_pool->remove(obj_category::INODE, std::to_string(target_i->get_ino()));
+			meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
 
 			/* parent dentry */
 			parent_dentry_table->delete_child_inode(request->filename());
@@ -563,13 +593,14 @@ Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink
 Status rpc_server::rpc_write(::grpc::ServerContext *context, const ::rpc_write_request *request,
 							 ::rpc_write_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_write()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 	off_t offset;
 	size_t size;
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i = parent_dentry_table->get_child_inode(request->filename());
 	{
 		std::scoped_lock scl{i->inode_mutex};
@@ -594,12 +625,13 @@ Status rpc_server::rpc_write(::grpc::ServerContext *context, const ::rpc_write_r
 Status rpc_server::rpc_chmod(::grpc::ServerContext *context, const ::rpc_chmod_request *request,
 							 ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_chmod(" + request->filename() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -626,12 +658,13 @@ Status rpc_server::rpc_chmod(::grpc::ServerContext *context, const ::rpc_chmod_r
 Status rpc_server::rpc_chown(::grpc::ServerContext *context, const ::rpc_chown_request *request,
 							 ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_chown(" + request->filename() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -661,12 +694,13 @@ Status rpc_server::rpc_chown(::grpc::ServerContext *context, const ::rpc_chown_r
 Status rpc_server::rpc_utimens(::grpc::ServerContext *context, const ::rpc_utimens_request *request,
 							   ::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_utimens(" + request->filename() + ")");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
@@ -716,12 +750,13 @@ Status rpc_server::rpc_utimens(::grpc::ServerContext *context, const ::rpc_utime
 Status rpc_server::rpc_truncate(::grpc::ServerContext *context, const ::rpc_truncate_request *request,
 								::rpc_common_respond *response) {
 	global_logger.log(rpc_server_ops, "Called rpc_truncate()");
-	if (indexing_table->check_dentry_table(request->dentry_table_ino()) != LOCAL) {
+	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
+	if (indexing_table->check_dentry_table(dentry_table_ino) != LOCAL) {
 		response->set_ret(-ENOTLEADER);
 		return Status::OK;
 	}
 
-	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
+	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
 	std::shared_ptr<inode> i;
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};

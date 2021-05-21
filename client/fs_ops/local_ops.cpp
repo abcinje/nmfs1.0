@@ -123,7 +123,7 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 	unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 	{
 		std::scoped_lock scl{dst_parent_dentry_table->dentry_table_mutex};
-		if (dst_parent_dentry_table->check_child_inode(*symlink_name).is_nil())
+		if (!dst_parent_dentry_table->check_child_inode(*symlink_name).is_nil())
 			return -EEXIST;
 
 		shared_ptr<inode> symlink_i = std::make_shared<inode>(this_client->get_client_uid(),
@@ -173,7 +173,7 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
 		if (flags == 0) {
-			if (check_dst_ino.is_nil()) {
+			if (!check_dst_ino.is_nil()) {
 				parent_dentry_table->delete_child_inode(*new_name);
 				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
 			}
@@ -223,7 +223,7 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, uuid target
 	{
 		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		if (flags == 0) {
-			if (check_dst_ino.is_nil()) {
+			if (!check_dst_ino.is_nil()) {
 				dst_dentry_table->delete_child_inode(*new_name);
 				/* TODO : is it okay to delete inode which is locked? */
 				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
