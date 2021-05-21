@@ -10,11 +10,8 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
-#include <boost/lexical_cast.hpp>
-#include "../fs_ops/fuse_ops.hpp"
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../../lib/logger/logger.hpp"
-#include "dentry.hpp"
 #include "../client/client.hpp"
 #include "../util.hpp"
 

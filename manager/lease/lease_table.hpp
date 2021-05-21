@@ -7,6 +7,9 @@
 #include <tuple>
 #include <tsl/robin_map.h>
 #include <boost/uuid/uuid.hpp>
+#include <iostream>
+#include <string>
+#include "../../client/meta/inode.hpp"
 
 using namespace std::chrono;
 using namespace boost::uuids;
@@ -43,7 +46,7 @@ private:
 	};
 
 	std::shared_mutex sm;
-	tsl::robin_map<uuid, lease_entry *> map;
+	tsl::robin_map<std::string, lease_entry *> map;
 
 public:
 	lease_table(void) = default;

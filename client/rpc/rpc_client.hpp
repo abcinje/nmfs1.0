@@ -3,6 +3,7 @@
 
 #include <grpcpp/grpcpp.h>
 #include <rpc.grpc.pb.h>
+#include "../meta/dentry.hpp"
 #include "../meta/remote_inode.hpp"
 #include "../meta/file_handler.hpp"
 
