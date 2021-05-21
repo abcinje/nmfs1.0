@@ -7,15 +7,12 @@
 #include <string>
 #include <vector>
 #include <mutex>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/uuid_generators.hpp>
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../../lib/logger/logger.hpp"
 #include "../client/client.hpp"
 #include "../util.hpp"
+#include "uuid_controller.hpp"
 
-#define INO_OFFSET_MASK (0x000000FFFFFFFFFF)
 #define VFTABLE_OFFSET 8
 #define REG_INODE_SIZE (sizeof(inode) - sizeof(char *) - sizeof(std::recursive_mutex) - VFTABLE_OFFSET)
 #define DIR_INODE_SIZE 4096
@@ -32,21 +29,6 @@ enum meta_location {
     UNKNOWN,
     NOBODY /* temporaly status */
 };
-
-class uuid_controller {
-private:
-    random_generator generator;
-public:
-    uuid_controller() = default;
-
-    uuid alloc_new_uuid();
-	static uint64_t get_prefix_from_uuid(const uuid& id);
-    static uint64_t get_postfix_from_uuid(const uuid& id);
-    static uuid splice_prefix_and_postfix(const uint64_t& prefix, const uint64_t& postfix);
-};
-
-uuid get_root_ino();
-std::string uuid_to_string(uuid id);
 
 class inode {
 private:

@@ -69,6 +69,7 @@ add_executable(
   meta/remote_inode.cpp
   meta/dentry.cpp
   meta/file_handler.cpp
+  meta/uuid_controller.cpp
 
   # client
   client/client.cpp

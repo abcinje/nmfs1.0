@@ -39,6 +39,7 @@ set(
   "lease/lease_impl.cpp"
   "lease/lease_table.cpp"
   "session/session_impl.cpp"
+  "../client/meta/uuid_controller.cpp"
 )
 
 # Generate binary files
