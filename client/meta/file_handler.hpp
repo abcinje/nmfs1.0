@@ -7,16 +7,16 @@
 
 class file_handler {
 private:
-    	ino_t ino;
+    	uuid ino;
     	uint64_t loc;
 	uint64_t fhno;
 
 	std::shared_ptr<inode> i;
 	std::shared_ptr<remote_inode> remote_i;
 public:
-	explicit file_handler(ino_t ino);
+	explicit file_handler(uuid ino);
 
-	ino_t get_ino();
+	uuid get_ino();
 	std::shared_ptr<inode> get_open_inode_info();
 
     	void set_fhno(uint64_t this_fhno);

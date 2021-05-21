@@ -48,13 +48,12 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	this_client->set_client_gid(fuse_ctx->gid);
 
 	global_logger.log(fuse_op, "Client(ID=" + std::to_string(this_client->get_client_id()) + ") is mounted");
-	global_logger.log(fuse_op, "Start Inode offset = " + std::to_string(this_client->get_per_client_ino_offset()));
 
 	/* root */
 	if (!meta_pool->exist(obj_category::INODE, "0")) {
 		inode i(this_client->get_client_uid(), this_client->get_client_gid(), S_IFDIR | 0777, true);
 
-		dentry d(0, true);
+		dentry d(get_root_ino(), true);
 
 		i.set_size(DIR_INODE_SIZE);
 		i.sync();
@@ -271,14 +270,14 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		if (parent_dentry_table->get_loc() == LOCAL) {
-			ino_t new_dir_ino = local_mkdir(parent_i, *target_name, mode);
+			uuid new_dir_ino = local_mkdir(parent_i, *target_name, mode);
 			indexing_table->lease_dentry_table(new_dir_ino);
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
 				parent_dentry_table->get_leader_ip(),
 				parent_dentry_table->get_dir_ino(),
 				*target_name);
-			ino_t new_dir_ino = remote_mkdir(remote_i, *target_name, mode);
+			uuid new_dir_ino = remote_mkdir(remote_i, *target_name, mode);
 			indexing_table->lease_dentry_table(new_dir_ino);
 		}
 
@@ -302,7 +301,7 @@ int fuse_ops::rmdir(const char *path) {
 		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		ino_t target_ino = parent_dentry_table->check_child_inode(*target_name);
+		uuid target_ino = parent_dentry_table->check_child_inode(*target_name);
 		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(*(get_filename_from_path(path).get()));
 		if(!S_ISDIR(target_i->get_mode()))
 			return -ENOTDIR;
@@ -389,12 +388,12 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 			shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_path);
 			shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
-			ino_t check_dst_ino = dst_dentry_table->check_child_inode(*get_filename_from_path(new_path));
+			uuid check_dst_ino = dst_dentry_table->check_child_inode(*get_filename_from_path(new_path));
 			if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == LOCAL)) {
-				ino_t target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
+				uuid target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
 				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == REMOTE)) {
-				ino_t target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
+				uuid target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
 				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
 					dst_dentry_table->get_leader_ip(),
 					dst_dentry_table->get_dir_ino(),
@@ -405,14 +404,14 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					src_dentry_table->get_leader_ip(),
 					src_dentry_table->get_dir_ino(),
 					old_path);
-				ino_t target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
+				uuid target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
 				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
 				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
 					src_dentry_table->get_leader_ip(),
 					src_dentry_table->get_dir_ino(),
 					old_path);
-				ino_t target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
+				uuid target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
 				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
 					dst_dentry_table->get_leader_ip(),
 					dst_dentry_table->get_dir_ino(),

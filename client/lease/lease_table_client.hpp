@@ -5,9 +5,11 @@
 #include <shared_mutex>
 #include <tuple>
 #include <tsl/robin_map.h>
+#include "../meta/inode.hpp"
 #include "../../lib/logger/logger.hpp"
 
 using namespace std::chrono;
+using namespace boost::uuids;
 
 class lease_table_client {
 private:
@@ -27,15 +29,15 @@ private:
 	};
 
 	std::shared_mutex sm;
-	tsl::robin_map<ino_t, lease_entry *> map;
+	tsl::robin_map<uuid, lease_entry *> map;
 
 public:
 	lease_table_client(void) = default;
 	~lease_table_client(void);
 
-	bool is_valid(ino_t ino);
-	bool is_mine(ino_t ino);
-	void update(ino_t ino, const system_clock::time_point &new_due, bool mine);
+	bool is_valid(uuid ino);
+	bool is_mine(uuid ino);
+	void update(uuid ino, const system_clock::time_point &new_due, bool mine);
 };
 
 #endif /* _LEASE_TABLE_CLIENT_HPP_ */

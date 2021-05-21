@@ -1,6 +1,6 @@
 #include "journal_table.hpp"
 
-std::shared_ptr<transaction> journal_table::get_entry(ino_t ino)
+std::shared_ptr<transaction> journal_table::get_entry(uuid ino)
 {
 	{
 		std::shared_lock lock(sm);

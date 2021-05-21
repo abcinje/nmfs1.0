@@ -1,6 +1,6 @@
 #include "file_handler.hpp"
 
-file_handler::file_handler(ino_t ino) : ino(ino), fhno(0) {
+file_handler::file_handler(uuid ino) : ino(ino), fhno(0) {
 
 }
 
@@ -8,7 +8,7 @@ void file_handler::set_fhno(uint64_t this_fhno) {
 	this->fhno = reinterpret_cast<uint64_t>(this_fhno);
 }
 
-ino_t  file_handler::get_ino() {
+uuid  file_handler::get_ino() {
 	return this->ino;
 }
 

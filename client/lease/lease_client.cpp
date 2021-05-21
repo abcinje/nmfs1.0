@@ -8,17 +8,17 @@ lease_client::lease_client(std::shared_ptr<Channel> channel, const std::string &
 {
 }
 
-bool lease_client::is_valid(ino_t ino)
+bool lease_client::is_valid(uuid ino)
 {
 	return table.is_valid(ino);
 }
 
-bool lease_client::is_mine(ino_t ino)
+bool lease_client::is_mine(uuid ino)
 {
 	return table.is_mine(ino);
 }
 
-int lease_client::acquire(ino_t ino, std::string &remote_addr)
+int lease_client::acquire(uuid ino, std::string &remote_addr)
 {
 	if (table.is_mine(ino))
 		return 0;

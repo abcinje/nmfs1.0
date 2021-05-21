@@ -1,24 +1,26 @@
 #include "rpc_client.hpp"
 extern rados_io *data_pool;
 extern std::unique_ptr<file_handler_list> open_context;
+extern std::unique_ptr<uuid_controller> ino_controller;
 
 rpc_client::rpc_client(std::shared_ptr<Channel> channel) : stub_(remote_ops::NewStub(channel)){}
 /* TODO : Handle -ENOTLEADER */
 /* dentry_table operations */
-ino_t rpc_client::check_child_inode(ino_t dentry_table_ino, std::string filename){
+uuid rpc_client::check_child_inode(uuid dentry_table_ino, std::string filename){
 	global_logger.log(rpc_client_ops, "Called check_child_inode()");
 	ClientContext context;
 	rpc_dentry_table_request Input;
 	rpc_dentry_table_respond Output;
 
-	Input.set_dentry_table_ino(dentry_table_ino);
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(dentry_table_ino));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(dentry_table_ino));
 	Input.set_filename(filename);
 
 	Status status = stub_->rpc_check_child_inode(&context, Input, &Output);
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		return Output.checked_ino();
+		return ino_controller->splice_prefix_and_postfix(Output.checked_ino_prefix(), Output.checked_ino_postfix());
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::check_child_inode() failed");
@@ -26,13 +28,14 @@ ino_t rpc_client::check_child_inode(ino_t dentry_table_ino, std::string filename
 }
 
 /* inode operations */
-mode_t rpc_client::get_mode(ino_t dentry_table_ino, std::string filename){
+mode_t rpc_client::get_mode(uuid dentry_table_ino, std::string filename){
 	global_logger.log(rpc_client_ops, "Called get_mode()");
 	ClientContext context;
 	rpc_inode_request Input;
 	rpc_inode_respond Output;
 
-	Input.set_dentry_table_ino(dentry_table_ino);
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(dentry_table_ino));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(dentry_table_ino));
 	Input.set_filename(filename);
 
 	Status status = stub_->rpc_get_mode(&context, Input, &Output);
@@ -46,13 +49,14 @@ mode_t rpc_client::get_mode(ino_t dentry_table_ino, std::string filename){
 	}
 }
 
-void rpc_client::permission_check(ino_t dentry_table_ino, std::string filename, int mask, bool target_is_parent){
+void rpc_client::permission_check(uuid dentry_table_ino, std::string filename, int mask, bool target_is_parent){
 	global_logger.log(rpc_client_ops, "Called permission_check()");
 	ClientContext context;
 	rpc_inode_request Input;
 	rpc_inode_respond Output;
 
-	Input.set_dentry_table_ino(dentry_table_ino);
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(dentry_table_ino));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(dentry_table_ino));
 	Input.set_filename(filename);
 	Input.set_mask(mask);
 	Input.set_target_is_parent(target_is_parent);
@@ -78,7 +82,8 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* s) {
 	rpc_getattr_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_target_is_parent(i->get_target_is_parent());
 
@@ -93,7 +98,7 @@ void rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* s) {
 		s->st_mode	= Output.i_mode();
 		s->st_uid	= Output.i_uid();
 		s->st_gid	= Output.i_gid();
-		s->st_ino	= Output.i_ino();
+		s->st_ino	= Output.i_ino_postfix();
 		s->st_nlink	= Output.i_nlink();
 		s->st_size	= Output.i_size();
 
@@ -117,7 +122,8 @@ void rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_mask(mask);
 	Input.set_target_is_parent(i->get_target_is_parent());
@@ -142,7 +148,8 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_target_is_parent(i->get_target_is_parent());
 
@@ -172,7 +179,8 @@ void rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir
 	rpc_readdir_request Input;
 	rpc_name_respond Output;
 
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	std::unique_ptr<ClientReader<rpc_name_respond>> reader(stub_->rpc_readdir(&context, Input));
 
 	while(reader->Read(&Output)){
@@ -193,14 +201,15 @@ void rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir
 	}
 }
 
-ino_t rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
+uuid rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(rpc_client_ops, "Called mkdir()");
 	ClientContext context;
 	rpc_mkdir_request Input;
 	rpc_mkdir_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(parent_i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
 	Input.set_new_dir_name(new_child_name);
 	Input.set_new_mode(mode);
 
@@ -208,22 +217,24 @@ ino_t rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		return Output.new_dir_ino();
+		return ino_controller->splice_prefix_and_postfix(Output.new_dir_ino_prefix(), Output.new_dir_ino_postfix());
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::mkdir() failed");
 	}
 }
 
-int rpc_client::rmdir_top(shared_ptr<remote_inode> target_i, ino_t target_ino) {
+int rpc_client::rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino) {
 	global_logger.log(rpc_client_ops, "Called rmdir_top()");
 	ClientContext context;
 	rpc_rmdir_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(target_ino);
-	Input.set_target_ino(target_ino);
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(target_ino));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(target_ino));
+	Input.set_target_ino_prefix(ino_controller->get_prefix_from_uuid(target_ino));
+	Input.set_target_ino_postfix(ino_controller->get_postfix_from_uuid(target_ino));
 
 	Status status = stub_->rpc_rmdir_top(&context, Input, &Output);
 	if(status.ok()){
@@ -236,17 +247,18 @@ int rpc_client::rmdir_top(shared_ptr<remote_inode> target_i, ino_t target_ino) {
 	}
 }
 
-int rpc_client::rmdir_down(shared_ptr<remote_inode> parent_i, ino_t target_ino, std::string target_name) {
+int rpc_client::rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::string target_name) {
 	global_logger.log(rpc_client_ops, "Called rmdir_down()");
 	ClientContext context;
 	rpc_rmdir_request Input;
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(parent_i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
 	Input.set_target_name(target_name);
-	Input.set_target_ino(target_ino);
-
+	Input.set_target_ino_prefix(ino_controller->get_prefix_from_uuid(parent_i->get_dentry_table_ino()));
+	Input.set_target_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
 	Status status = stub_->rpc_rmdir_down(&context, Input, &Output);
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
@@ -265,7 +277,8 @@ int rpc_client::symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, 
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(dst_parent_i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(dst_parent_i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(dst_parent_i->get_dentry_table_ino()));
 	Input.set_filename(dst_parent_i->get_file_name());
 	Input.set_src(src);
 	Input.set_dst(dst);
@@ -288,7 +301,8 @@ int rpc_client::readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 	rpc_name_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_size(size);
 
@@ -316,7 +330,8 @@ int rpc_client::rename_same_parent(shared_ptr<remote_inode> parent_i, const char
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(parent_i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
 	Input.set_old_path(old_path);
 	Input.set_new_path(new_path);
 	Input.set_flags(flags);
@@ -332,13 +347,14 @@ int rpc_client::rename_same_parent(shared_ptr<remote_inode> parent_i, const char
 	}
 }
 
-ino_t rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
+uuid rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
 	global_logger.log(rpc_client_ops, "Called remote_rename_not_same_parent_src()");
 	ClientContext context;
 	rpc_rename_not_same_parent_src_request Input;
 	rpc_rename_not_same_parent_src_respond Output;
 
-	Input.set_dentry_table_ino(src_parent_i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(src_parent_i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(src_parent_i->get_dentry_table_ino()));
 	Input.set_old_path(old_path);
 	Input.set_flags(flags);
 
@@ -347,22 +363,25 @@ ino_t rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		/* TODO : if ret == -ENOSYS */
-		return Output.target_ino();
+		return ino_controller->splice_prefix_and_postfix(Output.target_ino_prefix(), Output.target_ino_postfix());
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::remote_rename_not_same_parent_src() failed");
 	}
 }
 
-int rpc_client::rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino, const char* new_path, unsigned int flags) {
+int rpc_client::rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags) {
 	global_logger.log(rpc_client_ops, "Called remote_rename_not_same_parent_dst()");
 	ClientContext context;
 	rpc_rename_not_same_parent_dst_request Input;
 	rpc_common_respond Output;
 
-	Input.set_dentry_table_ino(dst_parent_i->get_dentry_table_ino());
-	Input.set_target_ino(target_ino);
-	Input.set_check_dst_ino(check_dst_ino);
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(dst_parent_i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(dst_parent_i->get_dentry_table_ino()));
+	Input.set_target_ino_prefix(ino_controller->get_prefix_from_uuid(target_ino));
+	Input.set_target_ino_postfix(ino_controller->get_postfix_from_uuid(target_ino));
+	Input.set_check_dst_ino_prefix(ino_controller->get_prefix_from_uuid(check_dst_ino));
+	Input.set_check_dst_ino_postfix(ino_controller->get_postfix_from_uuid(check_dst_ino));
 	Input.set_new_path(new_path);
 	Input.set_flags(flags);
 
@@ -384,7 +403,8 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_flags(file_info->flags);
 
@@ -415,7 +435,8 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 	rpc_create_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(parent_i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
 	Input.set_new_file_name(new_child_name);
 	Input.set_new_mode(mode);
 
@@ -424,10 +445,11 @@ void rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			shared_ptr<file_handler> fh = std::make_shared<file_handler>(Output.new_ino());
+			uuid new_ino = ino_controller->splice_prefix_and_postfix(Output.new_ino_prefix(), Output.new_ino_postfix());
+			shared_ptr<file_handler> fh = std::make_shared<file_handler>(new_ino);
 			fh->set_loc(REMOTE);
 			std::shared_ptr<remote_inode> open_remote_i = std::make_shared<remote_inode>(parent_i->get_address(), parent_i->get_dentry_table_ino(), new_child_name);
-			open_remote_i->inode::set_ino(Output.new_ino());
+			open_remote_i->inode::set_ino(new_ino);
 			fh->set_remote_i(open_remote_i);
 			file_info->fh = reinterpret_cast<uint64_t>(fh.get());
 			fh->set_fhno(file_info->fh);
@@ -448,7 +470,8 @@ void rpc_client::unlink(shared_ptr<remote_inode> parent_i, std::string child_nam
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(parent_i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(parent_i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
 	Input.set_filename(child_name);
 
 	Status status = stub_->rpc_unlink(&context, Input, &Output);
@@ -470,7 +493,8 @@ size_t rpc_client::write(shared_ptr<remote_inode> i, const char* buffer, size_t 
 	rpc_write_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_offset(offset);
 	Input.set_size(size);
@@ -481,7 +505,7 @@ size_t rpc_client::write(shared_ptr<remote_inode> i, const char* buffer, size_t 
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			size_t written_len = data_pool->write(obj_category::DATA, std::to_string(i->get_ino()), buffer, Output.size(), Output.offset());
+			size_t written_len = data_pool->write(obj_category::DATA, uuid_to_string(i->get_ino()), buffer, Output.size(), Output.offset());
 			return written_len;
 		}
 		return Output.ret();
@@ -498,7 +522,8 @@ void rpc_client::chmod(shared_ptr<remote_inode> i, mode_t mode) {
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_mode(mode);
 
@@ -519,7 +544,8 @@ void rpc_client::chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_uid(uid);
 	Input.set_gid(gid);
@@ -542,7 +568,8 @@ void rpc_client::utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_a_sec(tv[0].tv_sec);
 	Input.set_a_nsec(tv[0].tv_nsec);
@@ -567,7 +594,8 @@ int rpc_client::truncate(shared_ptr<remote_inode> i, off_t offset) {
 	rpc_common_respond Output;
 
 	/* prepare Input */
-	Input.set_dentry_table_ino(i->get_dentry_table_ino());
+	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_dentry_table_ino()));
+	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_dentry_table_ino()));
 	Input.set_filename(i->get_file_name());
 	Input.set_offset(offset);
 	Input.set_target_is_parent(i->get_target_is_parent());
@@ -577,7 +605,7 @@ int rpc_client::truncate(shared_ptr<remote_inode> i, off_t offset) {
 		if(Output.ret() == -ENOTLEADER)
 			throw std::runtime_error("ACCESS IMPROPER LEADER");
 		else if(Output.ret() == 0) {
-			int ret = data_pool->truncate(obj_category::DATA, std::to_string(i->get_ino()), offset);
+			int ret = data_pool->truncate(obj_category::DATA, uuid_to_string(i->get_ino()), offset);
 			return ret;
 		}
 		return Output.ret();

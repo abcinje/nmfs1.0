@@ -31,23 +31,26 @@ service remote_ops {
 }
 /* DENTRY_TABLE OPERATIONS REQUEST AND RESPOND*/
 message rpc_dentry_table_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
 }
 
 message rpc_dentry_table_respond {
-  uint64 	checked_ino = 1;
+  uint64 	checked_ino_prefix = 1;
+  uint64 	checked_ino_postfix = 2;
 
-  sint32 ret = 2;
+  sint32 ret = 3;
 }
 
 /* INODE OPERATIONS REQUEST AND RESPOND*/
 message rpc_inode_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
 
-  sint32 mask = 3;
-  bool target_is_parent = 4;
+  sint32 mask = 4;
+  bool target_is_parent = 5;
 }
 
 message rpc_inode_respond {
@@ -58,136 +61,158 @@ message rpc_inode_respond {
 
 /* FILE SYSTEM OPERATION REQUEST */
 message rpc_getattr_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
-  bool target_is_parent = 3;
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+  bool target_is_parent = 4;
 }
 
 message rpc_access_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
 
-  uint32 	mask = 3;
-  bool target_is_parent = 4;
-}
-
-message rpc_readdir_request {
-  uint64 dentry_table_ino = 1;
-}
-
-message rpc_mkdir_request {
-  uint64 dentry_table_ino = 1;
-
-  string new_dir_name = 2;
-  uint32 new_mode = 3;
-}
-message rpc_rmdir_request {
-  uint64 dentry_table_ino = 1;
-  string target_name = 2;
-  uint64 target_ino = 3;
-}
-
-message rpc_symlink_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
-
-  string src = 3;
-  string dst = 4;
-}
-
-message rpc_readlink_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
-
-  int64 size = 3;
-}
-
-message rpc_rename_same_parent_request {
-  uint64 dentry_table_ino = 1;
-
-  string old_path = 2;
-  string new_path = 3;
-  uint32 flags = 4;
-}
-
-message rpc_rename_not_same_parent_src_request {
-  uint64 dentry_table_ino = 1;
-
-  string old_path = 2;
-  uint32 flags = 3;
-}
-message rpc_rename_not_same_parent_dst_request {
-  uint64 dentry_table_ino = 1;
-
-  uint64 target_ino = 2;
-  uint64 check_dst_ino = 3;
-  string new_path = 4;
-  uint32 flags = 5;
-}
-message rpc_create_request {
-  uint64 dentry_table_ino = 1;
-
-  string new_file_name = 2;
-  uint32 new_mode = 3;
-}
-
-message rpc_unlink_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
-}
-
-message rpc_write_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
-
-  uint64 size = 3;
-  int64 offset = 4;
-  uint32 flags = 5;
-}
-
-message rpc_open_opendir_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
-
-  uint32 flags = 3;
-  bool target_is_parent = 4;
-}
-
-message rpc_chmod_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
-
-  uint32 mode = 3;
-  bool target_is_parent = 4;
-}
-
-message rpc_chown_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
-
-  uint32 uid = 3;
-  uint32 gid = 4;
+  uint32 	mask = 4;
   bool target_is_parent = 5;
 }
 
-message rpc_utimens_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
+message rpc_readdir_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+}
 
-  int64 a_sec = 3;
-  int64 a_nsec = 4;
-  int64 m_sec = 5;
-  int64 m_nsec = 6;
-  bool target_is_parent = 7;
+message rpc_mkdir_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+
+  string new_dir_name = 3;
+  uint32 new_mode = 4;
+}
+message rpc_rmdir_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string target_name = 3;
+  uint64 target_ino_prefix = 4;
+  uint64 target_ino_postfix = 5;
+}
+
+message rpc_symlink_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+
+  string src = 4;
+  string dst = 5;
+}
+
+message rpc_readlink_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+
+  int64 size = 4;
+}
+
+message rpc_rename_same_parent_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+
+  string old_path = 3;
+  string new_path = 4;
+  uint32 flags = 5;
+}
+
+message rpc_rename_not_same_parent_src_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+
+  string old_path = 3;
+  uint32 flags = 4;
+}
+message rpc_rename_not_same_parent_dst_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+
+  uint64 target_ino_prefix = 3;
+  uint64 target_ino_postfix = 4;
+  uint64 check_dst_ino_prefix = 5;
+  uint64 check_dst_ino_postfix = 6;
+  string new_path = 7;
+  uint32 flags = 8;
+}
+message rpc_create_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+
+  string new_file_name = 3;
+  uint32 new_mode = 4;
+}
+
+message rpc_unlink_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+}
+
+message rpc_write_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+
+  uint64 size = 4;
+  int64 offset = 5;
+  uint32 flags = 6;
+}
+
+message rpc_open_opendir_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+
+  uint32 flags = 4;
+  bool target_is_parent = 5;
+}
+
+message rpc_chmod_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+
+  uint32 mode = 4;
+  bool target_is_parent = 5;
+}
+
+message rpc_chown_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+
+  uint32 uid = 4;
+  uint32 gid = 5;
+  bool target_is_parent = 6;
+}
+
+message rpc_utimens_request {
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
+
+  int64 a_sec = 4;
+  int64 a_nsec = 5;
+  int64 m_sec = 6;
+  int64 m_nsec = 7;
+  bool target_is_parent = 8;
 }
 
 message rpc_truncate_request {
-  uint64 dentry_table_ino = 1;
-  string filename = 2;
+  uint64 dentry_table_ino_prefix = 1;
+  uint64 dentry_table_ino_postfix = 2;
+  string filename = 3;
 
-  int64 offset = 3;
-  bool target_is_parent = 4;
+  int64 offset = 4;
+  bool target_is_parent = 5;
 }
+
 /* FILE SYSTEM OPERATION RESPOND */
 message rpc_common_respond {
   sint32 ret = 1;
@@ -197,17 +222,18 @@ message rpc_getattr_respond {
   uint32 	i_mode = 1;
   uint32	i_uid = 2;
   uint32 i_gid = 3;
-  uint64 	i_ino = 4;
-  uint64 i_nlink = 5;
-  int64 i_size = 6;
-  int64 a_sec = 7;
-  int64 a_nsec = 8;
-  int64 m_sec = 9;
-  int64 m_nsec = 10;
-  int64 c_sec = 11;
-  int64 c_nsec = 12;
+  uint64 	i_ino_prefix = 4;
+  uint64 	i_ino_postfix = 5;
+  uint64 i_nlink = 6;
+  int64 i_size = 7;
+  int64 a_sec = 8;
+  int64 a_nsec = 9;
+  int64 m_sec = 10;
+  int64 m_nsec = 11;
+  int64 c_sec = 12;
+  int64 c_nsec = 13;
 
-  sint32 ret = 13;
+  sint32 ret = 14;
 }
 
 message rpc_name_respond {
@@ -217,21 +243,24 @@ message rpc_name_respond {
 }
 
 message rpc_create_respond {
-  uint64 	new_ino = 1;
+  uint64 new_ino_prefix = 1;
+  uint64 new_ino_postfix = 2;
 
-  sint32 ret = 2;
+  sint32 ret = 3;
 }
 
 message rpc_mkdir_respond {
-  uint64 	new_dir_ino = 1;
+  uint64 	new_dir_ino_prefix = 1;
+  uint64 	new_dir_ino_postfix = 2;
 
-  sint32 ret = 2;
+  sint32 ret = 3;
 }
 
 message rpc_rename_not_same_parent_src_respond {
-  uint64 	target_ino = 1;
+  uint64 	target_ino_prefix = 1;
+  uint64 	target_ino_postfix = 2;
 
-  sint32 ret = 2;
+  sint32 ret = 3;
 }
 
 message rpc_write_respond {

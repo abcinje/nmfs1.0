@@ -18,7 +18,7 @@ std::shared_ptr<rpc_client> get_rpc_client(const std::string& remote_address) {
 	}
 }
 
-remote_inode::remote_inode(std::string leader_ip, ino_t dentry_table_ino, std::string file_name, bool target_is_parent ) \
+remote_inode::remote_inode(std::string leader_ip, uuid dentry_table_ino, std::string file_name, bool target_is_parent ) \
 : inode(), leader_ip(leader_ip), dentry_table_ino(dentry_table_ino), file_name(file_name), target_is_parent(target_is_parent ) {
 }
 
@@ -26,7 +26,7 @@ const string &remote_inode::get_address() const {
 	return leader_ip;
 }
 
-ino_t remote_inode::get_dentry_table_ino() const {
+uuid remote_inode::get_dentry_table_ino() const {
 	return dentry_table_ino;
 }
 

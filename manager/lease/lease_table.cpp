@@ -39,7 +39,7 @@ lease_table::~lease_table(void)
 	exit(1);
 }
 
-int lease_table::acquire(ino_t ino, system_clock::time_point &latest_due, std::string &remote_addr)
+int lease_table::acquire(uuid ino, system_clock::time_point &latest_due, std::string &remote_addr)
 {
 	lease_entry *e;
 	std::string addr;

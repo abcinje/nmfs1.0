@@ -33,16 +33,16 @@ void remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t fi
 	rc->readdir(i, buffer, filler);
 }
 
-ino_t remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
+uuid remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(remote_fs_op, "Called remote_mkdir()");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	ino_t new_dir_ino = rc->mkdir(parent_i, new_child_name, mode);
+	uuid new_dir_ino = rc->mkdir(parent_i, new_child_name, mode);
 	return new_dir_ino;
 }
 
-int remote_rmdir_top(shared_ptr<remote_inode> target_i, ino_t target_ino) {
+int remote_rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino) {
 	global_logger.log(remote_fs_op, "Called remote_rmdir_top()");
 	std::string remote_address(target_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
@@ -51,7 +51,7 @@ int remote_rmdir_top(shared_ptr<remote_inode> target_i, ino_t target_ino) {
 	return ret;
 }
 
-int remote_rmdir_down(shared_ptr<remote_inode> parent_i, ino_t target_ino, std::string target_name) {
+int remote_rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::string target_name) {
 	global_logger.log(remote_fs_op, "Called remote_rmdir_down()");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
@@ -87,16 +87,16 @@ int remote_rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old
 	return ret;
 }
 
-ino_t remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
+uuid remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
 	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_src()");
 	std::string remote_address(src_parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	ino_t target_ino = rc->rename_not_same_parent_src(src_parent_i, old_path, flags);
+	uuid target_ino = rc->rename_not_same_parent_src(src_parent_i, old_path, flags);
 	return target_ino;
 }
 
-int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino, const char* new_path, unsigned int flags) {
+int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags) {
 	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_dst()");
 	std::string remote_address(dst_parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);

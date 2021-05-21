@@ -6,8 +6,31 @@ using std::runtime_error;
 
 extern rados_io *meta_pool;
 extern client *this_client;
-
+extern std::unique_ptr<uuid_controller> ino_controller;
 std::recursive_mutex alloc_mutex;
+
+uuid get_root_ino(){
+	return nil_uuid();
+}
+
+std::string uuid_to_string(uuid id){
+}
+
+uuid uuid_controller::alloc_new_uuid() {
+
+}
+
+uint64_t uuid_controller::get_postfix_from_uuid(uuid id){
+
+}
+
+uint64_t uuid_controller::get_prefix_from_uuid(uuid id) {
+
+}
+
+uuid uuid_controller::splice_prefix_and_postfix(uint64_t prefix, uint64_t postfix){
+
+}
 
 inode::no_entry::no_entry(const string &msg) : runtime_error(msg)
 {
@@ -53,7 +76,7 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i
 		runtime_error("timespec_get() failed");
 	i_atime = i_mtime = i_ctime = ts;
 	loc = LOCAL;
-	i_ino = root ? 0 : alloc_new_ino();
+	i_ino = root ? get_root_ino() : alloc_new_ino();
 }
 
 /* TODO : allocated target name should be freed later */
@@ -75,12 +98,12 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, const char *link_target_name
 }
 
 
-inode::inode(ino_t ino)
+inode::inode(uuid ino)
 {
-	global_logger.log(inode_ops, "Called inode(" + std::to_string(ino) + ")");
+	global_logger.log(inode_ops, "Called inode(" + uuid_to_string(ino) + ")");
 	unique_ptr<char[]> raw_data = std::make_unique<char[]>(REG_INODE_SIZE);
 	try {
-		meta_pool->read(obj_category::INODE, std::to_string(ino), raw_data.get(), REG_INODE_SIZE, 0);
+		meta_pool->read(obj_category::INODE, uuid_to_string(ino), raw_data.get(), REG_INODE_SIZE, 0);
 		this->deserialize(raw_data.get());
 	} catch(rados_io::no_such_object &e){
 		throw no_entry("No such file or Directory: in inode(ino) constructor");
@@ -99,7 +122,7 @@ void inode::fill_stat(struct stat *s)
 	s->st_mode	= i_mode;
 	s->st_uid	= i_uid;
 	s->st_gid	= i_gid;
-	s->st_ino	= i_ino;
+	s->st_ino	= ino_controller->get_postfix_from_uuid(i_ino);
 	s->st_nlink	= i_nlink;
 	s->st_size	= i_size;
 
@@ -131,20 +154,20 @@ void inode::deserialize(const char *value)
 
 	if(S_ISLNK(this->i_mode)){
 		char *raw = (char *)calloc(this->link_target_len + 1, sizeof(char));
-		meta_pool->read(obj_category::INODE, std::to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);
+		meta_pool->read(obj_category::INODE, uuid_to_string(this->i_ino), raw, this->link_target_len, REG_INODE_SIZE);
 		this->link_target_name = raw;
-		global_logger.log(inode_ops, "serialized link target name : " + std::string(this->link_target_name));
+		global_logger.log(inode_ops, "deserialized link target name : " + std::string(this->link_target_name));
 	}
 
-	global_logger.log(inode_ops, "serialized ino : " + std::to_string(this->i_ino));
-	global_logger.log(inode_ops, "serialized size : " + std::to_string(this->i_size));
+	global_logger.log(inode_ops, "deserialized ino : " + uuid_to_string(this->i_ino));
+	global_logger.log(inode_ops, "deserialized size : " + std::to_string(this->i_size));
 }
 
 void inode::sync()
 {
 	global_logger.log(inode_ops, "Called inode.sync()");
 	std::vector<char> raw = this->serialize();
-	meta_pool->write(obj_category::INODE, std::to_string(this->i_ino), raw.data(), REG_INODE_SIZE + this->link_target_len, 0);
+	meta_pool->write(obj_category::INODE, uuid_to_string(this->i_ino), raw.data(), REG_INODE_SIZE + this->link_target_len, 0);
 }
 
 void inode::permission_check(int mask){
@@ -188,7 +211,7 @@ uid_t inode::get_uid(){
 gid_t inode::get_gid(){
 	return this->i_gid;
 }
-ino_t inode::get_ino() {
+uuid inode::get_ino() {
 	return this->i_ino;
 }
 nlink_t inode::get_nlink() {
@@ -227,7 +250,7 @@ void inode::set_uid(uid_t uid){
 void inode::set_gid(gid_t gid){
 	this->i_gid = gid;
 }
-void inode::set_ino(ino_t ino){
+void inode::set_ino(uuid ino){
 	this->i_ino = ino;
 }
 void inode::set_nlink(nlink_t nlink){
@@ -257,16 +280,10 @@ void inode::set_link_target_name(const char *name){
 	memcpy(this->link_target_name, name, this->link_target_len);
 }
 
-ino_t alloc_new_ino() {
+uuid alloc_new_ino() {
 	global_logger.log(inode_ops, "Called alloc_new_ino()");
+	uuid new_ino = ino_controller->alloc_new_uuid();
 
-	ino_t new_ino;
-	/* new_ino use client_id for first 24 bit and use ino_offset for next 40 bit, total 64bit(8bytes) */
-	new_ino = (this_client->get_client_id()) << 40;
-	new_ino = new_ino + (this_client->get_per_client_ino_offset() & INO_OFFSET_MASK);
-	global_logger.log(inode_ops, "new inode number : " + std::to_string(new_ino));
-
-
-	this_client->increase_ino_offset();
+	global_logger.log(inode_ops, "new inode number : " + uuid_to_string(new_ino));
 	return new_ino;
 }

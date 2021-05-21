@@ -22,7 +22,7 @@ private:
 	tsl::robin_map<std::string, bool> dentries;
 
 	/* An unique pointer whose value is null means the file has been deleted. */
-	tsl::robin_map<ino_t, std::unique_ptr<inode>> f_inodes;
+	tsl::robin_map<uuid, std::unique_ptr<inode>> f_inodes;
 
 public:
 	transaction(void);

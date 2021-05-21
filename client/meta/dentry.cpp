@@ -2,21 +2,21 @@
 
 extern rados_io *meta_pool;
 
-dentry::dentry(ino_t ino) : this_ino(ino)
+dentry::dentry(uuid ino) : this_ino(ino)
 {
-	global_logger.log(dentry_ops, "Called dentry(" + std::to_string(ino) +")");
+	global_logger.log(dentry_ops, "Called dentry(" + uuid_to_string(ino) +")");
 	unique_ptr<char[]> raw_data = std::make_unique<char[]>(MAX_DENTRY_OBJ_SIZE);
 	try {
-		meta_pool->read(obj_category::DENTRY, std::to_string(ino), raw_data.get(), MAX_DENTRY_OBJ_SIZE, 0);
+		meta_pool->read(obj_category::DENTRY, uuid_to_string(ino), raw_data.get(), MAX_DENTRY_OBJ_SIZE, 0);
 		this->deserialize(raw_data.get());
 	} catch(rados_io::no_such_object &e){
-		throw std::runtime_error("Dentry Corrupted: inode number " + std::to_string(ino));
+		throw std::runtime_error("Dentry Corrupted: inode number " + uuid_to_string(ino));
 	}
 }
 
-dentry::dentry(ino_t ino, bool flag) : this_ino(ino)
+dentry::dentry(uuid ino, bool flag) : this_ino(ino)
 {
-	global_logger.log(dentry_ops, "Called dentry(" + std::to_string(ino) +") from mkdir");
+	global_logger.log(dentry_ops, "Called dentry(" + uuid_to_string(ino) +") from mkdir");
 	if(flag){
 		this->child_num = 0;
 		this->total_name_length = 0;
@@ -25,9 +25,9 @@ dentry::dentry(ino_t ino, bool flag) : this_ino(ino)
 	}
 }
 
-void dentry::add_new_child(const std::string &filename, ino_t ino){
+void dentry::add_new_child(const std::string &filename, uuid ino){
 	global_logger.log(dentry_ops, "Called dentry.add_new_child()");
-	global_logger.log(dentry_ops, "file : " + filename + " inode number : " + std::to_string(ino));
+	global_logger.log(dentry_ops, "file : " + filename + " inode number : " + uuid_to_string(ino));
 
 	this->child_list.insert(std::make_pair(filename, ino));
 	this->child_num++;
@@ -46,7 +46,7 @@ void dentry::delete_child(const std::string &filename) {
 unique_ptr<char[]> dentry::serialize()
 {
 	global_logger.log(dentry_ops, "Called dentry.serialize()");
-	size_t raw_size = sizeof(uint64_t) + (this->get_child_num()) * sizeof(int) + (this->get_total_name_legth()) + (this->get_child_num())*sizeof(ino_t) + 1;
+	size_t raw_size = sizeof(uint64_t) + (this->get_child_num()) * sizeof(int) + (this->get_total_name_legth()) + (this->get_child_num())*sizeof(uuid) + 1;
 	unique_ptr<char[]> raw = std::make_unique<char[]>(raw_size);
 	char *pointer = raw.get();
 
@@ -65,8 +65,8 @@ unique_ptr<char[]> dentry::serialize()
 		pointer += name_length;
 
 		/* serialize ino */
-		memcpy(pointer, &(it->second), sizeof(ino_t));
-		pointer += sizeof(ino_t);
+		memcpy(pointer, &(it->second), sizeof(uuid));
+		pointer += sizeof(uuid);
 	}
 
 	return raw;
@@ -93,13 +93,13 @@ void dentry::deserialize(char *raw)
 		memcpy(name, pointer, name_length);
 		pointer += name_length;
 
-		ino_t ino;
-		memcpy(&ino, pointer, sizeof(ino_t));
-		pointer += sizeof(ino_t);
+		uuid ino;
+		memcpy(&ino, pointer, sizeof(uuid));
+		pointer += sizeof(uuid);
 
-		this->child_list.insert(std::pair<std::string, ino_t>(name, ino));
+		this->child_list.insert(std::pair<std::string, uuid>(name, ino));
 		this->total_name_length += name_length;
-		global_logger.log(dentry_ops, "name_length : " + std::to_string(name_length) + "child name : " + std::string(name) + " child ino : " + std::to_string(ino));
+		global_logger.log(dentry_ops, "name_length : " + std::to_string(name_length) + "child name : " + std::string(name) + " child ino : " + uuid_to_string(ino));
 		free(name);
 	}
 
@@ -109,18 +109,18 @@ void dentry::sync()
 {
 	global_logger.log(dentry_ops,"Called dentry.sync()");
 
-	size_t raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(ino_t) + 1;
+	size_t raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(uuid) + 1;
 	unique_ptr<char[]> raw = this->serialize();
-	meta_pool->write(obj_category::DENTRY, std::to_string(this->this_ino), raw.get(), raw_size - 1, 0);
+	meta_pool->write(obj_category::DENTRY, uuid_to_string(this->this_ino), raw.get(), raw_size - 1, 0);
 }
 
-ino_t dentry::get_child_ino(std::string child_name)
+uuid dentry::get_child_ino(std::string child_name)
 {
 	global_logger.log(dentry_ops, "Called dentry.get_child_ino(" + child_name + ")");
 
-	std::map<std::string, ino_t>::iterator ret = child_list.find(child_name);
+	std::map<std::string, uuid>::iterator ret = child_list.find(child_name);
 	if(ret == child_list.end())
-		return -1;
+		return nil_uuid();
 	else
 		return ret->second;
 }

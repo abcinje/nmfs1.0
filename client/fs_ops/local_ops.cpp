@@ -57,7 +57,7 @@ void local_readdir(shared_ptr<inode> i, void *buffer, fuse_fill_dir_t filler) {
 	}
 }
 
-ino_t local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
+uuid local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(local_fs_op, "Called mkdir()");
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
@@ -75,7 +75,7 @@ ino_t local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 	return i->get_ino();
 }
 
-int local_rmdir_top(shared_ptr<inode> target_i, ino_t target_ino) {
+int local_rmdir_top(shared_ptr<inode> target_i, uuid target_ino) {
 	global_logger.log(local_fs_op, "Called rmdir_top()");
 	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_ino);
 	if (target_dentry_table == nullptr) {
@@ -86,14 +86,14 @@ int local_rmdir_top(shared_ptr<inode> target_i, ino_t target_ino) {
 		std::scoped_lock scl{target_dentry_table->dentry_table_mutex};
 		if (target_dentry_table->get_child_num() > 0)
 			return -ENOTEMPTY;
-		meta_pool->remove(obj_category::DENTRY, std::to_string(target_ino));
+		meta_pool->remove(obj_category::DENTRY, uuid_to_string(target_ino));
 		/* TODO : is it okay to delete dentry_table which is locked? */
 		indexing_table->delete_dentry_table(target_ino);
 	}
 	return 0;
 }
 
-int local_rmdir_down(shared_ptr<inode> parent_i, ino_t target_ino, std::string target_name) {
+int local_rmdir_down(shared_ptr<inode> parent_i, uuid target_ino, std::string target_name) {
 	global_logger.log(local_fs_op, "Called rmdir_down()");
 	int ret = 0;
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
@@ -105,7 +105,7 @@ int local_rmdir_down(shared_ptr<inode> parent_i, ino_t target_ino, std::string t
 		/* TODO : is it okay to delete inode which is locked? */
 		parent_dentry_table->delete_child_inode(target_name);
 
-		meta_pool->remove(obj_category::INODE, std::to_string(target_ino));
+		meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
 
 		/* It may be failed if top and down both are local */
 		ret = indexing_table->delete_dentry_table(target_ino);
@@ -123,7 +123,7 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 	unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 	{
 		std::scoped_lock scl{dst_parent_dentry_table->dentry_table_mutex};
-		if (dst_parent_dentry_table->check_child_inode(*symlink_name) != -1)
+		if (dst_parent_dentry_table->check_child_inode(*symlink_name).is_nil())
 			return -EEXIST;
 
 		shared_ptr<inode> symlink_i = std::make_shared<inode>(this_client->get_client_uid(),
@@ -170,12 +170,12 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex, target_i->inode_mutex};
-		ino_t check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
+		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
 		if (flags == 0) {
-			if (check_dst_ino != -1) {
+			if (check_dst_ino.is_nil()) {
 				parent_dentry_table->delete_child_inode(*new_name);
-				meta_pool->remove(obj_category::INODE, std::to_string(check_dst_ino));
+				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
 			}
 			parent_dentry_table->delete_child_inode(*old_name);
 			parent_dentry_table->create_child_inode(*new_name, target_i);
@@ -187,11 +187,11 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 	return 0;
 }
 
-ino_t local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char *old_path, unsigned int flags) {
+uuid local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char *old_path, unsigned int flags) {
 	global_logger.log(local_fs_op, "Called rename_not_same_parent_src()");
 	unique_ptr<std::string> old_name = get_filename_from_path(old_path);
 
-	ino_t target_ino;
+	uuid target_ino;
 	shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
 	shared_ptr<inode> target_i;
 	{
@@ -213,7 +213,7 @@ ino_t local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const cha
 	return target_ino;
 }
 
-int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino,
+int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, uuid target_ino, uuid check_dst_ino,
 				     const char *new_path, unsigned int flags) {
 	global_logger.log(local_fs_op, "Called rename_not_same_parent_dst()");
 	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
@@ -223,10 +223,10 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, ino_t targe
 	{
 		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		if (flags == 0) {
-			if (check_dst_ino != -1) {
+			if (check_dst_ino.is_nil()) {
 				dst_dentry_table->delete_child_inode(*new_name);
 				/* TODO : is it okay to delete inode which is locked? */
-				meta_pool->remove(obj_category::INODE, std::to_string(check_dst_ino));
+				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
 			}
 			dst_dentry_table->create_child_inode(*new_name, target_i);
 		} else {
@@ -299,10 +299,10 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 		nlink_t nlink = target_i->get_nlink() - 1;
 		if (nlink == 0) {
 			/* data */
-			data_pool->remove(obj_category::DATA, std::to_string(target_i->get_ino()));
+			data_pool->remove(obj_category::DATA, uuid_to_string(target_i->get_ino()));
 
 			/* inode */
-			meta_pool->remove(obj_category::INODE, std::to_string(target_i->get_ino()));
+			meta_pool->remove(obj_category::INODE, uuid_to_string(target_i->get_ino()));
 
 			/* parent dentry */
 			parent_dentry_table->delete_child_inode(child_name);
@@ -317,7 +317,7 @@ size_t local_read(shared_ptr<inode> i, char *buffer, size_t size, off_t offset) 
 	global_logger.log(local_fs_op, "Called read()");
 	size_t read_len = 0;
 
-	read_len = data_pool->read(obj_category::DATA, std::to_string(i->get_ino()), buffer, size, offset);
+	read_len = data_pool->read(obj_category::DATA, uuid_to_string(i->get_ino()), buffer, size, offset);
 	return read_len;
 }
 
@@ -331,7 +331,7 @@ size_t local_write(shared_ptr<inode> i, const char *buffer, size_t size, off_t o
 			offset = i->get_size();
 		}
 
-		written_len = data_pool->write(obj_category::DATA, std::to_string(i->get_ino()), buffer, size, offset);
+		written_len = data_pool->write(obj_category::DATA, uuid_to_string(i->get_ino()), buffer, size, offset);
 
 		if (i->get_size() < offset + size) {
 			i->set_size(offset + size);
@@ -403,7 +403,7 @@ int local_truncate(const shared_ptr<inode> i, off_t offset) {
 		if (S_ISDIR(i->get_mode()))
 			return -EISDIR;
 
-		ret = data_pool->truncate(obj_category::DATA, std::to_string(i->get_ino()), offset);
+		ret = data_pool->truncate(obj_category::DATA, uuid_to_string(i->get_ino()), offset);
 
 		i->set_size(offset);
 		i->sync();

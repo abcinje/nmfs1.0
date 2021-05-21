@@ -39,20 +39,23 @@ class uuid_controller {
 private:
     random_generator generator;
 public:
-    uuid_controller();
+    uuid_controller() = default;
 
     uuid alloc_new_uuid();
-    uint64_t get_least_from_uuid(uuid id);
-    uint64_t get_most_from_uuid(uuid id);
-    std::string uuid_to_string(uuid id);
+    uint64_t get_postfix_from_uuid(uuid id);
+    uint64_t get_prefix_from_uuid(uuid id);
+    uuid splice_prefix_and_postfix(uint64_t prefix, uint64_t postfix);
 };
+
+uuid get_root_ino();
+std::string uuid_to_string(uuid id);
 
 class inode {
 private:
 	mode_t	i_mode;
 	uid_t	i_uid;
 	gid_t	i_gid;
-	ino_t	i_ino;
+	uuid	i_ino;
 	nlink_t	i_nlink;
 	off_t	i_size;
 
@@ -86,7 +89,7 @@ public:
 	/* for symlink */
 	inode(uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
 	/* for pull metadata */
-	inode(ino_t ino);
+	inode(uuid ino);
 	/* parent constructor for remote_inode and dummy_inode which used with file_handler */
 	inode();
 
@@ -100,7 +103,7 @@ public:
 	virtual mode_t get_mode();
 	uid_t get_uid();
 	gid_t get_gid();
-	ino_t get_ino();
+	uuid get_ino();
 	nlink_t get_nlink();
 	off_t get_size();
 	struct timespec get_atime();
@@ -116,7 +119,7 @@ public:
 	void set_mode(mode_t mode);
 	void set_uid(uid_t uid);
 	void set_gid(gid_t gid);
-	void set_ino(ino_t ino);
+	void set_ino(uuid ino);
 	void set_nlink(nlink_t nlink);
 	void set_size(off_t size);
 	void set_atime(struct timespec atime);
@@ -128,6 +131,6 @@ public:
 	void set_link_target_name(const char *name);
 };
 
-ino_t alloc_new_ino();
+uuid alloc_new_ino();
 
 #endif /* _INODE_HPP_ */

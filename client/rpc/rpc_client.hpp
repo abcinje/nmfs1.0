@@ -22,24 +22,24 @@ public:
 	rpc_client(std::shared_ptr<Channel> channel);
 
 	/* dentry_table operations */
-	ino_t check_child_inode(ino_t dentry_table_ino, std::string filename);
+	uuid check_child_inode(uuid dentry_table_ino, std::string filename);
 
 	/* inode operations */
-	mode_t get_mode(ino_t dentry_table_ino, std::string filename);
-	void permission_check(ino_t dentry_table_ino, std::string filename, int mask, bool target_is_parent);
+	mode_t get_mode(uuid dentry_table_ino, std::string filename);
+	void permission_check(uuid dentry_table_ino, std::string filename, int mask, bool target_is_parent);
 	/* file system operations */
 	void getattr(shared_ptr<remote_inode> i, struct stat* s);
 	void access(shared_ptr<remote_inode> i, int mask);
 	int opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 	void readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler);
-        ino_t mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode);
-	int rmdir_top(shared_ptr<remote_inode> target_i, ino_t target_ino);
-    	int rmdir_down(shared_ptr<remote_inode> parent_i, ino_t target_ino, std::string target_name);
+        uuid mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode);
+	int rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino);
+    	int rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::string target_name);
 	int symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst);
 	int readlink(shared_ptr<remote_inode> i, char *buf, size_t size);
 	int rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old_path, const char* new_path, unsigned int flags);
-    	ino_t rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags);
-    	int rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, ino_t target_ino, ino_t check_dst_ino, const char* new_path, unsigned int flags);
+    	uuid rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags);
+    	int rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags);
 	int open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 	void create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);
 	void unlink(shared_ptr<remote_inode> parent_i, std::string child_name);

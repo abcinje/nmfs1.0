@@ -46,9 +46,9 @@ lease_table_client::~lease_table_client(void)
 	exit(1);
 }
 
-bool lease_table_client::is_valid(ino_t ino)
+bool lease_table_client::is_valid(uuid ino)
 {
-	global_logger.log(lease_ops, "Called is_valid(" + std::to_string(ino) + ")");
+	global_logger.log(lease_ops, "Called is_valid(" + uuid_to_string(ino) + ")");
 	lease_entry *e;
 
 	{
@@ -74,9 +74,9 @@ bool lease_table_client::is_valid(ino_t ino)
 	return system_clock::now() < e->get_due();
 }
 
-bool lease_table_client::is_mine(ino_t ino)
+bool lease_table_client::is_mine(uuid ino)
 {
-	global_logger.log(lease_ops, "Called is_mine(" + std::to_string(ino) + ")");
+	global_logger.log(lease_ops, "Called is_mine(" + uuid_to_string(ino) + ")");
 	lease_entry *e;
 	system_clock::time_point latest_due;
 	bool mine;
@@ -95,9 +95,9 @@ bool lease_table_client::is_mine(ino_t ino)
 	return mine && (system_clock::now() < latest_due);
 }
 
-void lease_table_client::update(ino_t ino, const system_clock::time_point &new_due, bool mine)
+void lease_table_client::update(uuid ino, const system_clock::time_point &new_due, bool mine)
 {
-	global_logger.log(lease_ops, "Called update(" + std::to_string(ino) + ")");
+	global_logger.log(lease_ops, "Called update(" + uuid_to_string(ino) + ")");
 	global_logger.log(lease_ops, "new_due: " + serializeTimePoint(new_due, "UTC: %Y-%m-%d %H:%M:%S"));
 
 	lease_entry *e;

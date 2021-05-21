@@ -21,13 +21,13 @@ static int set_name_bound(int &start_name, int &end_name, const std::string &pat
 }
 
 directory_table::directory_table() {
-	shared_ptr<dentry_table> root_dentry_table = this->get_dentry_table(0);
+	shared_ptr<dentry_table> root_dentry_table = this->get_dentry_table(get_root_ino());
 }
 
 directory_table::~directory_table() {
 	global_logger.log(directory_table_ops, "Called ~directory_table()");
 
-	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
+	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
 	for(it = this->dentry_tables.begin(); it != this->dentry_tables.end(); it++) {
 		it->second = nullptr;
 	}
@@ -35,9 +35,9 @@ directory_table::~directory_table() {
 
 shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	global_logger.log(directory_table_ops, "Called path_traverse(" + path + ")");
-	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(0);
+	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(get_root_ino());
 	shared_ptr<inode> target_inode = parent_dentry_table->get_this_dir_inode();;
-	ino_t check_target_ino;
+	uuid check_target_ino;
 
 	int start_name, end_name = -1;
 	int path_len = static_cast<int>(path.length());
@@ -52,8 +52,8 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 		{
 			std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 			check_target_ino = parent_dentry_table->check_child_inode(target_name);
-			/* TODO : ino_t cannot be -1 */
-			if (check_target_ino == -1)
+
+			if (check_target_ino.is_nil())
 				throw inode::no_entry("No such file or Directory: in path traversal");
 			else
 				/* if target is dir, this child is just for checking mode.
@@ -75,8 +75,8 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	return target_inode;
 }
 
-shared_ptr<dentry_table> directory_table::lease_dentry_table(ino_t ino){
-	global_logger.log(directory_table_ops, "Called lease_dentry_table(" + std::to_string(ino) + ")");
+shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
+	global_logger.log(directory_table_ops, "Called lease_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
 	std::string temp_address;
 	int ret = lc->acquire(ino, temp_address);
@@ -99,10 +99,10 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(ino_t ino){
 	return new_dentry_table;
 }
 
-shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
-	global_logger.log(directory_table_ops, "get_dentry_table(" + std::to_string(ino) + ")");
+shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino){
+	global_logger.log(directory_table_ops, "get_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
-	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
+	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 
 	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
@@ -124,10 +124,10 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(ino_t ino){
 
 }
 
-uint64_t directory_table::check_dentry_table(ino_t ino){
-	global_logger.log(directory_table_ops, "check_dentry_table(" + std::to_string(ino) + ")");
+uint64_t directory_table::check_dentry_table(uuid ino){
+	global_logger.log(directory_table_ops, "check_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
-	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
+	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 
 	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
@@ -141,8 +141,8 @@ uint64_t directory_table::check_dentry_table(ino_t ino){
 
 }
 
-int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable){
-	global_logger.log(directory_table_ops, "Called add_dentry_table(" + std::to_string(ino) + ")");
+int directory_table::add_dentry_table(uuid ino, shared_ptr<dentry_table> dtable){
+	global_logger.log(directory_table_ops, "Called add_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
 	auto ret = dentry_tables.insert(std::make_pair(ino, nullptr));
 	if(ret.second) {
@@ -154,10 +154,10 @@ int directory_table::add_dentry_table(ino_t ino, shared_ptr<dentry_table> dtable
 	return 0;
 }
 
-int directory_table::delete_dentry_table(ino_t ino){
-	global_logger.log(directory_table_ops, "Called delete_dentry_table(" + std::to_string(ino) + ")");
+int directory_table::delete_dentry_table(uuid ino){
+	global_logger.log(directory_table_ops, "Called delete_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
-	std::map<ino_t, shared_ptr<dentry_table>>::iterator it;
+	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
 
 	if(it == this->dentry_tables.end()) {

@@ -25,13 +25,13 @@ Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const :
 		return Status::OK;
 	}
 
-	ino_t check_target_ino;
+	uuid check_target_ino;
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		check_target_ino = parent_dentry_table->check_child_inode(request->filename());
 	}
-	/* TODO : ino_t cannot be -1 */
+	/* TODO : uuid cannot be -1 */
 	response->set_checked_ino(check_target_ino);
 	response->set_ret(0);
 	return Status::OK;
@@ -385,7 +385,7 @@ Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const 
 
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex, target_i->inode_mutex};
-		ino_t check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
+		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
 		if (request->flags() == 0) {
 			if (check_dst_ino != -1) {
@@ -415,7 +415,7 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 
 	unique_ptr<std::string> old_name = get_filename_from_path(request->old_path());
 
-	ino_t target_ino;
+	uuid target_ino;
 	std::shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(request->dentry_table_ino());
 	shared_ptr<inode> target_i;
 	{

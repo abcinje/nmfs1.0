@@ -12,7 +12,7 @@ using std::shared_ptr;
 
 class dentry_table {
 private:
-	ino_t dir_ino;
+	uuid dir_ino;
 	shared_ptr<inode> this_dir_inode;
 
 	shared_ptr<dentry> dentries;
@@ -24,7 +24,7 @@ private:
 public:
 	std::recursive_mutex dentry_table_mutex;
 
-	explicit dentry_table(ino_t dir_ino, enum meta_location loc);
+	explicit dentry_table(uuid dir_ino, enum meta_location loc);
 	~dentry_table();
 
 	int create_child_inode(std::string filename, shared_ptr<inode> inode);
@@ -32,13 +32,13 @@ public:
  	int add_child_inode(std::string filename, shared_ptr<inode> inode);
 	int delete_child_inode(std::string filename);
 
-	shared_ptr<inode> get_child_inode(std::string filename, ino_t target_ino = 0);
-	ino_t check_child_inode(std::string filename);
+	shared_ptr<inode> get_child_inode(std::string filename, uuid target_ino = nil_uuid());
+	uuid check_child_inode(std::string filename);
 	int pull_child_metadata();
 
 	enum meta_location get_loc();
 
-	ino_t get_dir_ino();
+	uuid get_dir_ino();
 	shared_ptr<inode> get_this_dir_inode();
 	const string &get_leader_ip();
 

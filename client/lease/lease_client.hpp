@@ -8,10 +8,11 @@
 
 #include <lease.pb.h>
 #include <lease.grpc.pb.h>
-
+#include <boost/uuid/uuid.hpp>
 #include "lease_table_client.hpp"
 
 using grpc::Channel;
+using namespace boost::uuids;
 
 class lease_client {
 private:
@@ -41,7 +42,7 @@ public:
 	 * This function returns true if the lease is valid now.
 	 * Otherwise, it returns false.
 	 */
-	bool is_valid(ino_t ino);
+	bool is_valid(uuid ino);
 
 	/*
 	 * is_mine()
@@ -53,7 +54,7 @@ public:
 	 * and I am the leader of the corresponding directory.
 	 * Otherwise, it returns false.
 	 */
-	bool is_mine(ino_t ino);
+	bool is_mine(uuid ino);
 
 	/*
 	 * acquire()
@@ -65,7 +66,7 @@ public:
 	 * - Return -1
 	 * - 'remote_addr' is changed to the address of the directory leader'
 	 */
-	int acquire(ino_t ino, std::string &remote_addr);
+	int acquire(uuid ino, std::string &remote_addr);
 };
 
 #endif /* _LEASE_CLIENT_HPP_ */
