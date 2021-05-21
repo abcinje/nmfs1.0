@@ -10,6 +10,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
+#include <boost/lexical_cast.hpp>
 #include "../fs_ops/fuse_ops.hpp"
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../../lib/logger/logger.hpp"
@@ -42,9 +43,9 @@ public:
     uuid_controller() = default;
 
     uuid alloc_new_uuid();
-    uint64_t get_postfix_from_uuid(uuid id);
-    uint64_t get_prefix_from_uuid(uuid id);
-    uuid splice_prefix_and_postfix(uint64_t prefix, uint64_t postfix);
+	static uint64_t get_prefix_from_uuid(const uuid& id);
+    static uint64_t get_postfix_from_uuid(const uuid& id);
+    static uuid splice_prefix_and_postfix(const uint64_t& prefix, const uint64_t& postfix);
 };
 
 uuid get_root_ino();

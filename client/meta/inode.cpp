@@ -9,27 +9,42 @@ extern client *this_client;
 extern std::unique_ptr<uuid_controller> ino_controller;
 std::recursive_mutex alloc_mutex;
 
+uuid uuid_controller::alloc_new_uuid() {
+	return this->generator();
+}
+
+uint64_t uuid_controller::get_prefix_from_uuid(const uuid& id) {
+	uint64_t prefix;
+	const uint8_t* cursor = id.data;
+	memcpy(&prefix, cursor, sizeof(uint64_t));
+}
+
+uint64_t uuid_controller::get_postfix_from_uuid(const uuid& id){
+	uint64_t postfix;
+	const uint8_t* cursor = id.data + 8;
+	memcpy(&postfix, cursor, sizeof(uint64_t));
+}
+
+uuid uuid_controller::splice_prefix_and_postfix(const uint64_t& prefix, const uint64_t& postfix){
+	uuid spliced_uuid{};
+	uint8_t* cursor = spliced_uuid.data;
+	memcpy(cursor, reinterpret_cast<const void *>(prefix), sizeof(uint64_t));
+
+	cursor = cursor + 8;
+	memcpy(cursor, reinterpret_cast<const void *>(postfix), sizeof(uint64_t));
+
+	return spliced_uuid;
+}
+
 uuid get_root_ino(){
-	return nil_uuid();
+	/* root_ino = nil_uuid + 1 */
+	uuid root_ino = nil_uuid();
+	root_ino.data[15] += 1;
+	return root_ino;
 }
 
 std::string uuid_to_string(uuid id){
-}
-
-uuid uuid_controller::alloc_new_uuid() {
-
-}
-
-uint64_t uuid_controller::get_postfix_from_uuid(uuid id){
-
-}
-
-uint64_t uuid_controller::get_prefix_from_uuid(uuid id) {
-
-}
-
-uuid uuid_controller::splice_prefix_and_postfix(uint64_t prefix, uint64_t postfix){
-
+	return to_string(id);
 }
 
 inode::no_entry::no_entry(const string &msg) : runtime_error(msg)
@@ -137,6 +152,7 @@ void inode::fill_stat(struct stat *s)
 std::vector<char> inode::serialize(void)
 {
 	global_logger.log(inode_ops, "Called inode.serialize()");
+	global_logger.log(inode_ops, "serialized ino : " + uuid_to_string(this->i_ino));
 	std::vector<char> value(REG_INODE_SIZE + this->link_target_len);
 	memcpy(value.data(), &i_mode, REG_INODE_SIZE);
 
