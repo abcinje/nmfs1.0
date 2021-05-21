@@ -21,8 +21,9 @@ service lease {
 }
 
 message lease_request {
-  int64 ino = 1;
-  string remote_addr = 2;
+  uint64 ino_prefix = 1;
+  uint64 ino_postfix = 2;
+  string remote_addr = 3;
 }
 
 message lease_response {
