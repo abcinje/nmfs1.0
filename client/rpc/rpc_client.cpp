@@ -257,8 +257,8 @@ int rpc_client::rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, s
 	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(parent_i->get_dentry_table_ino()));
 	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
 	Input.set_target_name(target_name);
-	Input.set_target_ino_prefix(ino_controller->get_prefix_from_uuid(parent_i->get_dentry_table_ino()));
-	Input.set_target_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
+	Input.set_target_ino_prefix(ino_controller->get_prefix_from_uuid(target_ino));
+	Input.set_target_ino_postfix(ino_controller->get_postfix_from_uuid(target_ino));
 	Status status = stub_->rpc_rmdir_down(&context, Input, &Output);
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
