@@ -16,6 +16,9 @@ private:
 	/* Has this transaction already been committed? */
 	bool committed;
 
+	/* the offset for this transaction in the journal object */
+	off_t offset;
+
 	/* the inode block of the directory itself */
 	std::unique_ptr<inode> d_inode;
 
@@ -31,9 +34,6 @@ public:
 		const char *what(void);
 	};
 
-	transaction(void);
-	~transaction(void) = default;
-
 	std::vector<char> serialize(void);
 	void deserialize(std::vector<char> raw);
 
@@ -42,6 +42,12 @@ public:
 	int rmdir(const std::string &d_name, const struct timespec &time);
 	int mkreg(const std::string &f_name, std::shared_ptr<inode> i);
 	int rmreg(const std::string &f_name, std::shared_ptr<inode> i, const struct timespec &time);
+
+	transaction(void);
+	~transaction(void) = default;
+
+	off_t get_offset(void);
+	void set_offset(off_t off);
 };
 
 #endif /* _TRANSACTION_HPP_ */

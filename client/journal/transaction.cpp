@@ -221,3 +221,15 @@ int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> i, cons
 
 	return 0;
 }
+
+off_t transaction::get_offset(void)
+{
+	/* We don't have to lock the tx here */
+	return offset;
+}
+
+void transaction::set_offset(off_t off)
+{
+	/* We don't have to lock the tx here */
+	offset = off;
+}
