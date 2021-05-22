@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <vector>
 #include <tsl/robin_map.h>
 
@@ -25,10 +26,16 @@ private:
 	tsl::robin_map<std::string, std::unique_ptr<inode>> f_inodes;
 
 public:
+	class invalidated : public std::exception {
+	public:
+		const char *what(void);
+	};
+
 	transaction(void);
 	~transaction(void) = default;
 
 	std::vector<char> serialize(void);
+	void deserialize(std::vector<char> raw);
 
 	int set_inode(std::shared_ptr<inode> i);
 	int mkdir(const std::string &d_name, const struct timespec &time);

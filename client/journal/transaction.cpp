@@ -1,5 +1,10 @@
 #include "transaction.hpp"
 
+const char *transaction::invalidated::what(void)
+{
+	return "Tried to make a checkpoint for an invalidated transaction.";
+}
+
 transaction::transaction(void) : committed(false), d_inode(nullptr)
 {
 }
@@ -18,18 +23,23 @@ std::vector<char> transaction::serialize(void)
 	vec.push_back(1);
 
 	/* d_inode */
-	auto d_inode_vec = d_inode->serialize();
-	uint32_t d_inode_size = static_cast<uint32_t>(d_inode_vec.size());
-	vec.push_back(static_cast<char>(d_inode_size & 0xff));
-	vec.push_back(static_cast<char>((d_inode_size >> 8) & 0xff));
-	vec.push_back(static_cast<char>((d_inode_size >> 16) & 0xff));
-	vec.push_back(static_cast<char>((d_inode_size >> 24) & 0xff));
-	vec.insert(vec.end(), d_inode_vec.begin(), d_inode_vec.end());
+	if (d_inode) {
+		auto d_inode_vec = d_inode->serialize();
+		int32_t d_inode_size = static_cast<uint32_t>(d_inode_vec.size());
+		vec.push_back(static_cast<char>(d_inode_size & 0xff));
+		vec.push_back(static_cast<char>((d_inode_size >> 8) & 0xff));
+		vec.push_back(static_cast<char>((d_inode_size >> 16) & 0xff));
+		vec.push_back(static_cast<char>((d_inode_size >> 24) & 0xff));
+		vec.insert(vec.end(), d_inode_vec.begin(), d_inode_vec.end());
+	} else {
+		for (int i = 0; i < 4; i++)
+			vec.push_back(-1);
+	}
 
 	/* dentries */
 	for (auto &d : dentries) {
 		vec.push_back(d.second ? 1 : 0);
-		uint32_t dentry_size = static_cast<uint32_t>(d.first.size());
+		int32_t dentry_size = static_cast<uint32_t>(d.first.size());
 		vec.push_back(static_cast<char>(dentry_size & 0xff));
 		vec.push_back(static_cast<char>((dentry_size >> 8) & 0xff));
 		vec.push_back(static_cast<char>((dentry_size >> 16) & 0xff));
@@ -41,7 +51,7 @@ std::vector<char> transaction::serialize(void)
 	/* f_inodes */
 	for (auto &i : f_inodes) {
 		auto f_inode_vec = i.second->serialize();
-		uint32_t f_inode_size = static_cast<uint32_t>(f_inode_vec.size());
+		int32_t f_inode_size = static_cast<uint32_t>(f_inode_vec.size());
 		vec.push_back(static_cast<char>(f_inode_size & 0xff));
 		vec.push_back(static_cast<char>((f_inode_size >> 8) & 0xff));
 		vec.push_back(static_cast<char>((f_inode_size >> 16) & 0xff));
@@ -53,6 +63,53 @@ std::vector<char> transaction::serialize(void)
 
 	return vec;
 }
+
+void transaction::deserialize(std::vector<char> raw)
+{
+	off_t index = 0;
+
+	/* valid bit */
+	if (raw[index++] == 0)
+		throw invalidated();
+
+	/* d_inode */
+	int32_t d_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
+	index += sizeof(int32_t);
+	if (d_inode_size != -1) {
+		d_inode->deserialize(&raw[index]);
+		index += sizeof(inode);
+	}
+
+	/* dentries */
+	while (true) {
+		char entry_stat = raw[index++];
+		if (entry_stat == -1)
+			break;
+		int32_t dentry_size = *(reinterpret_cast<int32_t *>(&raw[index]));
+		index += sizeof(int32_t);
+
+		auto ret = dentries.insert({std::string(&raw[index], dentry_size), static_cast<bool>(entry_stat)});
+		if (!ret.second)
+			throw std::logic_error("transaction::deserialize() failed (a duplicated key exists)");
+		index += dentry_size;
+	}
+
+	/* f_inodes */
+	while (true) {
+		int32_t f_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
+		index += sizeof(int32_t);
+		if (f_inode_size == -1)
+			break;
+		std::unique_ptr<inode> i = std::make_unique<inode>();
+		i->deserialize(&raw[index]);
+
+		auto ret = f_inodes.insert({uuid_to_string(i->get_ino()), std::move(i)});
+		if (!ret.second)
+			throw std::logic_error("transaction::deserialize() failed (a duplicated key exists)");
+		index += f_inode_size;
+	}
+}
+
 
 int transaction::set_inode(std::shared_ptr<inode> i)
 {
