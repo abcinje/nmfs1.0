@@ -313,7 +313,7 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 	}
 }
 
-size_t local_read(shared_ptr<inode> i, char *buffer, size_t size, off_t offset) {
+ssize_t local_read(shared_ptr<inode> i, char *buffer, size_t size, off_t offset) {
 	global_logger.log(local_fs_op, "Called read()");
 	size_t read_len = 0;
 
@@ -321,7 +321,7 @@ size_t local_read(shared_ptr<inode> i, char *buffer, size_t size, off_t offset) 
 	return read_len;
 }
 
-size_t local_write(shared_ptr<inode> i, const char *buffer, size_t size, off_t offset, int flags) {
+ssize_t local_write(shared_ptr<inode> i, const char *buffer, size_t size, off_t offset, int flags) {
 	global_logger.log(local_fs_op, "Called write()");
 	size_t written_len = 0;
 

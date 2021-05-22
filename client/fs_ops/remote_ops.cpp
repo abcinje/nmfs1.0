@@ -1,19 +1,21 @@
 #include "remote_ops.hpp"
 
-void remote_getattr(shared_ptr<remote_inode> i, struct stat* stat) {
+int remote_getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 	global_logger.log(remote_fs_op, "Called remote_getattr()");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->getattr(i, stat);
+	int ret = rc->getattr(i, stat);
+	return ret;
 }
 
-void remote_access(shared_ptr<remote_inode> i, int mask) {
+int remote_access(shared_ptr<remote_inode> i, int mask) {
 	global_logger.log(remote_fs_op, "Called remote_access()");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->access(i, mask);
+	int ret = rc->access(i, mask);
+	return ret;
 }
 
 int remote_opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {
@@ -25,12 +27,13 @@ int remote_opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info)
 	return ret;
 }
 
-void remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler) {
+int remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler) {
 	global_logger.log(remote_fs_op, "Called remote_readdir()");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->readdir(i, buffer, filler);
+	int ret = rc->readdir(i, buffer, filler);
+	return ret;
 }
 
 uuid remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
@@ -56,8 +59,8 @@ int remote_rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::s
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->rmdir_down(parent_i, target_ino, target_name);
-	return 0;
+	int ret = rc->rmdir_down(parent_i, target_ino, target_name);
+	return ret;
 }
 
 int remote_symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst) {
@@ -105,12 +108,6 @@ int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uui
 	return ret;
 }
 
-int remote_rename_not_same_parent(shared_ptr<remote_inode> src_parent_i, shared_ptr<remote_inode> dst_parent_i, const char* old_path, const char* new_path, unsigned int flags) {
-	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent()");
-
-	return -ENOSYS;
-}
-
 int remote_open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {
 	global_logger.log(remote_fs_op, "Called remote_open()");
 	std::string remote_address(i->get_address());
@@ -120,53 +117,58 @@ int remote_open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {
 	return ret;
 }
 
-void remote_create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
+int remote_create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
 	global_logger.log(remote_fs_op, "Called remote_create()");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->create(parent_i, new_child_name, mode, file_info);
+	int ret = rc->create(parent_i, new_child_name, mode, file_info);
+	return ret;
 }
 
-void remote_unlink(shared_ptr<remote_inode> parent_i, std::string child_name) {
+int remote_unlink(shared_ptr<remote_inode> parent_i, std::string child_name) {
 	global_logger.log(remote_fs_op, "Called remote_unlink()");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->unlink(parent_i, child_name);
+	int ret = rc->unlink(parent_i, child_name);
+	return ret;
 }
 
-size_t remote_write(shared_ptr<remote_inode> i, const char* buffer, size_t size, off_t offset, int flags) {
+ssize_t remote_write(shared_ptr<remote_inode> i, const char* buffer, size_t size, off_t offset, int flags) {
 	global_logger.log(remote_fs_op, "Called remote_write()");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	size_t written_len = rc->write(i, buffer, size, offset, flags);
+	ssize_t written_len = rc->write(i, buffer, size, offset, flags);
 	return written_len;
 }
 
-void remote_chmod(shared_ptr<remote_inode> i, mode_t mode) {
+int remote_chmod(shared_ptr<remote_inode> i, mode_t mode) {
 	global_logger.log(remote_fs_op, "Called remote_chmod()");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->chmod(i, mode);
+	int ret = rc->chmod(i, mode);
+	return ret;
 }
 
-void remote_chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
+int remote_chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 	global_logger.log(remote_fs_op, "Called remote_chown()");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->chown(i, uid, gid);
+	int ret = rc->chown(i, uid, gid);
+	return ret;
 }
 
-void remote_utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]) {
+int remote_utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]) {
 	global_logger.log(remote_fs_op, "Called remote_utimens()");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	rc->utimens(i, tv);
+	int ret = rc->utimens(i, tv);
+	return ret;
 }
 
 int remote_truncate (shared_ptr<remote_inode> i, off_t offset) {

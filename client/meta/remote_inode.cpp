@@ -56,4 +56,3 @@ void remote_inode::permission_check(int mask) {
 
 	rc->permission_check(this->dentry_table_ino, this->file_name, mask, this->target_is_parent);
 }
-

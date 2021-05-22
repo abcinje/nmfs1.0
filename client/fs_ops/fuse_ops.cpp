@@ -67,7 +67,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	open_context = std::make_unique<file_handler_list>();
 	config->nullpath_ok = 0;
 	fuse_capable = info->capable;
-	return NULL;
+	return nullptr;
 }
 
 void fuse_ops::destroy(void *private_data) {
@@ -87,6 +87,7 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 	global_logger.log(fuse_op, "Called getattr()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	int ret = 0;
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
@@ -99,7 +100,14 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 		if (i->get_loc() == LOCAL) {
 			local_getattr(i, stat);
 		} else if (i->get_loc() == REMOTE) {
-			remote_getattr(std::dynamic_pointer_cast<remote_inode>(i), stat);
+			while(true){
+				ret = remote_getattr(std::dynamic_pointer_cast<remote_inode>(i), stat);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			};
 		}
 
 	} catch (inode::no_entry &e) {
@@ -108,20 +116,28 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 		return -EACCES;
 	}
 
-	return 0;
+	return ret;
 }
 
 int fuse_ops::access(const char *path, int mask) {
 	global_logger.log(fuse_op, "Called access()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	int ret = 0;
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			local_access(i, mask);
 		} else if (i->get_loc() == REMOTE) {
-			remote_access(std::dynamic_pointer_cast<remote_inode>(i), mask);
+			while(true){
+				ret = remote_access(std::dynamic_pointer_cast<remote_inode>(i), mask);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			};
 		}
 
 	} catch (inode::no_entry &e) {
@@ -131,7 +147,7 @@ int fuse_ops::access(const char *path, int mask) {
 		return -EACCES;
 	}
 
-	return 0;
+	return ret;
 }
 
 int fuse_ops::symlink(const char *src, const char *dst) {
@@ -152,7 +168,14 @@ int fuse_ops::symlink(const char *src, const char *dst) {
 				dst_parent_dentry_table->get_leader_ip(),
 				dst_parent_dentry_table->get_dir_ino(),
 				*dst_parent_name);
-			ret = remote_symlink(remote_i, src, dst);
+			while(true){
+				ret = remote_symlink(remote_i, src, dst);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(remote_i);
+					continue;
+				} else
+					break;
+			}
 		}
 
 	} catch (inode::no_entry &e) {
@@ -169,14 +192,20 @@ int fuse_ops::readlink(const char *path, char *buf, size_t size) {
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	int ret = 0;
-
 	try {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
 			ret = local_readlink(i, buf, size);
 		} else if (i->get_loc() == REMOTE) {
-			ret = remote_readlink(std::dynamic_pointer_cast<remote_inode>(i), buf, size);
+			while(true){
+				ret = remote_readlink(std::dynamic_pointer_cast<remote_inode>(i), buf, size);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			}
 		}
 
 	} catch (inode::no_entry &e) {
@@ -200,7 +229,14 @@ int fuse_ops::opendir(const char *path, struct fuse_file_info *file_info) {
 		if (i->get_loc() == LOCAL) {
 			ret = local_opendir(i, file_info);
 		} else if (i->get_loc() == REMOTE) {
-			ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
+			while(true) {
+				ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			}
 		}
 
 	} catch (inode::no_entry &e) {
@@ -238,6 +274,7 @@ int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	global_logger.log(fuse_op, "Called readdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	int ret = 0;
 	shared_ptr<inode> i;
 	if(file_info){
 		shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
@@ -253,16 +290,24 @@ int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(),
 										   target_dentry_table->get_dir_ino(),
 										   *(get_filename_from_path(path)));
-		remote_readdir(remote_i, buffer, filler);
+		while(true) {
+			ret = remote_readdir(remote_i, buffer, filler);
+			if(ret == -ENOTLEADER) {
+				indexing_table->find_remote_dentry_table_again(remote_i);
+				continue;
+			} else
+				break;
+		}
 	}
 
-	return 0;
+	return ret;
 }
 
 int fuse_ops::mkdir(const char *path, mode_t mode) {
 	global_logger.log(fuse_op, "Called mkdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	uuid new_dir_ino;
 	try {
 		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
 
@@ -277,7 +322,14 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 				parent_dentry_table->get_leader_ip(),
 				parent_dentry_table->get_dir_ino(),
 				*target_name);
-			uuid new_dir_ino = remote_mkdir(remote_i, *target_name, mode);
+			while(true) {
+				new_dir_ino = remote_mkdir(remote_i, *target_name, mode);
+				if (new_dir_ino.is_nil()) {
+					indexing_table->find_remote_dentry_table_again(remote_i);
+					continue;
+				} else
+					break;
+			}
 			indexing_table->lease_dentry_table(new_dir_ino);
 		}
 
@@ -317,7 +369,14 @@ int fuse_ops::rmdir(const char *path) {
 				target_dentry_table->get_leader_ip(),
 				target_dentry_table->get_dir_ino(),
 				*target_name);
-			ret = remote_rmdir_top(target_remote_i, target_ino);
+			while(true) {
+				ret = remote_rmdir_top(target_remote_i, target_ino);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(target_remote_i);
+					continue;
+				} else
+					break;
+			}
 			if(ret == 0)
 				local_rmdir_down(parent_i, target_ino, *target_name);
 		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == LOCAL)) {
@@ -327,28 +386,50 @@ int fuse_ops::rmdir(const char *path) {
 					parent_dentry_table->get_leader_ip(),
 					parent_dentry_table->get_dir_ino(),
 					*target_name);
-				remote_rmdir_down(parent_remote_i, target_ino, *target_name);
+				while(true) {
+					ret = remote_rmdir_down(parent_remote_i, target_ino, *target_name);
+					if(ret == -ENOTLEADER) {
+						indexing_table->find_remote_dentry_table_again(parent_remote_i);
+						continue;
+					} else
+						break;
+				}
 			}
 		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == REMOTE)) {
 			shared_ptr<remote_inode> target_remote_i = std::make_shared<remote_inode>(
 				target_dentry_table->get_leader_ip(),
 				target_dentry_table->get_dir_ino(),
 				*target_name);
-			ret = remote_rmdir_top(target_remote_i, target_ino);
+			while(true) {
+				ret = remote_rmdir_top(target_remote_i, target_ino);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(target_remote_i);
+					continue;
+				} else
+					break;
+			}
 			if(ret == 0) {
 				shared_ptr<remote_inode> parent_remote_i = std::make_shared<remote_inode>(
 					parent_dentry_table->get_leader_ip(),
 					parent_dentry_table->get_dir_ino(),
 					*target_name);
 				remote_rmdir_down(parent_remote_i, target_ino, *target_name);
+				while(true) {
+					ret = remote_rmdir_down(parent_remote_i, target_ino, *target_name);
+					if(ret == -ENOTLEADER) {
+						indexing_table->find_remote_dentry_table_again(parent_remote_i);
+						continue;
+					} else
+						break;
+				}
 			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
 		return -EACCES;
 	}
+
 	return ret;
 }
 
@@ -377,10 +458,15 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					parent_dentry_table->get_leader_ip(),
 					parent_dentry_table->get_dir_ino(),
 					new_path);
-				ret = remote_rename_same_parent(remote_i, old_path, new_path, flags);
+				while(true) {
+					ret = remote_rename_same_parent(remote_i, old_path, new_path, flags);
+					if(ret == -ENOTLEADER) {
+						indexing_table->find_remote_dentry_table_again(remote_i);
+						continue;
+					} else
+						break;
+				}
 			}
-
-
 		} else {
 			shared_ptr<inode> src_parent_i = indexing_table->path_traversal(*src_parent_path);
 			shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
@@ -398,29 +484,58 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					dst_dentry_table->get_leader_ip(),
 					dst_dentry_table->get_dir_ino(),
 					new_path);
-				ret = remote_rename_not_same_parent_dst(dst_remote_i, target_ino, check_dst_ino, new_path, flags);
+				while(true) {
+					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_ino, check_dst_ino, new_path, flags);
+					if(ret == -ENOTLEADER) {
+						indexing_table->find_remote_dentry_table_again(dst_remote_i);
+						continue;
+					} else
+						break;
+				}
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == LOCAL)) {
 				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
 					src_dentry_table->get_leader_ip(),
 					src_dentry_table->get_dir_ino(),
 					old_path);
-				uuid target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
+				uuid target_ino;
+				while(true) {
+					target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
+					if(target_ino.is_nil()) {
+						indexing_table->find_remote_dentry_table_again(src_remote_i);
+						continue;
+					} else
+						break;
+				}
 				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
 				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
 					src_dentry_table->get_leader_ip(),
 					src_dentry_table->get_dir_ino(),
 					old_path);
-				uuid target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
+				uuid target_ino;
+				while(true) {
+					target_ino = remote_rename_not_same_parent_src(src_remote_i, old_path, flags);
+					if(target_ino.is_nil()) {
+						indexing_table->find_remote_dentry_table_again(src_remote_i);
+						continue;
+					} else
+						break;
+				}
 				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
 					dst_dentry_table->get_leader_ip(),
 					dst_dentry_table->get_dir_ino(),
 					new_path);
-				ret = remote_rename_not_same_parent_dst(dst_remote_i, target_ino, check_dst_ino, new_path, flags);
+				while(true) {
+					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_ino, check_dst_ino, new_path, flags);
+					if(ret == -ENOTLEADER) {
+						indexing_table->find_remote_dentry_table_again(dst_remote_i);
+						continue;
+					} else
+						break;
+				}
 			}
 
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -472,7 +587,14 @@ int fuse_ops::open(const char *path, struct fuse_file_info *file_info) {
 		if (i->get_loc() == LOCAL) {
 			ret = local_open(i, file_info);
 		} else if (i->get_loc() == REMOTE) {
-			ret = remote_open(std::dynamic_pointer_cast<remote_inode>(i), file_info);
+			while(true) {
+				ret = remote_open(std::dynamic_pointer_cast<remote_inode>(i), file_info);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			}
 		}
 
 	} catch (inode::no_entry &e) {
@@ -512,7 +634,7 @@ int fuse_ops::create(const char *path, mode_t mode, struct fuse_file_info *file_
 
 	if (S_ISDIR(mode))
 		return -EISDIR;
-
+	int ret = 0;
 	try {
 		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
 
@@ -526,23 +648,29 @@ int fuse_ops::create(const char *path, mode_t mode, struct fuse_file_info *file_
 				parent_dentry_table->get_leader_ip(),
 				parent_dentry_table->get_dir_ino(),
 				*target_name);
-			remote_create(remote_i, *target_name,
-				      mode, file_info);
+			while(true) {
+				ret = remote_create(remote_i, *target_name, mode, file_info);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(remote_i);
+					continue;
+				} else
+					break;
+			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
 		return -EACCES;
 	}
 
-	return 0;
+	return ret;
 }
 
 int fuse_ops::unlink(const char *path) {
 	global_logger.log(fuse_op, "Called unlink()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	int ret = 0;
 	try {
 		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
 
@@ -556,15 +684,21 @@ int fuse_ops::unlink(const char *path) {
 				parent_dentry_table->get_leader_ip(),
 				parent_dentry_table->get_dir_ino(),
 				*target_name);
-			remote_unlink(remote_i, *target_name);
+			while(true) {
+				ret = remote_unlink(remote_i, *target_name);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(remote_i);
+					continue;
+				} else
+					break;
+			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
 		return -EACCES;
 	}
-	return 0;
+	return ret;
 }
 
 int fuse_ops::read(const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *file_info) {
@@ -572,7 +706,7 @@ int fuse_ops::read(const char *path, char *buffer, size_t size, off_t offset, st
 	global_logger.log(fuse_op, "path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " +
 				   std::to_string(offset));
 
-	size_t read_len = 0;
+	ssize_t read_len = 0;
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
@@ -599,8 +733,7 @@ int fuse_ops::write(const char *path, const char *buffer, size_t size, off_t off
 	global_logger.log(fuse_op, "path : " + std::string(path) + " size : " + std::to_string(size) + " offset : " +
 				   std::to_string(offset));
 
-	size_t written_len = 0;
-
+	ssize_t written_len = 0;
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
@@ -613,10 +746,15 @@ int fuse_ops::write(const char *path, const char *buffer, size_t size, off_t off
 		if (i->get_loc() == LOCAL) {
 			written_len = local_write(i, buffer, size, offset, file_info->flags);
 		} else if (i->get_loc() == REMOTE) {
-			written_len = remote_write(std::dynamic_pointer_cast<remote_inode>(i), buffer, size, offset,
-						   file_info->flags);
+			while(true) {
+				written_len = remote_write(std::dynamic_pointer_cast<remote_inode>(i), buffer, size, offset, file_info->flags);
+				if(written_len == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -630,6 +768,7 @@ int fuse_ops::chmod(const char *path, mode_t mode, struct fuse_file_info *file_i
 	global_logger.log(fuse_op, "Called chmod()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	int ret = 0;
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
@@ -642,22 +781,29 @@ int fuse_ops::chmod(const char *path, mode_t mode, struct fuse_file_info *file_i
 		if (i->get_loc() == LOCAL) {
 			local_chmod(i, mode);
 		} else if (i->get_loc() == REMOTE) {
-			remote_chmod(std::dynamic_pointer_cast<remote_inode>(i), mode);
+			while(true) {
+				ret = remote_chmod(std::dynamic_pointer_cast<remote_inode>(i), mode);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
 		return -EACCES;
 	}
 
-	return 0;
+	return ret;
 }
 
 int fuse_ops::chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "Called chown()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	int ret = 0;
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
@@ -670,7 +816,14 @@ int fuse_ops::chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_inf
 		if (i->get_loc() == LOCAL) {
 			local_chown(i, uid, gid);
 		} else if (i->get_loc() == REMOTE) {
-			remote_chown(std::dynamic_pointer_cast<remote_inode>(i), uid, gid);
+			while(true) {
+				ret = remote_chown(std::dynamic_pointer_cast<remote_inode>(i), uid, gid);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			}
 		}
 
 	} catch (inode::no_entry &e) {
@@ -686,6 +839,7 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 	global_logger.log(fuse_op, "Called utimens()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
+	int ret = 0;
 	try {
 		shared_ptr<inode> i;
 		if(file_info){
@@ -698,7 +852,14 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 		if (i->get_loc() == LOCAL) {
 			local_utimens(i, tv);
 		} else if (i->get_loc() == REMOTE) {
-			remote_utimens(std::dynamic_pointer_cast<remote_inode>(i), tv);
+			while(true) {
+				ret = remote_utimens(std::dynamic_pointer_cast<remote_inode>(i), tv);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			}
 		}
 
 	} catch (inode::no_entry &e) {
@@ -727,7 +888,14 @@ int fuse_ops::truncate(const char *path, off_t offset, struct fuse_file_info *fi
 		if (i->get_loc() == LOCAL) {
 			ret = local_truncate(i, offset);
 		} else if (i->get_loc() == REMOTE) {
-			ret = remote_truncate(std::dynamic_pointer_cast<remote_inode>(i), offset);
+			while(true) {
+				ret = remote_truncate(std::dynamic_pointer_cast<remote_inode>(i), offset);
+				if(ret == -ENOTLEADER) {
+					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+					continue;
+				} else
+					break;
+			}
 		}
 	} catch (inode::no_entry &e) {
 		return -ENOENT;

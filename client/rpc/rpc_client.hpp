@@ -29,10 +29,10 @@ public:
 	mode_t get_mode(uuid dentry_table_ino, std::string filename);
 	void permission_check(uuid dentry_table_ino, std::string filename, int mask, bool target_is_parent);
 	/* file system operations */
-	void getattr(shared_ptr<remote_inode> i, struct stat* s);
-	void access(shared_ptr<remote_inode> i, int mask);
+	int getattr(shared_ptr<remote_inode> i, struct stat* s);
+	int access(shared_ptr<remote_inode> i, int mask);
 	int opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
-	void readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler);
+	int readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler);
 	uuid mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode);
 	int rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino);
 	int rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::string target_name);
@@ -42,12 +42,12 @@ public:
 	uuid rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags);
 	int rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags);
 	int open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
-	void create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);
-	void unlink(shared_ptr<remote_inode> parent_i, std::string child_name);
-	size_t write(shared_ptr<remote_inode>i, const char* buffer, size_t size, off_t offset, int flags);
-	void chmod(shared_ptr<remote_inode> i, mode_t mode);
-	void chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid);
-	void utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]);
+	int create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);
+	int unlink(shared_ptr<remote_inode> parent_i, std::string child_name);
+	ssize_t write(shared_ptr<remote_inode>i, const char* buffer, size_t size, off_t offset, int flags);
+	int chmod(shared_ptr<remote_inode> i, mode_t mode);
+	int chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid);
+	int utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]);
 	int truncate(shared_ptr<remote_inode> i, off_t offset);
 };
 

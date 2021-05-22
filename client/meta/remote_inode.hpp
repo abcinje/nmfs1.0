@@ -28,5 +28,4 @@ public:
     	void permission_check(int mask) override;
 };
 
-
 #endif //NMFS_REMOTE_INODE_H
