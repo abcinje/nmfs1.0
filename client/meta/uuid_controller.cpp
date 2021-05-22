@@ -1,10 +1,12 @@
 #include "uuid_controller.hpp"
 
 uuid uuid_controller::alloc_new_uuid() {
+	global_logger.log(inode_ops, "Called alloc_new_uuid()");
 	return this->generator();
 }
 
 uint64_t uuid_controller::get_prefix_from_uuid(const uuid& id) {
+	global_logger.log(inode_ops, "Called get_prefix_from_uuid(" + uuid_to_string(id) + ")");
 	uint64_t prefix;
 	const uint8_t* cursor = id.data;
 	memcpy(&prefix, cursor, sizeof(uint64_t));
@@ -13,6 +15,7 @@ uint64_t uuid_controller::get_prefix_from_uuid(const uuid& id) {
 }
 
 uint64_t uuid_controller::get_postfix_from_uuid(const uuid& id){
+	global_logger.log(inode_ops, "Called get_postfix_from_uuid(" + uuid_to_string(id) + ")");
 	uint64_t postfix;
 	const uint8_t* cursor = id.data + 8;
 	memcpy(&postfix, cursor, sizeof(uint64_t));
@@ -21,6 +24,7 @@ uint64_t uuid_controller::get_postfix_from_uuid(const uuid& id){
 }
 
 uuid uuid_controller::splice_prefix_and_postfix(const uint64_t& prefix, const uint64_t& postfix){
+	global_logger.log(inode_ops, "Called get_splice_from_uuid()");
 	uuid spliced_uuid{};
 	uint8_t* cursor = spliced_uuid.data;
 	memcpy(cursor, reinterpret_cast<const void *>(prefix), sizeof(uint64_t));
