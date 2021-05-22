@@ -17,7 +17,7 @@ public:
 	uuid alloc_new_uuid();
 	static uint64_t get_prefix_from_uuid(const uuid& id);
 	static uint64_t get_postfix_from_uuid(const uuid& id);
-	static uuid splice_prefix_and_postfix(const uint64_t& prefix, const uint64_t& postfix);
+	static uuid splice_prefix_and_postfix(const uint64_t prefix, const uint64_t postfix);
 };
 
 uuid get_root_ino();

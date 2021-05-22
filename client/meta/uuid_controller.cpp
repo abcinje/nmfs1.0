@@ -23,14 +23,14 @@ uint64_t uuid_controller::get_postfix_from_uuid(const uuid& id){
 	return postfix;
 }
 
-uuid uuid_controller::splice_prefix_and_postfix(const uint64_t& prefix, const uint64_t& postfix){
+uuid uuid_controller::splice_prefix_and_postfix(const uint64_t prefix, const uint64_t postfix){
 	global_logger.log(inode_ops, "Called get_splice_from_uuid()");
 	uuid spliced_uuid{};
 	uint8_t* cursor = spliced_uuid.data;
-	memcpy(cursor, reinterpret_cast<const void *>(prefix), sizeof(uint64_t));
+	memcpy(cursor, &prefix, sizeof(uint64_t));
 
 	cursor = cursor + 8;
-	memcpy(cursor, reinterpret_cast<const void *>(postfix), sizeof(uint64_t));
+	memcpy(cursor, &postfix, sizeof(uint64_t));
 
 	return spliced_uuid;
 }
