@@ -75,7 +75,7 @@ void transaction::deserialize(std::vector<char> raw)
 	/* d_inode */
 	int32_t d_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
 	index += sizeof(int32_t);
-	if (d_inode_size != -1) {
+	if (d_inode_size != -1) {	/* finished? */
 		d_inode->deserialize(&raw[index]);
 		index += sizeof(inode);
 	}
@@ -83,11 +83,11 @@ void transaction::deserialize(std::vector<char> raw)
 	/* dentries */
 	while (true) {
 		char entry_stat = raw[index++];
-		if (entry_stat == -1)
+		if (entry_stat == -1)	/* finished? */
 			break;
+
 		int32_t dentry_size = *(reinterpret_cast<int32_t *>(&raw[index]));
 		index += sizeof(int32_t);
-
 		auto ret = dentries.insert({std::string(&raw[index], dentry_size), static_cast<bool>(entry_stat)});
 		if (!ret.second)
 			throw std::logic_error("transaction::deserialize() failed (a duplicated key exists)");
@@ -98,11 +98,11 @@ void transaction::deserialize(std::vector<char> raw)
 	while (true) {
 		int32_t f_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
 		index += sizeof(int32_t);
-		if (f_inode_size == -1)
+		if (f_inode_size == -1)	/* finished? */
 			break;
+
 		std::unique_ptr<inode> i = std::make_unique<inode>();
 		i->deserialize(&raw[index]);
-
 		auto ret = f_inodes.insert({uuid_to_string(i->get_ino()), std::move(i)});
 		if (!ret.second)
 			throw std::logic_error("transaction::deserialize() failed (a duplicated key exists)");
