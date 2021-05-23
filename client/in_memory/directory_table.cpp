@@ -85,6 +85,7 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 		global_logger.log(directory_table_ops, "Success to acquire lease");
 		/* Success to acquire lease */
 		new_dentry_table = std::make_shared<dentry_table>(ino, LOCAL);
+		new_dentry_table->set_leader_ip(temp_address);
 		new_dentry_table->pull_child_metadata();
 		this->add_dentry_table(ino, new_dentry_table);
 	} else if(ret == -1) {
@@ -168,4 +169,16 @@ int directory_table::delete_dentry_table(uuid ino){
 	this->dentry_tables.erase(it);
 
 	return 0;
+}
+
+void directory_table::find_remote_dentry_table_again(const std::shared_ptr<remote_inode>& remote_i) {
+	global_logger.log(directory_table_ops, "Called find_remote_dentry_table_again()");
+	shared_ptr<dentry_table> target_dentry_table = this->get_dentry_table(remote_i->get_dentry_table_ino());
+	if(target_dentry_table->get_loc() == REMOTE) {
+		global_logger.log(directory_table_ops, "Remote dentry table moves to other leader");
+	} else if (target_dentry_table->get_loc() == LOCAL) {
+		global_logger.log(directory_table_ops, "Remote dentry table becomes Local dentry table");
+	}
+
+	remote_i->set_leader_ip(target_dentry_table->get_leader_ip());
 }

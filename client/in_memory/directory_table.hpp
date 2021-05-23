@@ -31,7 +31,7 @@ public:
         shared_ptr<dentry_table> lease_dentry_table(uuid ino);
 	shared_ptr<dentry_table> get_dentry_table(uuid ino);
 	uint64_t check_dentry_table(uuid ino);
-	void find_remote_dentry_table_again(std::shared_ptr<remote_inode> remote_i);
+	void find_remote_dentry_table_again(const std::shared_ptr<remote_inode>& remote_i);
 };
 
 #endif //NMFS0_DIRECTORY_TABLE_HPP

@@ -25,7 +25,10 @@ public:
 	[[nodiscard]] const string &get_file_name() const;
 	[[nodiscard]] bool get_target_is_parent() const;
 	mode_t get_mode() override;
-    	void permission_check(int mask) override;
+
+    void set_leader_ip(const string &leader_ip);
+
+    void permission_check(int mask) override;
 };
 
 #endif //NMFS_REMOTE_INODE_H

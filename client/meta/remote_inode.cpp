@@ -50,6 +50,10 @@ mode_t remote_inode::get_mode() {
 	return returend_mode;
 }
 
+void remote_inode::set_leader_ip(const string &leader_ip) {
+	remote_inode::leader_ip = leader_ip;
+}
+
 void remote_inode::permission_check(int mask) {
 	std::string remote_address(this->leader_ip);
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
