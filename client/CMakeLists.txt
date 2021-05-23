@@ -81,7 +81,6 @@ add_executable(
 
   # journal
   journal/journal_table.cpp
-  journal/mqueue.cpp
   journal/transaction.cpp
 
   # protobuf

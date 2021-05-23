@@ -14,8 +14,27 @@ private:
 	std::queue<T> q;
 
 public:
-	void issue(T value);
-	T dispatch(void);
+	void issue(T value)
+	{
+		std::scoped_lock lock(m);
+
+		q.push(value);
+		cv.notify_one();
+	}
+
+	T dispatch(void)
+	{
+		T value;
+
+		std::scoped_lock lock(m);
+
+		while (q.empty())
+			cv.wait(lock);
+		value = q.front();
+		q.pop();
+
+		return value;
+	}
 };
 
 #endif /* _MQUEUE_HPP_ */
