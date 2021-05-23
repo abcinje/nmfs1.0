@@ -5,18 +5,8 @@ const char *transaction::invalidated::what(void)
 	return "Tried to make a checkpoint for an invalidated transaction.";
 }
 
-transaction::transaction(void) : committed(false), d_inode(nullptr)
-{
-}
-
 std::vector<char> transaction::serialize(void)
 {
-	std::unique_lock lock(m);
-
-	if (committed)
-		return std::vector<char>();
-	committed = true;
-
 	std::vector<char> vec;
 
 	/* valid bit */
@@ -110,6 +100,9 @@ void transaction::deserialize(std::vector<char> raw)
 	}
 }
 
+transaction::transaction(void) : committed(false), d_inode(nullptr)
+{
+}
 
 int transaction::set_inode(std::shared_ptr<inode> i)
 {
@@ -222,14 +215,22 @@ int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> i, cons
 	return 0;
 }
 
-off_t transaction::get_offset(void)
+void transaction::commit(rados_io *meta)
 {
-	/* We don't have to lock the tx here */
-	return offset;
-}
+	{
+		std::unique_lock lock(m);
 
-void transaction::set_offset(off_t off)
-{
-	/* We don't have to lock the tx here */
-	offset = off;
+		if (committed)
+			throw std::logic_error("transaction::commit() failed (tx has been already committed)");
+		committed = true;
+	}
+
+	auto raw = serialize();
+
+	size_t obj_size;
+	meta->stat(obj_category::JOURNAL, uuid_to_string(d_inode->get_ino()), obj_size);
+	meta->write(obj_category::JOURNAL, uuid_to_string(d_inode->get_ino()), raw.data(), raw.size(), obj_size);
+
+	/* Update offset */
+	offset = obj_size;
 }
