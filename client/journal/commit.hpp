@@ -5,6 +5,7 @@
 
 #include "journal_table.hpp"
 #include "mqueue.hpp"
+#include "../../lib/rados_io/rados_io.hpp"
 
 #define JOURNALING_PERIOD_MS 5000
 
