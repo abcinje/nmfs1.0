@@ -2,7 +2,7 @@
 
 journal_table::journal_table(void)
 {
-	map = std::make_unique<tsl::robin_map<std::string, std::shared_ptr<transaction>>>();
+	map = std::make_unique<journal_map>();
 }
 
 std::shared_ptr<transaction> journal_table::get_entry(uuid ino)
@@ -25,11 +25,11 @@ std::shared_ptr<transaction> journal_table::get_entry(uuid ino)
 	}
 }
 
-std::unique_ptr<tsl::robin_map<std::string, std::shared_ptr<transaction>>> journal_table::replace_map(void)
+std::unique_ptr<journal_map> journal_table::replace_map(void)
 {
 	std::unique_lock lock(sm);
 
 	auto temp = std::move(map);
-	map = std::make_unique<tsl::robin_map<std::string, std::shared_ptr<transaction>>>();
+	map = std::make_unique<journal_map>();
 	return temp;
 }
