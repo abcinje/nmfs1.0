@@ -15,7 +15,13 @@ std::shared_ptr<rpc_client> get_rpc_client(const std::string& remote_address) {
 		return it->second;
 	} else {
 		std::shared_ptr<rpc_client> rc = std::make_shared<rpc_client>(grpc::CreateChannel(remote_address, grpc::InsecureChannelCredentials()));
-		rc_list.insert(std::make_pair(remote_address,rc));
+		auto ret = rc_list.insert(std::make_pair(remote_address,nullptr));
+		if (ret.second) {
+			ret.first->second = rc;
+		} else {
+			global_logger.log(dentry_table_ops, "Already added rc is tried to inserted");
+			return nullptr;
+		}
 		return rc;
 	}
 }
