@@ -17,7 +17,7 @@ std::shared_ptr<inode> file_handler::get_open_inode_info() {
 	if(this->loc == LOCAL){
 		return this->i;
 	} else if (this->loc == REMOTE) {
-		return std::dynamic_pointer_cast<inode>(this->remote_i);
+		return std::static_pointer_cast<inode>(this->remote_i);
 	} else {
 		throw std::runtime_error("file_handler is corrupted : cannot know loc of opened file");
 	}

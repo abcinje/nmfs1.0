@@ -77,7 +77,7 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename, uuid targe
 		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(this->leader_ip, this->dir_ino, filename);
 		remote_i->inode::set_ino(target_ino);
 		remote_i->set_loc(REMOTE);
-		return std::dynamic_pointer_cast<inode>(remote_i);
+		return std::static_pointer_cast<inode>(remote_i);
 	}
 
 	return nullptr;
@@ -156,7 +156,7 @@ shared_ptr<inode> dentry_table::get_this_dir_inode() {
 		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(this->leader_ip, this->dir_ino, "", true);
 		remote_i->inode::set_ino(this->dir_ino);
 		remote_i->set_loc(REMOTE);
-		return std::dynamic_pointer_cast<inode>(remote_i);
+		return std::static_pointer_cast<inode>(remote_i);
 	}
 	return nullptr;
 }

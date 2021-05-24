@@ -2,6 +2,8 @@
 
 int remote_getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 	global_logger.log(remote_fs_op, "Called remote_getattr()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -11,6 +13,8 @@ int remote_getattr(shared_ptr<remote_inode> i, struct stat* stat) {
 
 int remote_access(shared_ptr<remote_inode> i, int mask) {
 	global_logger.log(remote_fs_op, "Called remote_access()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -20,6 +24,8 @@ int remote_access(shared_ptr<remote_inode> i, int mask) {
 
 int remote_opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {
 	global_logger.log(remote_fs_op, "Called remote_opendir()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -29,6 +35,8 @@ int remote_opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info)
 
 int remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler) {
 	global_logger.log(remote_fs_op, "Called remote_readdir()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -38,6 +46,8 @@ int remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t fil
 
 uuid remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(remote_fs_op, "Called remote_mkdir()");
+	if(parent_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -47,6 +57,8 @@ uuid remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name,
 
 int remote_rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino) {
 	global_logger.log(remote_fs_op, "Called remote_rmdir_top()");
+	if(target_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(target_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -56,6 +68,8 @@ int remote_rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino) {
 
 int remote_rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::string target_name) {
 	global_logger.log(remote_fs_op, "Called remote_rmdir_down()");
+	if(parent_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -65,6 +79,8 @@ int remote_rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::s
 
 int remote_symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst) {
 	global_logger.log(remote_fs_op, "Called remote_synlink()");
+	if(dst_parent_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(dst_parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -74,6 +90,8 @@ int remote_symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const
 
 int remote_readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 	global_logger.log(remote_fs_op, "Called remote_readlink()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -83,6 +101,8 @@ int remote_readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 
 int remote_rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old_path, const char* new_path, unsigned int flags) {
 	global_logger.log(remote_fs_op, "Called remote_rename_same_parent()");
+	if(parent_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -92,6 +112,8 @@ int remote_rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old
 
 uuid remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
 	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_src()");
+	if(src_parent_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(src_parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -101,6 +123,8 @@ uuid remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, co
 
 int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags) {
 	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_dst()");
+	if(dst_parent_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(dst_parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -110,6 +134,8 @@ int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uui
 
 int remote_open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {
 	global_logger.log(remote_fs_op, "Called remote_open()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -119,6 +145,8 @@ int remote_open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info) {
 
 int remote_create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info) {
 	global_logger.log(remote_fs_op, "Called remote_create()");
+	if(parent_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -128,6 +156,8 @@ int remote_create(shared_ptr<remote_inode> parent_i, std::string new_child_name,
 
 int remote_unlink(shared_ptr<remote_inode> parent_i, std::string child_name) {
 	global_logger.log(remote_fs_op, "Called remote_unlink()");
+	if(parent_i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -137,6 +167,8 @@ int remote_unlink(shared_ptr<remote_inode> parent_i, std::string child_name) {
 
 ssize_t remote_write(shared_ptr<remote_inode> i, const char* buffer, size_t size, off_t offset, int flags) {
 	global_logger.log(remote_fs_op, "Called remote_write()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -146,6 +178,8 @@ ssize_t remote_write(shared_ptr<remote_inode> i, const char* buffer, size_t size
 
 int remote_chmod(shared_ptr<remote_inode> i, mode_t mode) {
 	global_logger.log(remote_fs_op, "Called remote_chmod()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -155,6 +189,8 @@ int remote_chmod(shared_ptr<remote_inode> i, mode_t mode) {
 
 int remote_chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 	global_logger.log(remote_fs_op, "Called remote_chown()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -164,6 +200,8 @@ int remote_chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 
 int remote_utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]) {
 	global_logger.log(remote_fs_op, "Called remote_utimens()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
@@ -173,6 +211,8 @@ int remote_utimens(shared_ptr<remote_inode> i, const struct timespec tv[2]) {
 
 int remote_truncate (shared_ptr<remote_inode> i, off_t offset) {
 	global_logger.log(remote_fs_op, "Called remote_truncate()");
+	if(i == nullptr)
+		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
