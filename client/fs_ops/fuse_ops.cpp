@@ -17,13 +17,13 @@ rados_io *data_pool;
 std::unique_ptr<Server> remote_handle;
 std::unique_ptr<lease_client> lc;
 
-directory_table *indexing_table;
+std::unique_ptr<directory_table> indexing_table;
 std::unique_ptr<uuid_controller> ino_controller;
 std::unique_ptr<file_handler_list> open_context;
 
 thread *remote_server_thread;
 
-client *this_client;
+std::unique_ptr<client> this_client;
 unsigned int fuse_capable;
 
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
@@ -43,7 +43,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 
 	auto channel = grpc::CreateChannel(manager_ip, grpc::InsecureChannelCredentials());
 	lc = std::make_unique<lease_client>(channel, remote_handle_ip);
-	this_client = new client(channel);
+	this_client = std::make_unique<client>(channel);
 	this_client->set_client_uid(fuse_ctx->uid);
 	this_client->set_client_gid(fuse_ctx->gid);
 
@@ -60,7 +60,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 		d.sync();
 	}
 
-	indexing_table = new directory_table();
+	indexing_table = std::make_unique<directory_table>();
 	ino_controller = std::make_unique<uuid_controller>();
 	open_context = std::make_unique<file_handler_list>();
 	config->nullpath_ok = 0;
@@ -73,11 +73,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 void fuse_ops::destroy(void *private_data) {
 	global_logger.log(fuse_op, "Called destroy()");
 
-	delete indexing_table;
-
 	remote_handle->Shutdown();
-
-	delete this_client;
 
 	delete meta_pool;
 	delete data_pool;

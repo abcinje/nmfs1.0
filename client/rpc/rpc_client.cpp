@@ -2,6 +2,7 @@
 extern rados_io *data_pool;
 extern std::unique_ptr<file_handler_list> open_context;
 extern std::unique_ptr<uuid_controller> ino_controller;
+extern std::unique_ptr<client> this_client;
 
 rpc_client::rpc_client(std::shared_ptr<Channel> channel) : stub_(remote_ops::NewStub(channel)){}
 /* TODO : Handle -ENOTLEADER */

@@ -2,11 +2,11 @@
 /* TODO : thread cannot read fuse_ctx, so only work with root uid and gid*/
 extern rados_io *meta_pool;
 extern rados_io *data_pool;
-extern directory_table *indexing_table;
+extern std::unique_ptr<directory_table> indexing_table;
 extern std::unique_ptr<uuid_controller> ino_controller;
 
 extern std::unique_ptr<Server> remote_handle;
-extern client *this_client;
+extern std::unique_ptr<client> this_client;
 
 void run_rpc_server(const std::string& remote_address){
 	rpc_server rpc_service;

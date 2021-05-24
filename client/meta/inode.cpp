@@ -5,7 +5,7 @@
 using std::runtime_error;
 
 extern rados_io *meta_pool;
-extern client *this_client;
+extern std::unique_ptr<client> this_client;
 extern std::unique_ptr<uuid_controller> ino_controller;
 
 inode::no_entry::no_entry(const string &msg) : runtime_error(msg)
