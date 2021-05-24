@@ -59,11 +59,10 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 				/* if target is dir, this child is just for checking mode.
 				 * if target is reg, this child is actual inode */
 				target_inode = parent_dentry_table->get_child_inode(target_name, check_target_ino);
-		}
-		if(target_inode == nullptr)
-			throw std::runtime_error("Failed to make remote_inode in path_traversal()");
-		{
-			std::scoped_lock scl{target_inode->inode_mutex};
+
+			if(target_inode == nullptr)
+				throw std::runtime_error("Failed to make remote_inode in path_traversal()");
+
 			if (S_ISDIR(target_inode->get_mode())) {
 				parent_dentry_table = this->get_dentry_table(check_target_ino);
 				target_inode = parent_dentry_table->get_this_dir_inode();
