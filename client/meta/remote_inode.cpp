@@ -3,9 +3,11 @@
 
 /* <address, channel> */
 std::map<std::string, std::shared_ptr<rpc_client>> rc_list;
+std::recursive_mutex rc_list_mutex;
 
 std::shared_ptr<rpc_client> get_rpc_client(const std::string& remote_address) {
 	global_logger.log(remote_fs_op, "Called  get_rpc_client()");
+	std::scoped_lock scl{rc_list_mutex};
 	std::map<std::string, std::shared_ptr<rpc_client>>::iterator it;
 	it = rc_list.find(remote_address);
 
