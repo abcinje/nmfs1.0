@@ -109,7 +109,6 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 					break;
 			};
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {

@@ -20,10 +20,9 @@ public:
 
 	uint64_t get_client_id();
 	uid_t get_client_uid() const;
-    	gid_t get_client_gid() const;
-
-    	void set_client_uid(uid_t client_uid);
-    	void set_client_gid(gid_t client_gid);
+	gid_t get_client_gid() const;
+	void set_client_uid(uid_t client_uid);
+	void set_client_gid(gid_t client_gid);
 };
 
 #endif //NMFS0_CLIENT_HPP

@@ -5,7 +5,6 @@ extern rados_io *data_pool;
 extern directory_table *indexing_table;
 extern std::unique_ptr<uuid_controller> ino_controller;
 
-
 extern std::unique_ptr<Server> remote_handle;
 extern client *this_client;
 
