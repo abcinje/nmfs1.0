@@ -60,13 +60,13 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 		d.sync();
 	}
 
-	remote_server_thread = new thread(run_rpc_server, remote_handle_ip);
-
 	indexing_table = new directory_table();
 	ino_controller = std::make_unique<uuid_controller>();
 	open_context = std::make_unique<file_handler_list>();
 	config->nullpath_ok = 0;
 	fuse_capable = info->capable;
+
+	remote_server_thread = new thread(run_rpc_server, remote_handle_ip);
 	return nullptr;
 }
 

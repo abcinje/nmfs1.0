@@ -32,8 +32,8 @@ private:
     std::map<uint64_t, std::shared_ptr<file_handler>> fh_list;
 
 public:
-    	std::mutex file_handler_mutex;
-    	void add_file_handler(uint64_t key, std::shared_ptr<file_handler> fh);
+    std::recursive_mutex file_handler_mutex;
+    void add_file_handler(uint64_t key, std::shared_ptr<file_handler> fh);
 	std::shared_ptr<file_handler> get_file_handler(uint64_t key);
 	int delete_file_handler(uint64_t key);
 };
