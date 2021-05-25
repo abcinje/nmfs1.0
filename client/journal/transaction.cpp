@@ -28,13 +28,19 @@ std::vector<char> transaction::serialize(void)
 
 	/* dentries */
 	for (auto &d : dentries) {
-		vec.push_back(d.second ? 1 : 0);
+		/* added or deleted */
+		vec.push_back(d.second.first ? 1 : 0);
+
+		/* entry name */
 		int32_t dentry_size = static_cast<uint32_t>(d.first.size());
 		vec.push_back(static_cast<char>(dentry_size & 0xff));
 		vec.push_back(static_cast<char>((dentry_size >> 8) & 0xff));
 		vec.push_back(static_cast<char>((dentry_size >> 16) & 0xff));
 		vec.push_back(static_cast<char>((dentry_size >> 24) & 0xff));
 		vec.insert(vec.end(), d.first.begin(), d.first.end());
+
+		/* ino */
+		vec.insert(vec.end(), d.second.second.begin(), d.second.second.end());
 	}
 	vec.push_back(-1);
 
@@ -76,12 +82,20 @@ void transaction::deserialize(std::vector<char> raw)
 		if (entry_stat == -1)	/* finished? */
 			break;
 
+		/* entry name */
 		int32_t dentry_size = *(reinterpret_cast<int32_t *>(&raw[index]));
 		index += sizeof(int32_t);
-		auto ret = dentries.insert({std::string(&raw[index], dentry_size), static_cast<bool>(entry_stat)});
+		std::string dentry(&raw[index], dentry_size);
+		index += dentry_size;
+
+		/* ino */
+		boost::uuids::uuid ino;
+		std::copy(raw.begin() + index, raw.begin() + index + ino.size(), ino.begin());
+		index += ino.size();
+
+		auto ret = dentries.insert({dentry, {static_cast<bool>(entry_stat), ino}});
 		if (!ret.second)
 			throw std::logic_error("transaction::deserialize() failed (a duplicated key exists)");
-		index += dentry_size;
 	}
 
 	/* f_inodes */
@@ -116,17 +130,17 @@ int transaction::set_inode(std::shared_ptr<inode> i)
 	return 0;
 }
 
-int transaction::mkdir(const std::string &d_name, const struct timespec &time)
+int transaction::mkdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time)
 {
 	std::unique_lock lock(m);
 
 	if (committed)
 		return -1;
 
-	auto dentries_ret = dentries.insert({d_name, true});
+	auto dentries_ret = dentries.insert({d_name, {true, d_ino}});
 	if (!dentries_ret.second) {
-		if (!dentries_ret.first->second) {
-			dentries_ret.first.value() = true;
+		if (!dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {true, d_ino};
 		} else {
 			throw std::logic_error("transaction::mkdir() failed (directory already exists)");
 		}
@@ -138,17 +152,17 @@ int transaction::mkdir(const std::string &d_name, const struct timespec &time)
 	return 0;
 }
 
-int transaction::rmdir(const std::string &d_name, const struct timespec &time)
+int transaction::rmdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time)
 {
 	std::unique_lock lock(m);
 
 	if (committed)
 		return -1;
 
-	auto dentries_ret = dentries.insert({d_name, false});
+	auto dentries_ret = dentries.insert({d_name, {false, d_ino}});
 	if (!dentries_ret.second) {
-		if (dentries_ret.first->second) {
-			dentries_ret.first.value() = false;
+		if (dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {false, d_ino};
 		} else {
 			throw std::logic_error("transaction::rmdir() failed (directory doesn't exist)");
 		}
@@ -160,28 +174,28 @@ int transaction::rmdir(const std::string &d_name, const struct timespec &time)
 	return 0;
 }
 
-int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> i)
+int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time)
 {
 	std::unique_lock lock(m);
 
 	if (committed)
 		return -1;
 
-	auto dentries_ret = dentries.insert({f_name, true});
+	auto dentries_ret = dentries.insert({f_name, {true, f_inode->get_ino()}});
 	if (!dentries_ret.second) {
-		if (!dentries_ret.first->second) {
-			dentries_ret.first.value() = true;
+		if (!dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {true, f_inode->get_ino()};
 		} else {
 			throw std::logic_error("transaction::mkreg() failed (file already exists)");
 		}
 	}
 
-	d_inode->set_mtime(i->get_mtime());
-	d_inode->set_ctime(i->get_ctime());
+	d_inode->set_mtime(f_inode->get_mtime());
+	d_inode->set_ctime(f_inode->get_ctime());
 
-	auto f_inodes_ret = f_inodes.insert({uuid_to_string(i->get_ino()), nullptr});
+	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
 	if (f_inodes_ret.second || !f_inodes_ret.first->second) {
-		f_inodes_ret.first.value() = std::make_unique<inode>(*i);
+		f_inodes_ret.first.value() = std::make_unique<inode>(*f_inode);
 	} else {
 		throw std::logic_error("transaction::mkreg() failed (file already exists)");
 	}
@@ -189,17 +203,17 @@ int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> i)
 	return 0;
 }
 
-int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> i, const struct timespec &time)
+int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time)
 {
 	std::unique_lock lock(m);
 
 	if (committed)
 		return -1;
 
-	auto dentries_ret = dentries.insert({f_name, false});
+	auto dentries_ret = dentries.insert({f_name, {false, f_inode->get_ino()}});
 	if (!dentries_ret.second) {
-		if (dentries_ret.first->second) {
-			dentries_ret.first.value() = false;
+		if (dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {false, f_inode->get_ino()};
 		} else {
 			throw std::logic_error("transaction::rmreg() failed (file doesn't exist)");
 		}
@@ -208,7 +222,7 @@ int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> i, cons
 	d_inode->set_mtime(time);
 	d_inode->set_ctime(time);
 
-	auto f_inodes_ret = f_inodes.insert({uuid_to_string(i->get_ino()), nullptr});
+	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
 	if (!f_inodes_ret.second && !f_inodes_ret.first->second)
 		throw std::logic_error("transaction::rmreg() failed (file doesn't exist)");
 
