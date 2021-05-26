@@ -116,7 +116,7 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino, bool remote
 			}
 		} else { /* UNKNOWN */
 			global_logger.log(directory_table_ops, "dentry_table : MISS");
-			throw dentry_table::not_leader("This client doesn;t has lease of this dentry table");
+			throw dentry_table::not_leader("This client doesn't have lease of this dentry table");
 		}
 	} else {
 		if (it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
@@ -157,7 +157,7 @@ int directory_table::delete_dentry_table(uuid ino){
 	it = this->dentry_tables.find(ino);
 
 	if(it == this->dentry_tables.end()) {
-		global_logger.log(directory_table_ops, "Non-existed dentry table is tried to deleted");
+		global_logger.log(directory_table_ops, "Non-existed dentry table is tried to delete");
 		return -1;
 	}
 
