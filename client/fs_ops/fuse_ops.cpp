@@ -204,6 +204,8 @@ int fuse_ops::readlink(const char *path, char *buf, size_t size) {
 				if(ret == -ENOTLEADER) {
 					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
 					continue;
+				}  else if(ret == -ENEEDRECOV) {
+					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
 			}
