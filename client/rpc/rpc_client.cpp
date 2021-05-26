@@ -219,13 +219,27 @@ uuid rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_
 	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(parent_i->get_dentry_table_ino()));
 	Input.set_new_dir_name(new_child_name);
 	Input.set_new_mode(mode);
+	Input.set_uid(this_client->get_client_uid());
+	Input.set_gid(this_client->get_client_gid());
 
 	Status status = stub_->rpc_mkdir(&context, Input, &Output);
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER)
 			return nil_uuid();
 
-		return ino_controller->splice_prefix_and_postfix(Output.new_dir_ino_prefix(), Output.new_dir_ino_postfix());
+		if(Output.ret() == 0){
+			uuid new_dir_ino = ino_controller->splice_prefix_and_postfix(Output.new_dir_ino_prefix(), Output.new_dir_ino_postfix());
+			shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), mode | S_IFDIR, new_dir_ino);
+			i->set_size(DIR_INODE_SIZE);
+			i->sync();
+
+			shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
+			new_d->sync();
+
+			return new_dir_ino;
+		}
+
+		return nil_uuid();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		throw std::runtime_error("rpc_client::mkdir() failed");

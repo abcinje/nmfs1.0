@@ -250,16 +250,10 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 	}
 
 	std::shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(dentry_table_ino);
-	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFDIR);
+	shared_ptr<inode> i = std::make_shared<inode>(request->uid(), request->gid(), request->new_mode() | S_IFDIR);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->create_child_inode(request->new_dir_name(), i);
-
-		i->set_size(DIR_INODE_SIZE);
-		i->sync();
-
-		shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
-		new_d->sync();
 
 		response->set_new_dir_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_ino()));
 		response->set_new_dir_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_ino()));

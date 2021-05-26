@@ -12,7 +12,7 @@ inode::no_entry::no_entry(const string &msg) : runtime_error(msg)
 {
 }
 
-const char *inode::no_entry::what(void)
+const char *inode::no_entry::what()
 {
 	return runtime_error::what();
 }
@@ -21,7 +21,7 @@ inode::permission_denied::permission_denied(const string &msg) : runtime_error(m
 {
 }
 
-const char *inode::permission_denied::what(void)
+const char *inode::permission_denied::what()
 {
 	return runtime_error::what();
 }
@@ -53,6 +53,16 @@ inode::inode(uid_t owner, gid_t group, mode_t mode, bool root) : i_mode(mode), i
 	i_atime = i_mtime = i_ctime = ts;
 	loc = LOCAL;
 	i_ino = root ? get_root_ino() : alloc_new_ino();
+}
+
+inode::inode(uid_t owner, gid_t group, mode_t mode, uuid &predefined_ino) : i_mode(mode), i_uid(owner), i_gid(group), i_nlink(1), i_size(0), link_target_len(0), link_target_name(NULL) {
+	global_logger.log(inode_ops, "Called inode(new directory)");
+	struct timespec ts;
+	if (!timespec_get(&ts, TIME_UTC))
+		runtime_error("timespec_get() failed");
+	i_atime = i_mtime = i_ctime = ts;
+	loc = LOCAL;
+	i_ino = predefined_ino;
 }
 
 /* TODO : allocated target name should be freed later */
