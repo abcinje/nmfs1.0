@@ -50,7 +50,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	global_logger.log(fuse_op, "Client(ID=" + std::to_string(this_client->get_client_id()) + ") is mounted");
 
 	/* root */
-	if (!meta_pool->exist(obj_category::INODE, "0")) {
+	if (!meta_pool->exist(obj_category::INODE, uuid_to_string(get_root_ino()))) {
 		inode i(this_client->get_client_uid(), this_client->get_client_gid(), S_IFDIR | 0777, true);
 
 		dentry d(get_root_ino(), true);
