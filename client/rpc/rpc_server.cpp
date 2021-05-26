@@ -278,6 +278,8 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->create_child_inode(request->new_dir_name(), i);
 
+		i->set_size(DIR_INODE_SIZE);
+
 		response->set_new_dir_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_ino()));
 		response->set_new_dir_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_ino()));
 	}
