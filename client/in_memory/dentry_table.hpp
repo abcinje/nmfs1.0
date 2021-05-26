@@ -24,6 +24,12 @@ private:
 public:
 	std::recursive_mutex dentry_table_mutex;
 
+	class not_leader : public runtime_error {
+    	public:
+	    	explicit not_leader(const string &msg);
+	    	const char *what(void);
+	};
+
 	explicit dentry_table(uuid dir_ino, enum meta_location loc);
 	~dentry_table();
 

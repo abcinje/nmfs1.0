@@ -1,5 +1,13 @@
 #include "dentry_table.hpp"
 
+dentry_table::not_leader::not_leader(const string &msg) : runtime_error(msg) {
+
+}
+
+const char *dentry_table::not_leader::what(void) {
+	return nullptr;
+}
+
 dentry_table::dentry_table(uuid dir_ino, enum meta_location loc) : dir_ino(dir_ino), loc(loc){
 	if(loc == LOCAL) {
 		this->this_dir_inode = std::make_shared<inode>(dir_ino);
@@ -164,8 +172,3 @@ shared_ptr<inode> dentry_table::get_this_dir_inode() {
 const string &dentry_table::get_leader_ip(){
 	return this->leader_ip;
 }
-
-
-
-
-
