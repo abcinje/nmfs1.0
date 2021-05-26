@@ -99,46 +99,42 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 	return new_dentry_table;
 }
 
-shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino){
+shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino, bool remote) {
 	global_logger.log(directory_table_ops, "get_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
 	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
 	it = this->dentry_tables.find(ino);
-
-	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
-		global_logger.log(directory_table_ops, "dentry_table : HIT");
-		bool valid = lc->is_valid(ino);
-		if(valid) {
-			return it->second;
-		} else {
-			this->dentry_tables.erase(it);
+	if (remote) {
+		if (it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
+			global_logger.log(directory_table_ops, "dentry_table : HIT");
+			bool valid = lc->is_valid(ino);
+			if (valid) {
+				return it->second;
+			} else {
+				this->dentry_tables.erase(it);
+				throw dentry_table::not_leader("Lease is expired at remote side");
+			}
+		} else { /* UNKNOWN */
+			global_logger.log(directory_table_ops, "dentry_table : MISS");
+			throw dentry_table::not_leader("This client doesn;t has lease of this dentry table");
+		}
+	} else {
+		if (it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
+			global_logger.log(directory_table_ops, "dentry_table : HIT");
+			bool valid = lc->is_valid(ino);
+			if (valid) {
+				return it->second;
+			} else {
+				this->dentry_tables.erase(it);
+				shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
+				return new_dentry_table;
+			}
+		} else { /* UNKNOWN */
+			global_logger.log(directory_table_ops, "dentry_table : MISS");
 			shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
 			return new_dentry_table;
 		}
 	}
-	else { /* UNKNOWN */
-		global_logger.log(directory_table_ops, "dentry_table : MISS");
-		shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
-		return new_dentry_table;
-	}
-
-}
-
-uint64_t directory_table::check_dentry_table(uuid ino){
-	global_logger.log(directory_table_ops, "check_dentry_table(" + uuid_to_string(ino) + ")");
-	std::scoped_lock scl{this->directory_table_mutex};
-	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
-	it = this->dentry_tables.find(ino);
-
-	if(it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
-		global_logger.log(directory_table_ops, "dentry_table : HIT");
-		return it->second->get_loc();
-	}
-	else { /* UNKNOWN */
-		global_logger.log(directory_table_ops, "dentry_table : MISS");
-		return UNKNOWN;
-	}
-
 }
 
 int directory_table::add_dentry_table(uuid ino, shared_ptr<dentry_table> dtable){

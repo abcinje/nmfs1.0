@@ -29,8 +29,7 @@ public:
 
 	shared_ptr<inode> path_traversal(const std::string &path);
         shared_ptr<dentry_table> lease_dentry_table(uuid ino);
-	shared_ptr<dentry_table> get_dentry_table(uuid ino);
-	uint64_t check_dentry_table(uuid ino);
+	shared_ptr<dentry_table> get_dentry_table(uuid ino, bool remote = false);
 	void find_remote_dentry_table_again(const std::shared_ptr<remote_inode>& remote_i);
 };
 

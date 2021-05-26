@@ -52,20 +52,22 @@ public:
 	std::recursive_mutex inode_mutex;
 	class no_entry : public runtime_error {
 	public:
-		no_entry(const string &msg);
-		const char *what(void);
+		explicit no_entry(const string &msg);
+		const char *what();
 	};
 
 	class permission_denied : public runtime_error {
 	public:
-		permission_denied(const string &msg);
-		const char *what(void);
+		explicit permission_denied(const string &msg);
+		const char *what();
 	};
 
 	inode(const inode &copy);
 
-	/* for normal reg file and directory */
+	/* for normal reg file and root directory */
 	inode(uid_t owner, gid_t group, mode_t mode, bool root = false);
+    	/* for normal directory */
+    	inode(uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
 	/* for symlink */
 	inode(uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
 	/* for pull metadata */
