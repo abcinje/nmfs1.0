@@ -16,7 +16,7 @@ private:
 public:
 	void issue(T value)
 	{
-		std::scoped_lock lock(m);
+		std::unique_lock lock(m);
 
 		q.push(value);
 		cv.notify_one();
@@ -26,7 +26,7 @@ public:
 	{
 		T value;
 
-		std::scoped_lock lock(m);
+		std::unique_lock lock(m);
 
 		while (q.empty())
 			cv.wait(lock);

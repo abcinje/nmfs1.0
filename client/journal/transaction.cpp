@@ -1,5 +1,7 @@
 #include "transaction.hpp"
 
+#include "../meta/dentry.hpp"
+
 const char *transaction::invalidated::what(void)
 {
 	return "Tried to make a checkpoint for an invalidated transaction.";
@@ -247,4 +249,32 @@ void transaction::commit(rados_io *meta)
 
 	/* Update offset */
 	offset = obj_size;
+}
+
+void transaction::checkpoint(rados_io *meta)
+{
+	/* d_inode */
+	d_inode->sync();
+
+	/* dentries */
+	dentry d(d_inode->get_ino());
+	for (const auto &p : dentries) {
+		bool alive = p.second.first;
+		std::string name = p.first;
+		boost::uuids::uuid ino = p.second.second;
+
+		if (alive) {
+			d.add_new_child(name, ino);
+		} else {
+			d.delete_child(name);
+		}
+	}
+	d.sync();
+
+	/* f_inodes */
+	for (const auto &p : f_inodes)
+		p.second->sync();
+
+	/* Clear the checkpoint bit */
+	meta->write(obj_category::JOURNAL, uuid_to_string(d_inode->get_ino()), "\0", 1, offset);
 }

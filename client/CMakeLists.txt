@@ -80,6 +80,7 @@ add_executable(
   in_memory/dentry_table.cpp
 
   # journal
+  journal/checkpoint.cpp
   journal/commit.cpp
   journal/journal_table.cpp
   journal/transaction.cpp

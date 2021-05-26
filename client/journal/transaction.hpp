@@ -50,6 +50,7 @@ public:
 	~transaction(void) = default;
 
 	void commit(rados_io *meta);
+	void checkpoint(rados_io *meta);
 };
 
 #endif /* _TRANSACTION_HPP_ */
