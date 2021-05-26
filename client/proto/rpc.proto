@@ -87,7 +87,10 @@ message rpc_mkdir_request {
 
   string new_dir_name = 3;
   uint32 new_mode = 4;
+  uint32 uid = 5;
+  uint32 gid = 6;
 }
+
 message rpc_rmdir_request {
   uint64 dentry_table_ino_prefix = 1;
   uint64 dentry_table_ino_postfix = 2;
