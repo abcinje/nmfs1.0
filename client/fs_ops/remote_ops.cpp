@@ -44,15 +44,15 @@ int remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t fil
 	return ret;
 }
 
-uuid remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
+int remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, uuid& new_dir_ino) {
 	global_logger.log(remote_fs_op, "Called remote_mkdir()");
 	if(parent_i == nullptr)
 		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	uuid new_dir_ino = rc->mkdir(parent_i, new_child_name, mode);
-	return new_dir_ino;
+	int ret = rc->mkdir(parent_i, new_child_name, mode, new_dir_ino);
+	return ret;
 }
 
 int remote_rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino) {
@@ -110,15 +110,15 @@ int remote_rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old
 	return ret;
 }
 
-uuid remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
+int remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags, uuid& target_ino) {
 	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_src()");
 	if(src_parent_i == nullptr)
 		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(src_parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	uuid target_ino = rc->rename_not_same_parent_src(src_parent_i, old_path, flags);
-	return target_ino;
+	int ret = rc->rename_not_same_parent_src(src_parent_i, old_path, flags, target_ino);
+	return ret;
 }
 
 int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags) {

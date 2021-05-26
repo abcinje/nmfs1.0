@@ -33,13 +33,13 @@ public:
 	int access(shared_ptr<remote_inode> i, int mask);
 	int opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 	int readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler);
-	uuid mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode);
+	int mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, uuid& new_dir_ino);
 	int rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino);
 	int rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::string target_name);
 	int symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst);
 	int readlink(shared_ptr<remote_inode> i, char *buf, size_t size);
 	int rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old_path, const char* new_path, unsigned int flags);
-	uuid rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags);
+	int rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags, uuid& target_ino);
 	int rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags);
 	int open(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 	int create(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);

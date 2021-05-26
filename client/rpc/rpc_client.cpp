@@ -113,7 +113,8 @@ int rpc_client::getattr(shared_ptr<remote_inode> i, struct stat* s) {
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::getattr() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::getattr() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -141,7 +142,8 @@ int rpc_client::access(shared_ptr<remote_inode> i, int mask) {
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::access() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::access() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -175,7 +177,8 @@ int rpc_client::opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::opendir() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::opendir() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -204,11 +207,12 @@ int rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::readdir() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::readdir() failed");
+		return -ENEEDRECOV;
 	}
 }
 
-uuid rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode) {
+int rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, uuid& new_dir_ino) {
 	global_logger.log(rpc_client_ops, "Called mkdir()");
 	ClientContext context;
 	rpc_mkdir_request Input;
@@ -224,25 +228,29 @@ uuid rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_
 
 	Status status = stub_->rpc_mkdir(&context, Input, &Output);
 	if(status.ok()){
-		if(Output.ret() == -ENOTLEADER)
-			return nil_uuid();
+		if(Output.ret() == -ENOTLEADER) {
+			new_dir_ino = nil_uuid();
+			return -ENOTLEADER;
+		}
 
 		if(Output.ret() == 0){
-			uuid new_dir_ino = ino_controller->splice_prefix_and_postfix(Output.new_dir_ino_prefix(), Output.new_dir_ino_postfix());
-			shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), mode | S_IFDIR, new_dir_ino);
+			uuid returned_dir_ino = ino_controller->splice_prefix_and_postfix(Output.new_dir_ino_prefix(), Output.new_dir_ino_postfix());
+			shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), mode | S_IFDIR, returned_dir_ino);
 			i->set_size(DIR_INODE_SIZE);
 			i->sync();
 
 			shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
 			new_d->sync();
 
-			return new_dir_ino;
+			new_dir_ino = returned_dir_ino;
 		}
 
-		return nil_uuid();
+		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::mkdir() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::mkdir() failed");
+		new_dir_ino = nil_uuid();
+		return -ENEEDRECOV;
 	}
 }
 
@@ -266,7 +274,8 @@ int rpc_client::rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino) {
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::rmdir_top() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::rmdir_top() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -290,7 +299,8 @@ int rpc_client::rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, s
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::rmdir_down() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::rmdir_down() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -315,7 +325,8 @@ int rpc_client::symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, 
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::symlink() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::symlink() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -346,7 +357,8 @@ int rpc_client::readlink(shared_ptr<remote_inode> i, char *buf, size_t size) {
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::readlink() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::readlink() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -371,11 +383,12 @@ int rpc_client::rename_same_parent(shared_ptr<remote_inode> parent_i, const char
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::readlink() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::rename_same_parent() failed");
+		return -ENEEDRECOV;
 	}
 }
 
-uuid rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags) {
+int rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags, uuid& target_ino) {
 	global_logger.log(rpc_client_ops, "Called remote_rename_not_same_parent_src()");
 	ClientContext context;
 	rpc_rename_not_same_parent_src_request Input;
@@ -388,13 +401,24 @@ uuid rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_
 
 	Status status = stub_->rpc_rename_not_same_parent_src(&context, Input, &Output);
 	if(status.ok()){
-		if(Output.ret() == -ENOTLEADER)
-			throw std::runtime_error("ACCESS IMPROPER LEADER");
-		/* TODO : if ret == -ENOSYS */
-		return ino_controller->splice_prefix_and_postfix(Output.target_ino_prefix(), Output.target_ino_postfix());
+		if(Output.ret() == -ENOTLEADER) {
+			target_ino = nil_uuid();
+			return -ENOTLEADER;
+		}
+
+		if(Output.ret() == -ENOSYS) {
+			throw std::runtime_error("Flag specific behaviors of rename operation are not implemented");
+		}
+
+		if(Output.ret() == 0)
+			target_ino = ino_controller->splice_prefix_and_postfix(Output.target_ino_prefix(), Output.target_ino_postfix());
+
+		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::remote_rename_not_same_parent_src() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::remote_rename_not_same_parent_src() failed");
+		target_ino = nil_uuid();
+		return -ENEEDRECOV;
 	}
 }
 
@@ -421,7 +445,8 @@ int rpc_client::rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::remote_rename_not_same_parent_src() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::remote_rename_not_same_parent_dst() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -453,7 +478,8 @@ int rpc_client::open(shared_ptr<remote_inode> i, struct fuse_file_info* file_inf
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::open() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::open() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -488,7 +514,8 @@ int rpc_client::create(shared_ptr<remote_inode> parent_i, std::string new_child_
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::create() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::create() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -511,7 +538,8 @@ int rpc_client::unlink(shared_ptr<remote_inode> parent_i, std::string child_name
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::unlink() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::unlink() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -541,7 +569,8 @@ ssize_t rpc_client::write(shared_ptr<remote_inode> i, const char* buffer, size_t
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::write() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::write() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -565,7 +594,8 @@ int rpc_client::chmod(shared_ptr<remote_inode> i, mode_t mode) {
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::chmod() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::chmod() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -591,7 +621,8 @@ int rpc_client::chown(shared_ptr<remote_inode> i, uid_t uid, gid_t gid) {
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::chown() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::chown() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -619,7 +650,8 @@ int rpc_client::utimens(shared_ptr<remote_inode> i, const struct timespec tv[2])
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::utimens() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::utimnes() failed");
+		return -ENEEDRECOV;
 	}
 }
 
@@ -647,6 +679,7 @@ int rpc_client::truncate(shared_ptr<remote_inode> i, off_t offset) {
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
-		throw std::runtime_error("rpc_client::truncate() failed");
+		global_logger.log(rpc_client_ops, "rpc_client::truncate() failed");
+		return -ENEEDRECOV;
 	}
 }

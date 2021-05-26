@@ -17,6 +17,7 @@
 #define REG_INODE_SIZE (sizeof(inode) - sizeof(char *) - sizeof(std::recursive_mutex) - VFTABLE_OFFSET)
 #define DIR_INODE_SIZE 4096
 #define ENOTLEADER 8000
+#define ENEEDRECOV 8001
 
 using std::unique_ptr;
 using std::runtime_error;
