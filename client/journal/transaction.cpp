@@ -14,15 +14,15 @@ std::vector<char> transaction::serialize(void)
 	/* valid bit */
 	vec.push_back(1);
 
-	/* d_inode */
-	if (d_inode) {
-		auto d_inode_vec = d_inode->serialize();
-		int32_t d_inode_size = static_cast<uint32_t>(d_inode_vec.size());
-		vec.push_back(static_cast<char>(d_inode_size & 0xff));
-		vec.push_back(static_cast<char>((d_inode_size >> 8) & 0xff));
-		vec.push_back(static_cast<char>((d_inode_size >> 16) & 0xff));
-		vec.push_back(static_cast<char>((d_inode_size >> 24) & 0xff));
-		vec.insert(vec.end(), d_inode_vec.begin(), d_inode_vec.end());
+	/* s_inode */
+	if (s_inode) {
+		auto s_inode_vec = s_inode->serialize();
+		int32_t s_inode_size = static_cast<uint32_t>(s_inode_vec.size());
+		vec.push_back(static_cast<char>(s_inode_size & 0xff));
+		vec.push_back(static_cast<char>((s_inode_size >> 8) & 0xff));
+		vec.push_back(static_cast<char>((s_inode_size >> 16) & 0xff));
+		vec.push_back(static_cast<char>((s_inode_size >> 24) & 0xff));
+		vec.insert(vec.end(), s_inode_vec.begin(), s_inode_vec.end());
 	} else {
 		for (int i = 0; i < 4; i++)
 			vec.push_back(-1);
@@ -70,11 +70,11 @@ void transaction::deserialize(std::vector<char> raw)
 	if (raw[index++] == 0)
 		throw invalidated();
 
-	/* d_inode */
-	int32_t d_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
+	/* s_inode */
+	int32_t s_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
 	index += sizeof(int32_t);
-	if (d_inode_size != -1) {	/* finished? */
-		d_inode->deserialize(&raw[index]);
+	if (s_inode_size != -1) {	/* finished? */
+		s_inode->deserialize(&raw[index]);
 		index += sizeof(inode);
 	}
 
@@ -116,18 +116,18 @@ void transaction::deserialize(std::vector<char> raw)
 	}
 }
 
-transaction::transaction(void) : committed(false), d_inode(nullptr)
+transaction::transaction(void) : committed(false), s_inode(nullptr)
 {
 }
 
-int transaction::set_inode(std::shared_ptr<inode> i)
+int transaction::chself(std::shared_ptr<inode> self_inode)
 {
 	std::unique_lock lock(m);
 
 	if (committed)
 		return -1;
 
-	d_inode = std::make_unique<inode>(*i);
+	s_inode = std::make_unique<inode>(*self_inode);
 
 	return 0;
 }
@@ -148,8 +148,8 @@ int transaction::mkdir(const std::string &d_name, const uuid &d_ino, const struc
 		}
 	}
 
-	d_inode->set_mtime(time);
-	d_inode->set_ctime(time);
+	s_inode->set_mtime(time);
+	s_inode->set_ctime(time);
 
 	return 0;
 }
@@ -170,8 +170,8 @@ int transaction::rmdir(const std::string &d_name, const uuid &d_ino, const struc
 		}
 	}
 
-	d_inode->set_mtime(time);
-	d_inode->set_ctime(time);
+	s_inode->set_mtime(time);
+	s_inode->set_ctime(time);
 
 	return 0;
 }
@@ -192,8 +192,8 @@ int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> f_inode
 		}
 	}
 
-	d_inode->set_mtime(f_inode->get_mtime());
-	d_inode->set_ctime(f_inode->get_ctime());
+	s_inode->set_mtime(f_inode->get_mtime());
+	s_inode->set_ctime(f_inode->get_ctime());
 
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
 	if (f_inodes_ret.second || !f_inodes_ret.first->second) {
@@ -221,8 +221,8 @@ int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> f_inode
 		}
 	}
 
-	d_inode->set_mtime(time);
-	d_inode->set_ctime(time);
+	s_inode->set_mtime(time);
+	s_inode->set_ctime(time);
 
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
 	if (!f_inodes_ret.second && !f_inodes_ret.first->second)
@@ -244,8 +244,8 @@ void transaction::commit(rados_io *meta)
 	auto raw = serialize();
 
 	size_t obj_size;
-	meta->stat(obj_category::JOURNAL, uuid_to_string(d_inode->get_ino()), obj_size);
-	meta->write(obj_category::JOURNAL, uuid_to_string(d_inode->get_ino()), raw.data(), raw.size(), obj_size);
+	meta->stat(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), obj_size);
+	meta->write(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), raw.data(), raw.size(), obj_size);
 
 	/* Update offset */
 	offset = obj_size;
@@ -253,11 +253,11 @@ void transaction::commit(rados_io *meta)
 
 void transaction::checkpoint(rados_io *meta)
 {
-	/* d_inode */
-	d_inode->sync();
+	/* s_inode */
+	s_inode->sync();
 
 	/* dentries */
-	dentry d(d_inode->get_ino());
+	dentry d(s_inode->get_ino());
 	for (const auto &p : dentries) {
 		bool alive = p.second.first;
 		std::string name = p.first;
@@ -276,5 +276,5 @@ void transaction::checkpoint(rados_io *meta)
 		p.second->sync();
 
 	/* Clear the checkpoint bit */
-	meta->write(obj_category::JOURNAL, uuid_to_string(d_inode->get_ino()), "\0", 1, offset);
+	meta->write(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), "\0", 1, offset);
 }

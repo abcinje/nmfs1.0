@@ -23,7 +23,7 @@ private:
 	off_t offset;
 
 	/* the inode block of the directory itself */
-	std::unique_ptr<inode> d_inode;
+	std::unique_ptr<inode> s_inode;
 
 	/* The boolean value is true if the entry has been added and false if the entry has been deleted. */
 	tsl::robin_map<std::string, std::pair<bool, boost::uuids::uuid>> dentries;
@@ -40,7 +40,7 @@ public:
 		const char *what(void);
 	};
 
-	int set_inode(std::shared_ptr<inode> i);
+	int chself(std::shared_ptr<inode> self_inode);
 	int mkdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time);
 	int rmdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time);
 	int mkreg(const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time);
