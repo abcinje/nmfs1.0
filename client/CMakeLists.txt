@@ -82,6 +82,7 @@ add_executable(
   # journal
   journal/checkpoint.cpp
   journal/commit.cpp
+  journal/journal.cpp
   journal/journal_table.cpp
   journal/transaction.cpp
 
