@@ -22,6 +22,15 @@ void journal::chself(const uuid &self_ino, std::shared_ptr<inode> self_inode)
 	}
 }
 
+void journal::chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode)
+{
+	while (true) {
+		auto tx = jtable.get_entry(self_ino);
+		if (!tx->chreg(f_inode))
+			break;
+	}
+}
+
 void journal::mkdir(const uuid &self_ino, const std::string &d_name, const uuid &d_ino, const struct timespec &time)
 {
 	while (true) {

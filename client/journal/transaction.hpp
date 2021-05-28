@@ -41,6 +41,7 @@ public:
 	};
 
 	int chself(std::shared_ptr<inode> self_inode);
+	int chreg(std::shared_ptr<inode> f_inode);
 	int mkdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time);
 	int rmdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time);
 	int mkreg(const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time);

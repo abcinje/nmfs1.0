@@ -132,6 +132,20 @@ int transaction::chself(std::shared_ptr<inode> self_inode)
 	return 0;
 }
 
+int transaction::chreg(std::shared_ptr<inode> f_inode)
+{
+	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
+
+	auto i = std::make_unique<inode>(*f_inode);
+	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
+	f_inodes_ret.first.value() = std::move(i);
+
+	return 0;
+}
+
 int transaction::mkdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time)
 {
 	std::unique_lock lock(m);

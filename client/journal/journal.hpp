@@ -24,6 +24,7 @@ public:
 	~journal(void);
 
 	void chself(const uuid &self_ino, std::shared_ptr<inode> self_inode);
+	void chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode);
 	void mkdir(const uuid &self_ino, const std::string &d_name, const uuid &d_ino, const struct timespec &time);
 	void rmdir(const uuid &self_ino, const std::string &d_name, const uuid &d_ino, const struct timespec &time);
 	void mkreg(const uuid &self_ino, const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time);
