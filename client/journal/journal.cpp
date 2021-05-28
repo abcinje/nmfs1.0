@@ -13,7 +13,7 @@ journal::~journal(void)
 	checkpoint_thr->join();
 }
 
-void journal::set_inode(const uuid &self_ino, std::shared_ptr<inode> i)
+void journal::chself(const uuid &self_ino, std::shared_ptr<inode> i)
 {
 	while (true) {
 		auto tx = jtable.get_entry(self_ino);
