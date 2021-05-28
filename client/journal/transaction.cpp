@@ -107,7 +107,7 @@ void transaction::deserialize(std::vector<char> raw)
 		if (f_inode_size == -1)	/* finished? */
 			break;
 
-		std::unique_ptr<inode> i = std::make_unique<inode>();
+		auto i = std::make_unique<inode>();
 		i->deserialize(&raw[index]);
 		auto ret = f_inodes.insert({uuid_to_string(i->get_ino()), std::move(i)});
 		if (!ret.second)
