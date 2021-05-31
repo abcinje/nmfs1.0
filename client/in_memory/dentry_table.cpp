@@ -31,7 +31,7 @@ int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> ino
 		ret.first->second = inode;
 
 		this->dentries->add_new_child(filename, inode->get_ino());
-		this->dentries->sync();
+		//this->dentries->sync();
 	} else {
 		global_logger.log(dentry_table_ops, "Already added file is tried to inserted");
 		return -1;
@@ -65,7 +65,7 @@ int dentry_table::delete_child_inode(std::string filename) {
 	this->child_inodes.erase(it);
 
 	this->dentries->delete_child(filename);
-	this->dentries->sync();
+	//this->dentries->sync();
 
 	return 0;
 }
@@ -115,10 +115,10 @@ int dentry_table::pull_child_metadata() {
 	std::map<std::string, uuid>::iterator it;
 	for(it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
 		shared_ptr<inode> child_i = std::make_shared<inode>(it->second);
+		child_i->set_p_ino(this->dir_ino);
 		if(S_ISDIR(child_i->get_mode())){
 			child_i->set_loc(UNKNOWN);
 		} else {
-			/* TODO : S_ISLINK? */
 			child_i->set_loc(LOCAL);
 		}
 		this->add_child_inode(it->first, child_i);

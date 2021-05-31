@@ -273,7 +273,7 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 		return Status::OK;
 	}
 
-	shared_ptr<inode> i = std::make_shared<inode>(request->uid(), request->gid(), request->new_mode() | S_IFDIR);
+	shared_ptr<inode> i = std::make_shared<inode>(dentry_table_ino, request->uid(), request->gid(), request->new_mode() | S_IFDIR);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->create_child_inode(request->new_dir_name(), i);
@@ -372,7 +372,7 @@ Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symli
 			return Status::OK;
 		}
 
-		shared_ptr<inode> symlink_i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), S_IFLNK | 0777, request->src().c_str());
+		shared_ptr<inode> symlink_i = std::make_shared<inode>(dentry_table_ino, this_client->get_client_uid(), this_client->get_client_gid(), S_IFLNK | 0777, request->src().c_str());
 
 		symlink_i->set_size(static_cast<off_t>(request->src().length()));
 
@@ -518,6 +518,7 @@ Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context
 
 	/* TODO : need other method to use cache */
 	shared_ptr<inode> target_i = std::make_shared<inode>(target_ino);
+	target_i->set_p_ino(dentry_table_ino);
 	{
 		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		if (request->flags() == 0) {
@@ -589,7 +590,7 @@ Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create
 		return Status::OK;
 	}
 
-	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFREG);
+	shared_ptr<inode> i = std::make_shared<inode>(dentry_table_ino, this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFREG);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		i->sync();

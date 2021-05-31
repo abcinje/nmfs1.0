@@ -53,7 +53,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 
 	/* root */
 	if (!meta_pool->exist(obj_category::INODE, uuid_to_string(get_root_ino()))) {
-		inode i(this_client->get_client_uid(), this_client->get_client_gid(), S_IFDIR | 0777, true);
+		inode i(get_root_ino(), this_client->get_client_uid(), this_client->get_client_gid(), S_IFDIR | 0777, true);
 
 		dentry d(get_root_ino(), true);
 

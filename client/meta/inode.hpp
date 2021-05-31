@@ -13,8 +13,7 @@
 #include "../util.hpp"
 #include "uuid_controller.hpp"
 
-#define VFTABLE_OFFSET 8
-#define REG_INODE_SIZE (sizeof(inode) - sizeof(char *) - sizeof(std::recursive_mutex) - VFTABLE_OFFSET)
+#define REG_INODE_SIZE (sizeof(core))
 #define DIR_INODE_SIZE 4096
 #define ENOTLEADER 8000
 #define ENEEDRECOV 8001
@@ -33,16 +32,20 @@ enum meta_location {
 
 class inode {
 private:
-	mode_t	i_mode;
-	uid_t	i_uid;
-	gid_t	i_gid;
-	uuid	i_ino;
-	nlink_t	i_nlink;
-	off_t	i_size;
+	uuid p_ino;
 
-	struct timespec	i_atime;
-	struct timespec	i_mtime;
-	struct timespec	i_ctime;
+	struct _core {
+		mode_t i_mode;
+		uid_t i_uid;
+		gid_t i_gid;
+		uuid i_ino;
+		nlink_t i_nlink;
+		off_t i_size;
+
+		struct timespec i_atime;
+		struct timespec i_mtime;
+		struct timespec i_ctime;
+	} core;
 
 	uint64_t loc;
 
@@ -66,23 +69,24 @@ public:
 	inode(const inode &copy);
 
 	/* for normal reg file and root directory */
-	inode(uid_t owner, gid_t group, mode_t mode, bool root = false);
-    	/* for normal directory */
-    	inode(uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
+	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, bool root = false);
+    /* for normal directory */
+    inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
 	/* for symlink */
-	inode(uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
+	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
 	/* for pull metadata */
 	inode(uuid ino);
 	/* parent constructor for remote_inode and dummy_inode which used with file_handler */
 	inode();
 
 	void fill_stat(struct stat *s);
-	std::vector<char> serialize(void);
+	std::vector<char> serialize();
 	void deserialize(const char *value);
 	void sync();
 	virtual void permission_check(int mask);
 
 	// getter
+	uuid get_p_ino();
 	virtual mode_t get_mode();
 	uid_t get_uid();
 	gid_t get_gid();
@@ -99,6 +103,8 @@ public:
 	char *get_link_target_name();
 
 	// setter
+	void set_p_ino(const uuid &p_ino);
+
 	void set_mode(mode_t mode);
 	void set_uid(uid_t uid);
 	void set_gid(gid_t gid);
