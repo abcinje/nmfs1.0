@@ -3,6 +3,7 @@
 #include "local_ops.hpp"
 #include "remote_ops.hpp"
 #include "../rpc/rpc_server.hpp"
+#include "../journal/journal.hpp"
 #include <cstring>
 #include <mutex>
 #include <thread>
@@ -15,11 +16,12 @@ std::shared_ptr<rados_io> meta_pool;
 std::shared_ptr<rados_io> data_pool;
 
 std::unique_ptr<Server> remote_handle;
-std::unique_ptr<lease_client> lc;
+std::shared_ptr<lease_client> lc;
 
 std::unique_ptr<directory_table> indexing_table;
 std::unique_ptr<uuid_controller> ino_controller;
 std::unique_ptr<file_handler_list> open_context;
+std::unique_ptr<journal> journalctl;
 
 std::unique_ptr<thread> remote_server_thread;
 
@@ -42,7 +44,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	data_pool = std::make_shared<rados_io>(ci, DATA_POOL);
 
 	auto channel = grpc::CreateChannel(manager_ip, grpc::InsecureChannelCredentials());
-	lc = std::make_unique<lease_client>(channel, remote_handle_ip);
+	lc = std::make_shared<lease_client>(channel, remote_handle_ip);
 	this_client = std::make_unique<client>(channel);
 	this_client->set_client_uid(fuse_ctx->uid);
 	this_client->set_client_gid(fuse_ctx->gid);
@@ -63,6 +65,8 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	indexing_table = std::make_unique<directory_table>();
 	ino_controller = std::make_unique<uuid_controller>();
 	open_context = std::make_unique<file_handler_list>();
+	journalctl = std::make_unique<journal>(meta_pool, lc);
+
 	config->nullpath_ok = 0;
 	fuse_capable = info->capable;
 
