@@ -128,9 +128,10 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino, bool remote
 				return it->second;
 			} else {
 				shared_ptr<dentry_table> new_dentry_table;
-				if(it->second->get_loc() == LOCAL)
-					new_dentry_table = lease_dentry_table(ino, true);
-				else {
+				if(it->second->get_loc() == LOCAL) {
+					lease_dentry_table(ino, true);
+					return it->second;
+				} else {
 					this->dentry_tables.erase(it);
 					new_dentry_table = lease_dentry_table(ino);
 				}
