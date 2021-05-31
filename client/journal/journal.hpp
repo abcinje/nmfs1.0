@@ -11,7 +11,7 @@
 
 class journal {
 private:
-	rados_io *meta;
+	std::shared_ptr<rados_io> meta;
 	std::shared_ptr<lease_client> lc;
 
 	bool stopped;
@@ -20,7 +20,7 @@ private:
 	std::unique_ptr<std::thread> commit_thr, checkpoint_thr;
 
 public:
-	journal(rados_io *meta_pool, std::shared_ptr<lease_client> lease);
+	journal(std::shared_ptr<rados_io> meta_pool, std::shared_ptr<lease_client> lease);
 	~journal(void);
 
 	void chself(const uuid &self_ino, std::shared_ptr<inode> self_inode);

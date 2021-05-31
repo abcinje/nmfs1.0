@@ -6,11 +6,11 @@
 
 class checkpoint {
 private:
-	rados_io *meta;
+	std::shared_ptr<rados_io> meta;
 	mqueue<std::shared_ptr<transaction>> *q;
 
 public:
-	checkpoint(rados_io *meta_pool, mqueue<std::shared_ptr<transaction>> *queue);
+	checkpoint(std::shared_ptr<rados_io> meta_pool, mqueue<std::shared_ptr<transaction>> *queue);
 	~checkpoint(void) = default;
 
 	void operator()(void);

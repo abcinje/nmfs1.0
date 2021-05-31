@@ -1,7 +1,7 @@
 #include "local_ops.hpp"
 
-extern rados_io *meta_pool;
-extern rados_io *data_pool;
+extern std::shared_ptr<rados_io> meta_pool;
+extern std::shared_ptr<rados_io> data_pool;
 extern std::unique_ptr<directory_table> indexing_table;
 extern std::unique_ptr<client> this_client;
 extern std::unique_ptr<file_handler_list> open_context;

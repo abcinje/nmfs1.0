@@ -1,6 +1,6 @@
 #include "journal.hpp"
 
-journal::journal(rados_io *meta_pool, std::shared_ptr<lease_client> lease) : meta(meta_pool), lc(lease), stopped(false)
+journal::journal(std::shared_ptr<rados_io> meta_pool, std::shared_ptr<lease_client> lease) : meta(meta_pool), lc(lease), stopped(false)
 {
 	commit_thr = std::make_unique<std::thread>(commit(&stopped, meta, &jtable, &q));
 	checkpoint_thr = std::make_unique<std::thread>(checkpoint(meta, &q));

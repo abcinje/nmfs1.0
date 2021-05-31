@@ -1,7 +1,7 @@
 #include "rpc_server.hpp"
 /* TODO : thread cannot read fuse_ctx, so only work with root uid and gid*/
-extern rados_io *meta_pool;
-extern rados_io *data_pool;
+extern std::shared_ptr<rados_io> meta_pool;
+extern std::shared_ptr<rados_io> data_pool;
 extern std::unique_ptr<directory_table> indexing_table;
 extern std::unique_ptr<uuid_controller> ino_controller;
 

@@ -12,12 +12,12 @@
 class commit {
 private:
 	bool *stopped;
-	rados_io *meta;
+	std::shared_ptr<rados_io> meta;
 	journal_table *table;
 	mqueue<std::shared_ptr<transaction>> *q;
 
 public:
-	commit(bool *stopped_flag, rados_io *meta_pool, journal_table *jtable, mqueue<std::shared_ptr<transaction>> *queue);
+	commit(bool *stopped_flag, std::shared_ptr<rados_io> meta_pool, journal_table *jtable, mqueue<std::shared_ptr<transaction>> *queue);
 	~commit(void) = default;
 
 	void operator()(void);

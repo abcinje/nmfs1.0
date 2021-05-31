@@ -2,7 +2,7 @@
 
 #include <thread>
 
-commit::commit(bool *stopped_flag, rados_io *meta_pool, journal_table *jtable, mqueue<std::shared_ptr<transaction>> *queue) : stopped(stopped_flag), meta(meta_pool), table(jtable), q(queue)
+commit::commit(bool *stopped_flag, std::shared_ptr<rados_io> meta_pool, journal_table *jtable, mqueue<std::shared_ptr<transaction>> *queue) : stopped(stopped_flag), meta(meta_pool), table(jtable), q(queue)
 {
 }
 

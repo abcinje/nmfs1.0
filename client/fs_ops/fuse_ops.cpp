@@ -11,8 +11,8 @@ using namespace std;
 #define META_POOL "nmfs.meta"
 #define DATA_POOL "nmfs.data"
 
-rados_io *meta_pool;
-rados_io *data_pool;
+std::shared_ptr<rados_io> meta_pool;
+std::shared_ptr<rados_io> data_pool;
 
 std::unique_ptr<Server> remote_handle;
 std::unique_ptr<lease_client> lc;
@@ -21,7 +21,7 @@ std::unique_ptr<directory_table> indexing_table;
 std::unique_ptr<uuid_controller> ino_controller;
 std::unique_ptr<file_handler_list> open_context;
 
-thread *remote_server_thread;
+std::unique_ptr<thread> remote_server_thread;
 
 std::unique_ptr<client> this_client;
 unsigned int fuse_capable;
@@ -38,8 +38,8 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	global_logger.log(fuse_op, "manager IP: " + manager_ip + " remote_handle IP: " + remote_handle_ip);
 
 	rados_io::conn_info ci = {"client.admin", "ceph", 0};
-	meta_pool = new rados_io(ci, META_POOL);
-	data_pool = new rados_io(ci, DATA_POOL);
+	meta_pool = std::make_shared<rados_io>(ci, META_POOL);
+	data_pool = std::make_shared<rados_io>(ci, DATA_POOL);
 
 	auto channel = grpc::CreateChannel(manager_ip, grpc::InsecureChannelCredentials());
 	lc = std::make_unique<lease_client>(channel, remote_handle_ip);
@@ -66,7 +66,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	config->nullpath_ok = 0;
 	fuse_capable = info->capable;
 
-	remote_server_thread = new thread(run_rpc_server, remote_handle_ip);
+	remote_server_thread = std::make_unique<thread>(run_rpc_server, remote_handle_ip);
 	return nullptr;
 }
 
@@ -74,9 +74,6 @@ void fuse_ops::destroy(void *private_data) {
 	global_logger.log(fuse_op, "Called destroy()");
 
 	remote_handle->Shutdown();
-
-	delete meta_pool;
-	delete data_pool;
 }
 
 int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info *file_info) {

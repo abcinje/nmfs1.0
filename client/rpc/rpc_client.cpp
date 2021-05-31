@@ -1,5 +1,5 @@
 #include "rpc_client.hpp"
-extern rados_io *data_pool;
+extern std::shared_ptr<rados_io> data_pool;
 extern std::unique_ptr<file_handler_list> open_context;
 extern std::unique_ptr<uuid_controller> ino_controller;
 extern std::unique_ptr<client> this_client;

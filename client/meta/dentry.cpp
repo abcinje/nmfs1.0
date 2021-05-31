@@ -1,6 +1,6 @@
 #include "dentry.hpp"
 
-extern rados_io *meta_pool;
+extern std::shared_ptr<rados_io> meta_pool;
 
 dentry::dentry(uuid ino) : this_ino(ino)
 {

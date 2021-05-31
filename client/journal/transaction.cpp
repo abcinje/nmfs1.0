@@ -245,7 +245,7 @@ int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> f_inode
 	return 0;
 }
 
-void transaction::commit(rados_io *meta)
+void transaction::commit(std::shared_ptr<rados_io> meta)
 {
 	{
 		std::unique_lock lock(m);
@@ -265,7 +265,7 @@ void transaction::commit(rados_io *meta)
 	offset = obj_size;
 }
 
-void transaction::checkpoint(rados_io *meta)
+void transaction::checkpoint(std::shared_ptr<rados_io> meta)
 {
 	/* s_inode */
 	s_inode->sync();

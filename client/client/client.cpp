@@ -1,12 +1,12 @@
 #include "client.hpp"
 
 /*
- * client(rados_io *meta_pool)
+ * client(std::shared_ptr<rados_io> meta_pool)
  * : constructor that get unused client id number from client.list which is in metadata pool
  * and allocate it to the field ""client_id"
  */
 
-extern rados_io *meta_pool;
+extern std::shared_ptr<rados_io> meta_pool;
 
 client::client(std::shared_ptr<Channel> channel) {
 	session_client session(channel);

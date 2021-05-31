@@ -4,7 +4,7 @@
 
 using std::runtime_error;
 
-extern rados_io *meta_pool;
+extern std::shared_ptr<rados_io> meta_pool;
 extern std::unique_ptr<client> this_client;
 extern std::unique_ptr<uuid_controller> ino_controller;
 
