@@ -71,8 +71,6 @@ uuid local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t 
 
 		struct timespec ts;
 		timespec_get(&ts, TIME_UTC);
-		parent_i->set_mtime(ts);
-		parent_i->set_ctime(ts);
 		journalctl->mkdir(parent_i->get_ino(), new_child_name, i->get_ino(), ts);
 		//i->sync();
 
@@ -114,8 +112,6 @@ int local_rmdir_down(shared_ptr<inode> parent_i, uuid target_ino, std::string ta
 
 		struct timespec ts;
 		timespec_get(&ts, TIME_UTC);
-		parent_i->set_mtime(ts);
-		parent_i->set_ctime(ts);
 		journalctl->rmdir(parent_i->get_ino(), target_name, target_ino, ts);
 		//meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
 
@@ -148,8 +144,6 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 
 		struct timespec ts;
 		timespec_get(&ts, TIME_UTC);
-		dst_parent_i->set_mtime(ts);
-		dst_parent_i->set_ctime(ts);
 		journalctl->mkreg(dst_parent_i->get_ino(), *symlink_name, symlink_i, ts);
 
 		//symlink_i->sync();
@@ -268,7 +262,8 @@ int local_open(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 
 		if ((file_info->flags & O_TRUNC) && !(file_info->flags & O_PATH)) {
 			i->set_size(0);
-			i->sync();
+			journalctl->chreg(i->get_p_ino(), i);
+			//i->sync();
 		}
 
 		shared_ptr<file_handler> fh = std::make_shared<file_handler>(i->get_ino());
@@ -301,8 +296,6 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 
 		struct timespec ts;
 		timespec_get(&ts, TIME_UTC);
-		parent_i->set_mtime(ts);
-		parent_i->set_ctime(ts);
 		journalctl->mkreg(parent_i->get_ino(), new_child_name, i, ts);
 		//i->sync();
 
@@ -335,12 +328,11 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 
 			struct timespec ts;
 			timespec_get(&ts, TIME_UTC);
-			parent_i->set_mtime(ts);
-			parent_i->set_ctime(ts);
 			journalctl->rmreg(parent_i->get_ino(), child_name, target_i, ts);
 		} else {
 			target_i->set_nlink(nlink);
-			target_i->sync();
+			journalctl->chreg(target_i->get_p_ino(), target_i);
+			//target_i->sync();
 		}
 	}
 }
@@ -367,7 +359,9 @@ ssize_t local_write(shared_ptr<inode> i, const char *buffer, size_t size, off_t 
 
 		if (i->get_size() < offset + size) {
 			i->set_size(offset + size);
-			i->sync();
+
+			journalctl->chreg(i->get_p_ino(), i);
+			//i->sync();
 		}
 	}
 	return written_len;
@@ -380,7 +374,12 @@ void local_chmod(shared_ptr<inode> i, mode_t mode) {
 		mode_t type = i->get_mode() & S_IFMT;
 
 		i->set_mode(mode | type);
-		i->sync();
+
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i->get_p_ino(), i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
+		//i->sync();
 	}
 }
 
@@ -394,7 +393,11 @@ void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid) {
 		if (((int32_t) gid) >= 0)
 			i->set_gid(gid);
 
-		i->sync();
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i->get_p_ino(), i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
+		//i->sync();
 	}
 }
 
@@ -422,7 +425,11 @@ void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]) {
 			i->set_mtime(tv[1]);
 		}
 
-		i->sync();
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i->get_p_ino(), i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
+		//i->sync();
 	}
 }
 
@@ -438,7 +445,16 @@ int local_truncate(const shared_ptr<inode> i, off_t offset) {
 		ret = data_pool->truncate(obj_category::DATA, uuid_to_string(i->get_ino()), offset);
 
 		i->set_size(offset);
-		i->sync();
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		i->set_mtime(ts);
+		i->set_ctime(ts);
+
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i->get_p_ino(), i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
+		//i->sync();
 	}
 	return ret;
 }
