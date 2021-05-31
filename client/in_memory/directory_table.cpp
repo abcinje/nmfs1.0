@@ -74,7 +74,7 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	return target_inode;
 }
 
-shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
+shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino, bool extend){
 	global_logger.log(directory_table_ops, "Called lease_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
 	std::string temp_address;
@@ -83,10 +83,12 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 	if(ret == 0) {
 		global_logger.log(directory_table_ops, "Success to acquire lease");
 		/* Success to acquire lease */
-		new_dentry_table = std::make_shared<dentry_table>(ino, LOCAL);
-		new_dentry_table->set_leader_ip(temp_address);
-		new_dentry_table->pull_child_metadata();
-		this->add_dentry_table(ino, new_dentry_table);
+		if(!extend) {
+			new_dentry_table = std::make_shared<dentry_table>(ino, LOCAL);
+			new_dentry_table->set_leader_ip(temp_address);
+			new_dentry_table->pull_child_metadata();
+			this->add_dentry_table(ino, new_dentry_table);
+		}
 	} else if(ret == -1) {
 		global_logger.log(directory_table_ops, "Fail to acquire lease, this dir already has the leader");
 		global_logger.log(directory_table_ops, "Leader Address: " + temp_address);
@@ -125,8 +127,13 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino, bool remote
 			if (valid) {
 				return it->second;
 			} else {
-				this->dentry_tables.erase(it);
-				shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
+				shared_ptr<dentry_table> new_dentry_table;
+				if(it->second->get_loc() == LOCAL)
+					new_dentry_table = lease_dentry_table(ino, true);
+				else {
+					this->dentry_tables.erase(it);
+					new_dentry_table = lease_dentry_table(ino);
+				}
 				return new_dentry_table;
 			}
 		} else { /* UNKNOWN */
