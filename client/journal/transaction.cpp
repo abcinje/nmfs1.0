@@ -2,14 +2,13 @@
 
 #include "../meta/dentry.hpp"
 
-const char *transaction::invalidated::what(void)
-{
-	return "Tried to make a checkpoint for an invalidated transaction.";
-}
-
 std::vector<char> transaction::serialize(void)
 {
 	std::vector<char> vec;
+
+	/* total vector size */
+	for (int i = 0; i < 4; i++)
+		vec.push_back(0);
 
 	/* valid bit */
 	vec.push_back(1);
@@ -59,16 +58,23 @@ std::vector<char> transaction::serialize(void)
 	for (int i = 0; i < 4; i++)
 		vec.push_back(-1);
 
+	int vec_size = static_cast<int>(vec.size());
+	vec[0] = static_cast<char>(vec_size & 0xff);
+	vec[1] = static_cast<char>((vec_size >> 8) & 0xff);
+	vec[2] = static_cast<char>((vec_size >> 16) & 0xff);
+	vec[3] = static_cast<char>((vec_size >> 24) & 0xff);
+
 	return vec;
 }
 
-void transaction::deserialize(std::vector<char> raw)
+int transaction::deserialize(std::vector<char> raw)
 {
-	off_t index = 0;
+	/* Consider vector size */
+	off_t index = 4;
 
 	/* valid bit */
 	if (raw[index++] == 0)
-		throw invalidated();
+		return -1;
 
 	/* s_inode */
 	int32_t s_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
@@ -114,6 +120,8 @@ void transaction::deserialize(std::vector<char> raw)
 			throw std::logic_error("transaction::deserialize() failed (a duplicated key exists)");
 		index += f_inode_size;
 	}
+
+	return 0;
 }
 
 transaction::transaction(void) : committed(false), s_inode(nullptr)
@@ -132,21 +140,20 @@ int transaction::chself(std::shared_ptr<inode> self_inode)
 	return 0;
 }
 
-int transaction::chreg(std::shared_ptr<inode> f_inode)
+int transaction::chreg(std::shared_ptr<inode> self_inode, std::shared_ptr<inode> f_inode)
 {
 	std::unique_lock lock(m);
 
 	if (committed)
 		return -1;
 
-	auto i = std::make_unique<inode>(*f_inode);
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
-	f_inodes_ret.first.value() = std::move(i);
+	f_inodes_ret.first.value() = std::make_unique<inode>(*f_inode);
 
 	return 0;
 }
 
-int transaction::mkdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time)
+int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
 	std::unique_lock lock(m);
 
@@ -162,13 +169,17 @@ int transaction::mkdir(const std::string &d_name, const uuid &d_ino, const struc
 		}
 	}
 
-	s_inode->set_mtime(time);
-	s_inode->set_ctime(time);
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
 
 	return 0;
 }
 
-int transaction::rmdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time)
+int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
 	std::unique_lock lock(m);
 
@@ -184,13 +195,17 @@ int transaction::rmdir(const std::string &d_name, const uuid &d_ino, const struc
 		}
 	}
 
-	s_inode->set_mtime(time);
-	s_inode->set_ctime(time);
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
 
 	return 0;
 }
 
-int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time)
+int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
 	std::unique_lock lock(m);
 
@@ -206,8 +221,12 @@ int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> f_inode
 		}
 	}
 
-	s_inode->set_mtime(f_inode->get_mtime());
-	s_inode->set_ctime(f_inode->get_ctime());
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
 
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
 	if (f_inodes_ret.second || !f_inodes_ret.first->second) {
@@ -219,7 +238,7 @@ int transaction::mkreg(const std::string &f_name, std::shared_ptr<inode> f_inode
 	return 0;
 }
 
-int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time)
+int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
 	std::unique_lock lock(m);
 
@@ -235,8 +254,12 @@ int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> f_inode
 		}
 	}
 
-	s_inode->set_mtime(time);
-	s_inode->set_ctime(time);
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
 
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
 	if (!f_inodes_ret.second && !f_inodes_ret.first->second)
@@ -245,27 +268,7 @@ int transaction::rmreg(const std::string &f_name, std::shared_ptr<inode> f_inode
 	return 0;
 }
 
-void transaction::commit(std::shared_ptr<rados_io> meta)
-{
-	{
-		std::unique_lock lock(m);
-
-		if (committed)
-			throw std::logic_error("transaction::commit() failed (tx has been already committed)");
-		committed = true;
-	}
-
-	auto raw = serialize();
-
-	size_t obj_size;
-	meta->stat(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), obj_size);
-	meta->write(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), raw.data(), raw.size(), obj_size);
-
-	/* Update offset */
-	offset = obj_size;
-}
-
-void transaction::checkpoint(std::shared_ptr<rados_io> meta)
+void transaction::sync(void)
 {
 	/* s_inode */
 	s_inode->sync();
@@ -288,6 +291,32 @@ void transaction::checkpoint(std::shared_ptr<rados_io> meta)
 	/* f_inodes */
 	for (const auto &p : f_inodes)
 		p.second->sync();
+}
+
+void transaction::commit(rados_io *meta)
+{
+	{
+		std::unique_lock lock(m);
+
+		if (committed)
+			throw std::logic_error("transaction::commit() failed (tx has been already committed)");
+		committed = true;
+	}
+
+	auto raw = serialize();
+
+	size_t obj_size;
+	meta->stat(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), obj_size);
+	meta->write(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), raw.data(), raw.size(), obj_size);
+
+	/* Update offset */
+	offset = obj_size;
+}
+
+void transaction::checkpoint(rados_io *meta)
+{
+	/* Synchronize */
+	sync();
 
 	/* Clear the checkpoint bit */
 	meta->write(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), "\0", 1, offset);

@@ -5,7 +5,13 @@ journal_table::journal_table(void)
 	map = std::make_unique<journal_map>();
 }
 
-std::shared_ptr<transaction> journal_table::get_entry(uuid ino)
+void journal_table::delete_entry(const uuid &ino)
+{
+	std::unique_lock lock(sm);
+	map->erase(uuid_to_string(ino));
+}
+
+std::shared_ptr<transaction> journal_table::get_entry(const uuid &ino)
 {
 	{
 		std::shared_lock lock(sm);

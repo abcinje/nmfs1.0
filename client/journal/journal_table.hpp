@@ -18,8 +18,9 @@ public:
 	journal_table(void);
 	~journal_table(void) = default;
 
-	std::shared_ptr<transaction> get_entry(uuid ino);
-	std::unique_ptr<journal_map> replace_map(void);
+	void delete_entry(const uuid &ino);				/* for check */
+	std::shared_ptr<transaction> get_entry(const uuid &ino);	/* for operation */
+	std::unique_ptr<journal_map> replace_map(void);			/* for commit */
 };
 
 #endif /* _JOURNAL_TABLE_HPP_ */

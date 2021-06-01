@@ -31,27 +31,24 @@ private:
 	/* An unique pointer whose value is null means the file has been deleted. */
 	tsl::robin_map<std::string, std::unique_ptr<inode>> f_inodes;
 
-	std::vector<char> serialize(void);
-	void deserialize(std::vector<char> raw);
-
 public:
-	class invalidated : public std::exception {
-	public:
-		const char *what(void);
-	};
-
 	int chself(std::shared_ptr<inode> self_inode);
-	int chreg(std::shared_ptr<inode> f_inode);
-	int mkdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time);
-	int rmdir(const std::string &d_name, const uuid &d_ino, const struct timespec &time);
-	int mkreg(const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time);
-	int rmreg(const std::string &f_name, std::shared_ptr<inode> f_inode, const struct timespec &time);
+	int chreg(std::shared_ptr<inode> self_inode, std::shared_ptr<inode> f_inode);
+	int mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
+	int rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
+	int mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
+	int rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
 
 	transaction(void);
 	~transaction(void) = default;
 
-	void commit(std::shared_ptr<rados_io> meta);
-	void checkpoint(std::shared_ptr<rados_io> meta);
+	std::vector<char> serialize(void);
+	int deserialize(std::vector<char> raw);
+
+	void sync(void);
+
+	void commit(rados_io *meta);
+	void checkpoint(rados_io *meta);
 };
 
 #endif /* _TRANSACTION_HPP_ */
