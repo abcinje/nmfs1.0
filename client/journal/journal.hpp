@@ -26,7 +26,7 @@ public:
 	void check(const uuid &self_ino);
 
 	void chself(std::shared_ptr<inode> self_inode);
-	void chreg(std::shared_ptr<inode> self_inode, std::shared_ptr<inode> f_inode);
+	void chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode);
 	void mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
 	void rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
 	void mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);

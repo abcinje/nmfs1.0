@@ -140,7 +140,7 @@ int transaction::chself(std::shared_ptr<inode> self_inode)
 	return 0;
 }
 
-int transaction::chreg(std::shared_ptr<inode> self_inode, std::shared_ptr<inode> f_inode)
+int transaction::chreg(std::shared_ptr<inode> f_inode)
 {
 	std::unique_lock lock(m);
 

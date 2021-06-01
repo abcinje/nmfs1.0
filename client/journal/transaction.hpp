@@ -33,7 +33,7 @@ private:
 
 public:
 	int chself(std::shared_ptr<inode> self_inode);
-	int chreg(std::shared_ptr<inode> self_inode, std::shared_ptr<inode> f_inode);
+	int chreg(std::shared_ptr<inode> f_inode);
 	int mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
 	int rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
 	int mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);

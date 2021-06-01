@@ -43,11 +43,11 @@ void journal::chself(std::shared_ptr<inode> self_inode)
 	}
 }
 
-void journal::chreg(std::shared_ptr<inode> self_inode, std::shared_ptr<inode> f_inode)
+void journal::chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode)
 {
 	while (true) {
-		auto tx = jtable.get_entry(self_inode->get_ino());
-		if (!tx->chreg(self_inode, f_inode))
+		auto tx = jtable.get_entry(self_ino);
+		if (!tx->chreg(f_inode))
 			break;
 	}
 }
