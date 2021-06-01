@@ -293,7 +293,7 @@ void transaction::sync(void)
 		p.second->sync();
 }
 
-void transaction::commit(rados_io *meta)
+void transaction::commit(std::shared_ptr<rados_io> meta)
 {
 	{
 		std::unique_lock lock(m);
@@ -313,7 +313,7 @@ void transaction::commit(rados_io *meta)
 	offset = obj_size;
 }
 
-void transaction::checkpoint(rados_io *meta)
+void transaction::checkpoint(std::shared_ptr<rados_io> meta)
 {
 	/* Synchronize */
 	sync();

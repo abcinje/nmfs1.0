@@ -47,8 +47,8 @@ public:
 
 	void sync(void);
 
-	void commit(rados_io *meta);
-	void checkpoint(rados_io *meta);
+	void commit(std::shared_ptr<rados_io> meta);
+	void checkpoint(std::shared_ptr<rados_io> meta);
 };
 
 #endif /* _TRANSACTION_HPP_ */
