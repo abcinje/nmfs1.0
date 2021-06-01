@@ -5,6 +5,12 @@ journal_table::journal_table(void)
 	map = std::make_unique<journal_map>();
 }
 
+void journal_table::delete_entry(uuid ino)
+{
+	std::unique_lock lock(sm);
+	map->erase(uuid_to_string(ino));
+}
+
 std::shared_ptr<transaction> journal_table::get_entry(uuid ino)
 {
 	{
