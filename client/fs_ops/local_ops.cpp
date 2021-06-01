@@ -5,6 +5,7 @@ extern std::shared_ptr<rados_io> data_pool;
 extern std::unique_ptr<directory_table> indexing_table;
 extern std::unique_ptr<client> this_client;
 extern std::unique_ptr<file_handler_list> open_context;
+extern std::unique_ptr<journal> journalctl;
 
 void local_getattr(shared_ptr<inode> i, struct stat *stat) {
 	global_logger.log(local_fs_op, "Called getattr()");
@@ -61,13 +62,17 @@ uuid local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t 
 	global_logger.log(local_fs_op, "Called mkdir()");
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFDIR);
+	shared_ptr<inode> i = std::make_shared<inode>(parent_i->get_ino(), this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFDIR);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->create_child_inode(new_child_name, i);
 
 		i->set_size(DIR_INODE_SIZE);
-		i->sync();
+
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		journalctl->mkdir(parent_i->get_ino(), new_child_name, i->get_ino(), ts);
+		//i->sync();
 
 		shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
 		new_d->sync();
@@ -86,7 +91,7 @@ int local_rmdir_top(shared_ptr<inode> target_i, uuid target_ino) {
 		std::scoped_lock scl{target_dentry_table->dentry_table_mutex};
 		if (target_dentry_table->get_child_num() > 0)
 			return -ENOTEMPTY;
-		meta_pool->remove(obj_category::DENTRY, uuid_to_string(target_ino));
+		//meta_pool->remove(obj_category::DENTRY, uuid_to_string(target_ino));
 		/* TODO : is it okay to delete dentry_table which is locked? */
 		indexing_table->delete_dentry_table(target_ino);
 	}
@@ -105,7 +110,10 @@ int local_rmdir_down(shared_ptr<inode> parent_i, uuid target_ino, std::string ta
 		/* TODO : is it okay to delete inode which is locked? */
 		parent_dentry_table->delete_child_inode(target_name);
 
-		meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		journalctl->rmdir(parent_i->get_ino(), target_name, target_ino, ts);
+		//meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
 
 		/* It may be failed if top and down both are local */
 		ret = indexing_table->delete_dentry_table(target_ino);
@@ -126,14 +134,19 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 		if (!dst_parent_dentry_table->check_child_inode(*symlink_name).is_nil())
 			return -EEXIST;
 
-		shared_ptr<inode> symlink_i = std::make_shared<inode>(this_client->get_client_uid(),
+		shared_ptr<inode> symlink_i = std::make_shared<inode>(dst_parent_i->get_ino(), this_client->get_client_uid(),
 								      this_client->get_client_gid(), S_IFLNK | 0777,
 								      src);
 
 		symlink_i->set_size(static_cast<off_t>(std::string(src).length()));
 
 		dst_parent_dentry_table->create_child_inode(*symlink_name, symlink_i);
-		symlink_i->sync();
+
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		journalctl->mkreg(dst_parent_i->get_ino(), *symlink_name, symlink_i, ts);
+
+		//symlink_i->sync();
 	}
 	return 0;
 }
@@ -220,6 +233,7 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, uuid target
 
 	shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 	shared_ptr<inode> target_i = std::make_shared<inode>(target_ino);
+	target_i->set_p_ino(dst_parent_i->get_ino());
 	{
 		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		if (flags == 0) {
@@ -248,7 +262,8 @@ int local_open(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 
 		if ((file_info->flags & O_TRUNC) && !(file_info->flags & O_PATH)) {
 			i->set_size(0);
-			i->sync();
+			journalctl->chreg(i->get_p_ino(), i);
+			//i->sync();
 		}
 
 		shared_ptr<file_handler> fh = std::make_shared<file_handler>(i->get_ino());
@@ -273,12 +288,16 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 	global_logger.log(local_fs_op, "Called create()");
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	shared_ptr<inode> i = std::make_shared<inode>(this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFREG);
+	shared_ptr<inode> i = std::make_shared<inode>(parent_i->get_ino(), this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFREG);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
-		i->sync();
 
 		parent_dentry_table->create_child_inode(new_child_name, i);
+
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		journalctl->mkreg(parent_i->get_ino(), new_child_name, i, ts);
+		//i->sync();
 
 		shared_ptr<file_handler> fh = std::make_shared<file_handler>(i->get_ino());
 		fh->set_loc(LOCAL);
@@ -306,9 +325,14 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 
 			/* parent dentry */
 			parent_dentry_table->delete_child_inode(child_name);
+
+			struct timespec ts;
+			timespec_get(&ts, TIME_UTC);
+			journalctl->rmreg(parent_i->get_ino(), child_name, target_i, ts);
 		} else {
 			target_i->set_nlink(nlink);
-			target_i->sync();
+			journalctl->chreg(target_i->get_p_ino(), target_i);
+			//target_i->sync();
 		}
 	}
 }
@@ -335,7 +359,9 @@ ssize_t local_write(shared_ptr<inode> i, const char *buffer, size_t size, off_t 
 
 		if (i->get_size() < offset + size) {
 			i->set_size(offset + size);
-			i->sync();
+
+			journalctl->chreg(i->get_p_ino(), i);
+			//i->sync();
 		}
 	}
 	return written_len;
@@ -348,7 +374,12 @@ void local_chmod(shared_ptr<inode> i, mode_t mode) {
 		mode_t type = i->get_mode() & S_IFMT;
 
 		i->set_mode(mode | type);
-		i->sync();
+
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i->get_p_ino(), i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
+		//i->sync();
 	}
 }
 
@@ -362,7 +393,11 @@ void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid) {
 		if (((int32_t) gid) >= 0)
 			i->set_gid(gid);
 
-		i->sync();
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i->get_p_ino(), i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
+		//i->sync();
 	}
 }
 
@@ -390,7 +425,11 @@ void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]) {
 			i->set_mtime(tv[1]);
 		}
 
-		i->sync();
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i->get_p_ino(), i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
+		//i->sync();
 	}
 }
 
@@ -406,7 +445,16 @@ int local_truncate(const shared_ptr<inode> i, off_t offset) {
 		ret = data_pool->truncate(obj_category::DATA, uuid_to_string(i->get_ino()), offset);
 
 		i->set_size(offset);
-		i->sync();
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		i->set_mtime(ts);
+		i->set_ctime(ts);
+
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i->get_p_ino(), i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
+		//i->sync();
 	}
 	return ret;
 }
