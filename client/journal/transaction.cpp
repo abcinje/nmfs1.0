@@ -147,9 +147,8 @@ int transaction::chreg(std::shared_ptr<inode> self_inode, std::shared_ptr<inode>
 	if (committed)
 		return -1;
 
-	auto i = std::make_unique<inode>(*f_inode);
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
-	f_inodes_ret.first.value() = std::move(i);
+	f_inodes_ret.first.value() = std::make_unique<inode>(*f_inode);
 
 	return 0;
 }
