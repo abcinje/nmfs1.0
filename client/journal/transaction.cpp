@@ -2,11 +2,6 @@
 
 #include "../meta/dentry.hpp"
 
-const char *transaction::invalidated::what(void)
-{
-	return "Tried to make a checkpoint for an invalidated transaction.";
-}
-
 std::vector<char> transaction::serialize(void)
 {
 	std::vector<char> vec;

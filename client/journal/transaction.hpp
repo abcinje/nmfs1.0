@@ -32,11 +32,6 @@ private:
 	tsl::robin_map<std::string, std::unique_ptr<inode>> f_inodes;
 
 public:
-	class invalidated : public std::exception {
-	public:
-		const char *what(void);
-	};
-
 	int chself(std::shared_ptr<inode> self_inode);
 	int chreg(std::shared_ptr<inode> self_inode, std::shared_ptr<inode> f_inode);
 	int mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
