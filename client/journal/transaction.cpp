@@ -170,7 +170,12 @@ int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 		}
 	}
 
-	s_inode = std::make_unique<inode>(*self_inode);
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
 
 	return 0;
 }
@@ -191,7 +196,12 @@ int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 		}
 	}
 
-	s_inode = std::make_unique<inode>(*self_inode);
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
 
 	return 0;
 }
@@ -212,7 +222,12 @@ int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 		}
 	}
 
-	s_inode = std::make_unique<inode>(*self_inode);
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
 
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
 	if (f_inodes_ret.second || !f_inodes_ret.first->second) {
@@ -240,7 +255,12 @@ int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 		}
 	}
 
-	s_inode = std::make_unique<inode>(*self_inode);
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
 
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
 	if (!f_inodes_ret.second && !f_inodes_ret.first->second)
