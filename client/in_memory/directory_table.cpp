@@ -1,6 +1,7 @@
 #include "directory_table.hpp"
 
 extern std::unique_ptr<lease_client> lc;
+extern std::unique_ptr<journal> journalctl;
 
 static int set_name_bound(int &start_name, int &end_name, const std::string &path, int path_len){
 	start_name = end_name + 2;
@@ -82,6 +83,9 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 	shared_ptr<dentry_table> new_dentry_table = nullptr;
 	if(ret == 0) {
 		global_logger.log(directory_table_ops, "Success to acquire lease");
+		/* Check whether the directory needs recovery */
+		//journalctl->check(ino);
+
 		/* Success to acquire lease */
 		new_dentry_table = std::make_shared<dentry_table>(ino, LOCAL);
 		new_dentry_table->set_leader_ip(temp_address);
@@ -94,6 +98,29 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 		new_dentry_table = std::make_shared<dentry_table>(ino, REMOTE);
 		new_dentry_table->set_leader_ip(temp_address);
 		this->add_dentry_table(ino, new_dentry_table);
+	}
+
+	return new_dentry_table;
+}
+
+shared_ptr<dentry_table> directory_table::lease_dentry_table_mkdir(std::shared_ptr<inode> new_dir_inode) {
+	global_logger.log(directory_table_ops, "Called lease_dentry_table(" + uuid_to_string(new_dir_inode->get_ino()) + ")");
+	std::scoped_lock scl{this->directory_table_mutex};
+	std::string temp_address;
+	int ret = lc->acquire(new_dir_inode->get_ino(), temp_address);
+	shared_ptr<dentry_table> new_dentry_table = nullptr;
+	if(ret == 0) {
+		global_logger.log(directory_table_ops, "Success to acquire lease");
+		/* Check whether the directory needs recovery */
+		//journalctl->check(ino);
+
+		/* Success to acquire lease */
+		new_dentry_table = std::make_shared<dentry_table>(new_dir_inode, LOCAL);
+		new_dentry_table->set_leader_ip(temp_address);
+		new_dentry_table->pull_child_metadata();
+		this->add_dentry_table(new_dir_inode->get_ino(), new_dentry_table);
+	} else if(ret == -1) {
+		throw std::runtime_error("New directory should have local dentry table");
 	}
 
 	return new_dentry_table;
@@ -177,3 +204,4 @@ void directory_table::find_remote_dentry_table_again(const std::shared_ptr<remot
 
 	remote_i->set_leader_ip(target_dentry_table->get_leader_ip());
 }
+

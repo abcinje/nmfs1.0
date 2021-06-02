@@ -324,14 +324,15 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 
 		int ret = 0;
 		if (parent_dentry_table->get_loc() == LOCAL) {
-			new_dir_ino = local_mkdir(parent_i, *target_name, mode);
-			indexing_table->lease_dentry_table(new_dir_ino);
+			std::shared_ptr<inode> new_dir_inode = local_mkdir(parent_i, *target_name, mode);
+			indexing_table->lease_dentry_table_mkdir(new_dir_inode);
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
 				parent_dentry_table->get_leader_ip(),
 				parent_dentry_table->get_dir_ino(),
 				*target_name);
 			while(true) {
+				/* TODO : change to use inode pointer */
 				ret = remote_mkdir(remote_i, *target_name, mode, new_dir_ino);
 				if (ret == -ENOTLEADER) {
 					indexing_table->find_remote_dentry_table_again(remote_i);

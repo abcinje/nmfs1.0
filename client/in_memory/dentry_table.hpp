@@ -31,6 +31,7 @@ public:
 	};
 
 	explicit dentry_table(uuid dir_ino, enum meta_location loc);
+    	explicit dentry_table(std::shared_ptr<inode> new_dir_inode, enum meta_location loc);
 	~dentry_table();
 
 	int create_child_inode(std::string filename, shared_ptr<inode> inode);

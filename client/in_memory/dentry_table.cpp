@@ -19,6 +19,13 @@ dentry_table::dentry_table(uuid dir_ino, enum meta_location loc) : dir_ino(dir_i
 	 */
 }
 
+dentry_table::dentry_table(std::shared_ptr<inode> new_dir_inode, enum meta_location loc) : loc(loc){
+	if(loc == LOCAL) {
+		this->this_dir_inode = new_dir_inode;
+		this->this_dir_inode->set_loc(LOCAL);
+	}
+}
+
 dentry_table::~dentry_table() {
 	global_logger.log(dentry_table_ops, "Called ~dentry_table(" + uuid_to_string(this->dir_ino)+")");
 	this->child_inodes.clear();

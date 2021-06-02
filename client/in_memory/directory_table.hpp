@@ -12,6 +12,7 @@
 #include "../logger/logger.hpp"
 #include "../client/client.hpp"
 #include "../lease/lease_client.hpp"
+#include "../journal/journal.hpp"
 
 using std::shared_ptr;
 
@@ -28,7 +29,8 @@ public:
 	int delete_dentry_table(uuid ino);
 
 	shared_ptr<inode> path_traversal(const std::string &path);
-    shared_ptr<dentry_table> lease_dentry_table(uuid ino);
+    	shared_ptr<dentry_table> lease_dentry_table(uuid ino);
+    	shared_ptr<dentry_table> lease_dentry_table_mkdir(std::shared_ptr<inode> new_dir_inode);
 	shared_ptr<dentry_table> get_dentry_table(uuid ino, bool remote = false);
 	void find_remote_dentry_table_again(const std::shared_ptr<remote_inode>& remote_i);
 };

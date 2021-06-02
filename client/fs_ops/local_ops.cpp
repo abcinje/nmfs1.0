@@ -58,7 +58,7 @@ void local_readdir(shared_ptr<inode> i, void *buffer, fuse_fill_dir_t filler) {
 	}
 }
 
-uuid local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
+std::shared_ptr<inode> local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
 	global_logger.log(local_fs_op, "Called mkdir()");
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
@@ -77,7 +77,7 @@ uuid local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t 
 		shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
 		new_d->sync();
 	}
-	return i->get_ino();
+	return i;
 }
 
 int local_rmdir_top(shared_ptr<inode> target_i, uuid target_ino) {
