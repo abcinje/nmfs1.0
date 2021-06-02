@@ -317,9 +317,6 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 			/* data */
 			data_pool->remove(obj_category::DATA, uuid_to_string(target_i->get_ino()));
 
-			/* inode */
-			meta_pool->remove(obj_category::INODE, uuid_to_string(target_i->get_ino()));
-
 			/* parent dentry */
 			parent_dentry_table->delete_child_inode(child_name);
 
