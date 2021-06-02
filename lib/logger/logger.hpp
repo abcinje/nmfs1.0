@@ -18,7 +18,10 @@ enum code_location {
 	rpc_server_ops,
 	manager_lease,
 	manager_session,
-	file_handler_ops
+	file_handler_ops,
+	journal_ops,
+	journal_table_ops,
+	transaction_ops
 };
 
 

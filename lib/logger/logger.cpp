@@ -52,6 +52,15 @@ void logger::log(enum code_location location, std::string message)
 		case file_handler_ops:
 			location_str = "file_handler";
 			break;
+		case journal_ops:
+			location_str = "journal";
+			break;
+		case journal_table_ops:
+			location_str = "journal_table";
+			break;
+		case transaction_ops:
+			location_str = "transaction";
+			break;
 		default:
 			location_str = "Unknown";
 	}

@@ -7,12 +7,14 @@ journal_table::journal_table(void)
 
 void journal_table::delete_entry(const uuid &ino)
 {
+	global_logger.log(journal_table_ops, "Called delete_entry(" + uuid_to_string(ino) + ")");
 	std::unique_lock lock(sm);
 	map->erase(uuid_to_string(ino));
 }
 
 std::shared_ptr<transaction> journal_table::get_entry(const uuid &ino)
 {
+	global_logger.log(journal_table_ops, "Called get_entry(" + uuid_to_string(ino) + ")");
 	{
 		std::shared_lock lock(sm);
 		auto it = map->find(uuid_to_string(ino));
@@ -33,6 +35,7 @@ std::shared_ptr<transaction> journal_table::get_entry(const uuid &ino)
 
 std::unique_ptr<journal_map> journal_table::replace_map(void)
 {
+	global_logger.log(journal_table_ops, "Called replace_map()");
 	std::unique_lock lock(sm);
 
 	auto temp = std::move(map);

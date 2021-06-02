@@ -15,6 +15,7 @@ journal::~journal(void)
 
 void journal::check(const uuid &self_ino)
 {
+	global_logger.log(journal_ops, "Called check()");
 	jtable.delete_entry(self_ino);
 
 	std::vector<char> value(OBJ_SIZE);
@@ -36,6 +37,7 @@ void journal::check(const uuid &self_ino)
 
 void journal::chself(std::shared_ptr<inode> self_inode)
 {
+	global_logger.log(journal_ops, "Called chself(" + uuid_to_string(self_inode->get_ino()) + ")");
 	while (true) {
 		auto tx = jtable.get_entry(self_inode->get_ino());
 		if (!tx->chself(self_inode))
@@ -45,6 +47,7 @@ void journal::chself(std::shared_ptr<inode> self_inode)
 
 void journal::chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode)
 {
+	global_logger.log(journal_ops, "Called chreg(" + uuid_to_string(self_ino) + ")");
 	while (true) {
 		auto tx = jtable.get_entry(self_ino);
 		if (!tx->chreg(f_inode))
@@ -54,6 +57,7 @@ void journal::chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode)
 
 void journal::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
+	global_logger.log(journal_ops, "Called mkdir(" + uuid_to_string(self_inode->get_ino()) + ")");
 	while (true) {
 		auto tx = jtable.get_entry(self_inode->get_ino());
 		if (!tx->mkdir(self_inode, d_name, d_ino))
@@ -63,6 +67,7 @@ void journal::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name
 
 void journal::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
+	global_logger.log(journal_ops, "Called rmdir(" + uuid_to_string(self_inode->get_ino()) + ")");
 	while (true) {
 		auto tx = jtable.get_entry(self_inode->get_ino());
 		if (!tx->rmdir(self_inode, d_name, d_ino))
@@ -72,6 +77,7 @@ void journal::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name
 
 void journal::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
+	global_logger.log(journal_ops, "Called mkreg(" + uuid_to_string(f_inode->get_ino()) + ")");
 	while (true) {
 		auto tx = jtable.get_entry(self_inode->get_ino());
 		if (!tx->mkreg(self_inode, f_name, f_inode))
@@ -81,6 +87,7 @@ void journal::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name
 
 void journal::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
+	global_logger.log(journal_ops, "Called rmreg(" + uuid_to_string(f_inode->get_ino()) + ")");
 	while (true) {
 		auto tx = jtable.get_entry(self_inode->get_ino());
 		if (!tx->rmreg(self_inode, f_name, f_inode))
