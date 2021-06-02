@@ -16,8 +16,8 @@ int local_rmdir_down(shared_ptr<inode> parent_i, uuid target_ino, std::string ta
 int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *dst);
 int local_readlink(shared_ptr<inode> i, char *buf, size_t size);
 int local_rename_same_parent(shared_ptr<inode> parent_i, const char* old_path, const char* new_path, unsigned int flags);
-uuid local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char* old_path, unsigned int flags);
-int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags);
+std::shared_ptr<inode> local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char* old_path, unsigned int flags);
+int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, std::shared_ptr<inode> target_inode, uuid check_dst_ino, const char* new_path, unsigned int flags);
 int local_open(shared_ptr<inode> i, struct fuse_file_info* file_info);
 int local_release(shared_ptr<inode> i, struct fuse_file_info* file_info);
 void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, struct fuse_file_info* file_info);

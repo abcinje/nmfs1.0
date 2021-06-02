@@ -497,16 +497,17 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 
 			uuid check_dst_ino = dst_dentry_table->check_child_inode(*get_filename_from_path(new_path));
 			if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == LOCAL)) {
-				uuid target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
-				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
+				std::shared_ptr<inode> target_inode = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
+				ret = local_rename_not_same_parent_dst(dst_parent_i, target_inode, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == REMOTE)) {
-				uuid target_ino = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
+				/* TODO : TODO : change to use inode pointer */
+				std::shared_ptr<inode> target_inode = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
 				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
 					dst_dentry_table->get_leader_ip(),
 					dst_dentry_table->get_dir_ino(),
 					new_path);
 				while(true) {
-					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_ino, check_dst_ino, new_path, flags);
+					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_inode->get_ino(), check_dst_ino, new_path, flags);
 					if(ret == -ENOTLEADER) {
 						indexing_table->find_remote_dentry_table_again(dst_remote_i);
 						continue;
@@ -531,7 +532,7 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					} else
 						break;
 				}
-				ret = local_rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
+				ret = local_rename_not_same_parent_dst(dst_parent_i, nullptr, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
 				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
 					src_dentry_table->get_leader_ip(),

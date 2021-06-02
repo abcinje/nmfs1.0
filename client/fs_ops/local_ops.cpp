@@ -200,7 +200,7 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 	return 0;
 }
 
-uuid local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char *old_path, unsigned int flags) {
+std::shared_ptr<inode> local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char *old_path, unsigned int flags) {
 	global_logger.log(local_fs_op, "Called rename_not_same_parent_src()");
 	unique_ptr<std::string> old_name = get_filename_from_path(old_path);
 
@@ -214,8 +214,6 @@ uuid local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char
 
 	{
 		std::scoped_lock scl{src_dentry_table->dentry_table_mutex, target_i->inode_mutex};
-		target_ino = target_i->get_ino();
-
 		if (flags == 0) {
 			/* TODO : is it okay to delete inode which is locked? */
 			src_dentry_table->delete_child_inode(*old_name);
@@ -223,26 +221,25 @@ uuid local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char
 			throw std::runtime_error("NOT IMPLEMENTED");
 		}
 	}
-	return target_ino;
+	return target_i;
 }
 
-int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, uuid target_ino, uuid check_dst_ino,
+int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, std::shared_ptr<inode> target_inode, uuid check_dst_ino,
 				     const char *new_path, unsigned int flags) {
 	global_logger.log(local_fs_op, "Called rename_not_same_parent_dst()");
 	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
 	shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
-	shared_ptr<inode> target_i = std::make_shared<inode>(target_ino);
-	target_i->set_p_ino(dst_parent_i->get_ino());
+	target_inode->set_p_ino(dst_parent_i->get_ino());
 	{
-		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_i->inode_mutex};
+		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_inode->inode_mutex};
 		if (flags == 0) {
 			if (!check_dst_ino.is_nil()) {
 				dst_dentry_table->delete_child_inode(*new_name);
 				/* TODO : is it okay to delete inode which is locked? */
 				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
 			}
-			dst_dentry_table->create_child_inode(*new_name, target_i);
+			dst_dentry_table->create_child_inode(*new_name, target_inode);
 		} else {
 			throw std::runtime_error("NOT IMPLEMENTED");
 		}
