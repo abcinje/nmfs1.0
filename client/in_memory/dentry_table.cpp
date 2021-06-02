@@ -22,6 +22,7 @@ dentry_table::dentry_table(uuid dir_ino, enum meta_location loc) : dir_ino(dir_i
 dentry_table::dentry_table(std::shared_ptr<inode> new_dir_inode, enum meta_location loc) : loc(loc){
 	if(loc == LOCAL) {
 		this->this_dir_inode = new_dir_inode;
+		this->dir_ino = new_dir_inode->get_ino();
 		this->this_dir_inode->set_loc(LOCAL);
 	}
 }
