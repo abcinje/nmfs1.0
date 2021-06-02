@@ -132,7 +132,7 @@ transaction::transaction(void) : committed(false), s_inode(nullptr)
 
 int transaction::chself(std::shared_ptr<inode> self_inode)
 {
-	global_logger.log(transaction_ops, "Called chself(" + uuid_to_string(self_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::chself(" + uuid_to_string(self_inode->get_ino()) + ")");
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -145,7 +145,7 @@ int transaction::chself(std::shared_ptr<inode> self_inode)
 
 int transaction::chreg(std::shared_ptr<inode> f_inode)
 {
-	global_logger.log(transaction_ops, "Called chreg(" + uuid_to_string(f_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::chreg(" + uuid_to_string(f_inode->get_ino()) + ")");
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -159,7 +159,7 @@ int transaction::chreg(std::shared_ptr<inode> f_inode)
 
 int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
-	global_logger.log(transaction_ops, "Called mkdir(" + uuid_to_string(self_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::mkdir(" + uuid_to_string(self_inode->get_ino()) + d_name + ")");
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -186,7 +186,7 @@ int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 
 int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
-	global_logger.log(transaction_ops, "Called rmdir(" + uuid_to_string(self_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::rmdir(" + uuid_to_string(self_inode->get_ino()) + d_name + ")");
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -213,7 +213,7 @@ int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 
 int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
-	global_logger.log(transaction_ops, "Called mkreg(" + uuid_to_string(f_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::mkreg(" + uuid_to_string(f_inode->get_ino()) + f_name + ")");
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -247,7 +247,7 @@ int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 
 int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
-	global_logger.log(transaction_ops, "Called rmreg(" + uuid_to_string(f_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::rmreg(" + uuid_to_string(f_inode->get_ino()) + f_name + ")");
 	std::unique_lock lock(m);
 
 	if (committed)
