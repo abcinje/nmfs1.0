@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <iomanip>
 
 enum code_location {
 	fuse_op = 0,
@@ -27,6 +28,7 @@ enum code_location {
 
 class logger {
 public:
+    	logger();
 	void log( enum code_location location, std::string message);
 };
 

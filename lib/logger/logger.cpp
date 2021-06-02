@@ -3,6 +3,10 @@
 #define CYAN "\033[0;36m"
 #define RESET "\033[0m"
 
+logger::logger() {
+	std::cout.setf(std::ios::left);
+}
+
 void logger::log(enum code_location location, std::string message)
 {
 #ifdef DEBUG
@@ -14,10 +18,10 @@ void logger::log(enum code_location location, std::string message)
 			message = CYAN + message + RESET;
 			break;
 		case local_fs_op:
-			location_str = "local_fs_operations";
+			location_str = "local_fs_ops";
 			break;
 		case remote_fs_op:
-			location_str = "remote_fs_operations";
+			location_str = "remote_fs_ops";
 			break;
 		case rados_io_ops:
 			location_str = "rados_io_ops";
@@ -65,7 +69,8 @@ void logger::log(enum code_location location, std::string message)
 			location_str = "Unknown";
 	}
 
-	std::cout<< "[" + location_str + "]\t" + message << std::endl;
+	std::cout << std::setw(20) <<"[" + location_str + "]";
+	std::cout << message << std::endl;
 #endif
 }
 
