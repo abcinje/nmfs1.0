@@ -13,7 +13,7 @@
 #include "../util.hpp"
 #include "uuid_controller.hpp"
 
-#define REG_INODE_SIZE (sizeof(core))
+#define REG_INODE_SIZE (sizeof(struct _core))
 #define DIR_INODE_SIZE 4096
 #define ENOTLEADER 8000
 #define ENEEDRECOV 8001
