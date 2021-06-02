@@ -26,7 +26,7 @@ std::shared_ptr<transaction> journal_table::get_entry(const uuid &ino)
 		std::unique_lock lock(sm);
 		auto ret = map->insert({uuid_to_string(ino), nullptr});
 		if (ret.second) {
-			return ret.first.value() = std::make_shared<transaction>();
+			return ret.first.value() = std::make_shared<transaction>(ino);
 		} else {
 			return ret.first->second;
 		}

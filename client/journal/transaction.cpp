@@ -82,6 +82,7 @@ int transaction::deserialize(std::vector<char> raw)
 	int32_t s_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
 	index += sizeof(int32_t);
 	if (s_inode_size != -1) {	/* finished? */
+		s_inode = std::make_unique<inode>();
 		s_inode->deserialize(&raw[index]);
 		index += sizeof(inode);
 	}
@@ -126,7 +127,7 @@ int transaction::deserialize(std::vector<char> raw)
 	return 0;
 }
 
-transaction::transaction(void) : committed(false), s_inode(nullptr)
+transaction::transaction(const uuid &self_ino) : committed(false), s_ino(self_ino), s_inode(nullptr)
 {
 }
 
@@ -280,10 +281,11 @@ void transaction::sync(void)
 {
 	global_logger.log(transaction_ops, "Called sync()");
 	/* s_inode */
-	s_inode->sync();
+	if (s_inode)
+		s_inode->sync();
 
 	/* dentries */
-	dentry d(s_inode->get_ino());
+	dentry d(s_ino);
 	for (const auto &p : dentries) {
 		bool alive = p.second.first;
 		std::string name = p.first;
@@ -316,8 +318,8 @@ void transaction::commit(std::shared_ptr<rados_io> meta)
 	auto raw = serialize();
 
 	size_t obj_size;
-	meta->stat(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), obj_size);
-	meta->write(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), raw.data(), raw.size(), obj_size);
+	meta->stat(obj_category::JOURNAL, uuid_to_string(s_ino), obj_size);
+	meta->write(obj_category::JOURNAL, uuid_to_string(s_ino), raw.data(), raw.size(), obj_size);
 
 	/* Update offset */
 	offset = obj_size;
@@ -330,5 +332,5 @@ void transaction::checkpoint(std::shared_ptr<rados_io> meta)
 	sync();
 
 	/* Clear the checkpoint bit */
-	meta->write(obj_category::JOURNAL, uuid_to_string(s_inode->get_ino()), "\0", 1, offset);
+	meta->write(obj_category::JOURNAL, uuid_to_string(s_ino), "\0", 1, offset);
 }

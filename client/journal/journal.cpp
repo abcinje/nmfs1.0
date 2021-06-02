@@ -25,7 +25,7 @@ void journal::check(const uuid &self_ino)
 	while (index < obj_size) {
 		int32_t tx_size = *(reinterpret_cast<int32_t *>(&value[index]));
 		std::vector<char> raw(&value[index], &value[index] + tx_size);
-		transaction tx;
+		transaction tx(self_ino);
 		if (!tx.deserialize(raw)) {
 			tx.sync();
 		} else {

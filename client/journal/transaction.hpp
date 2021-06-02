@@ -22,6 +22,10 @@ private:
 	/* the offset for this transaction in the journal object */
 	off_t offset;
 
+	/* the inode number of the directory itself
+	 * This field should be always valid unlike s_inode pointer */
+	uuid s_ino;
+
 	/* the inode block of the directory itself */
 	std::unique_ptr<inode> s_inode;
 
@@ -39,7 +43,7 @@ public:
 	int mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
 	int rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
 
-	transaction(void);
+	transaction(const uuid &self_ino);
 	~transaction(void) = default;
 
 	std::vector<char> serialize(void);
