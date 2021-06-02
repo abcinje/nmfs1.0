@@ -28,20 +28,22 @@ const char *inode::permission_denied::what()
 
 inode::inode(const inode &copy)
 {
-	core.i_mode		= copy.core.i_mode;
-	core.i_uid		= copy.core.i_uid;
-	core.i_gid		= copy.core.i_gid;
-	core.i_ino		= copy.core.i_ino;
-	core.i_nlink	= copy.core.i_nlink;
-	core.i_size		= copy.core.i_size;
+	core.i_mode = copy.core.i_mode;
+	core.i_uid = copy.core.i_uid;
+	core.i_gid = copy.core.i_gid;
+	core.i_ino = copy.core.i_ino;
+	core.i_nlink = copy.core.i_nlink;
+	core.i_size = copy.core.i_size;
 
-	core.i_atime	= copy.core.i_atime;
-	core.i_mtime	= copy.core.i_mtime;
-	core.i_ctime	= copy.core.i_ctime;
+	core.i_atime = copy.core.i_atime;
+	core.i_mtime = copy.core.i_mtime;
+	core.i_ctime = copy.core.i_ctime;
 
-	link_target_len	= copy.link_target_len;
-	link_target_name = reinterpret_cast<char *>(malloc(link_target_len + 1));
-	memcpy(link_target_name, copy.link_target_name, link_target_len + 1);
+	link_target_len = copy.link_target_len;
+	if (S_ISLNK(this->core.i_mode) && (this->link_target_len > 0)) {
+		link_target_name = reinterpret_cast<char *>(malloc(link_target_len));
+		memcpy(link_target_name, copy.link_target_name, link_target_len);
+	}
 }
 
 inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, bool root) {
