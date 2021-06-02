@@ -47,15 +47,16 @@ std::vector<char> transaction::serialize(void)
 	vec.push_back(-1);
 
 	/* f_inodes */
-	for (auto &i : f_inodes) {
-		auto f_inode_vec = i.second->serialize();
-		int32_t f_inode_size = static_cast<uint32_t>(f_inode_vec.size());
-		vec.push_back(static_cast<char>(f_inode_size & 0xff));
-		vec.push_back(static_cast<char>((f_inode_size >> 8) & 0xff));
-		vec.push_back(static_cast<char>((f_inode_size >> 16) & 0xff));
-		vec.push_back(static_cast<char>((f_inode_size >> 24) & 0xff));
-		vec.insert(vec.end(), f_inode_vec.begin(), f_inode_vec.end());
-	}
+	for (auto &i : f_inodes)
+		if (i.second) {
+			auto f_inode_vec = i.second->serialize();
+			int32_t f_inode_size = static_cast<uint32_t>(f_inode_vec.size());
+			vec.push_back(static_cast<char>(f_inode_size & 0xff));
+			vec.push_back(static_cast<char>((f_inode_size >> 8) & 0xff));
+			vec.push_back(static_cast<char>((f_inode_size >> 16) & 0xff));
+			vec.push_back(static_cast<char>((f_inode_size >> 24) & 0xff));
+			vec.insert(vec.end(), f_inode_vec.begin(), f_inode_vec.end());
+		}
 	for (int i = 0; i < 4; i++)
 		vec.push_back(-1);
 
