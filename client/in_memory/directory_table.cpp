@@ -104,7 +104,7 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 }
 
 shared_ptr<dentry_table> directory_table::lease_dentry_table_mkdir(std::shared_ptr<inode> new_dir_inode) {
-	global_logger.log(directory_table_ops, "Called lease_dentry_table(" + uuid_to_string(new_dir_inode->get_ino()) + ")");
+	global_logger.log(directory_table_ops, "Called lease_dentry_table_mkdir(" + uuid_to_string(new_dir_inode->get_ino()) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
 	std::string temp_address;
 	int ret = lc->acquire(new_dir_inode->get_ino(), temp_address);
