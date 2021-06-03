@@ -43,8 +43,8 @@ private:
 	/* the inode block of the directory itself */
 	std::unique_ptr<inode> s_inode;
 
-	/* The boolean value is true if the entry has been added and false if the entry has been deleted. */
-	tsl::robin_map<std::string, std::pair<bool, boost::uuids::uuid>> dentries;
+	/* The integer value is the count diff for directory entries since this transaction has been created. */
+	tsl::robin_map<std::string, std::pair<int, boost::uuids::uuid>> dentries;
 
 	/* An unique pointer whose value is null means the file has been deleted. */
 	tsl::robin_map<std::string, std::unique_ptr<inode>> f_inodes;
