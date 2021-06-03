@@ -282,7 +282,7 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 
 		i->set_size(DIR_INODE_SIZE);
 
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		parent_i->set_mtime(ts);
 		parent_i->set_ctime(ts);
@@ -320,8 +320,7 @@ Status rpc_server::rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmd
 			return Status::OK;
 		}
 
-		/* TODO : rmreg */
-		//meta_pool->remove(obj_category::DENTRY, uuid_to_string(target_ino));
+		journalctl->rmself(target_ino);
 		indexing_table->delete_dentry_table(target_ino);
 	}
 	response->set_ret(0);
@@ -348,7 +347,7 @@ Status rpc_server::rpc_rmdir_down(::grpc::ServerContext *context, const ::rpc_rm
 		std::shared_ptr<inode> parent_i = parent_dentry_table->get_this_dir_inode();
 		parent_dentry_table->delete_child_inode(request->target_name());
 
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		parent_i->set_mtime(ts);
 		parent_i->set_ctime(ts);
@@ -393,7 +392,7 @@ Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symli
 
 		dst_parent_dentry_table->create_child_inode(*symlink_name, symlink_i);
 
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		journalctl->mkreg(dst_parent_i, *symlink_name, symlink_i);
 	}
@@ -621,7 +620,7 @@ Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create
 		shared_ptr<inode> i = std::make_shared<inode>(dentry_table_ino, this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFREG);
 		parent_dentry_table->create_child_inode(request->new_file_name(), i);
 
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		parent_i->set_mtime(ts);
 		parent_i->set_ctime(ts);
@@ -660,7 +659,7 @@ Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink
 			/* parent dentry */
 			parent_dentry_table->delete_child_inode(request->filename());
 
-			struct timespec ts;
+			struct timespec ts{};
 			timespec_get(&ts, TIME_UTC);
 			parent_i->set_mtime(ts);
 			parent_i->set_ctime(ts);

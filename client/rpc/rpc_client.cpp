@@ -3,6 +3,7 @@ extern std::shared_ptr<rados_io> data_pool;
 extern std::unique_ptr<file_handler_list> open_context;
 extern std::unique_ptr<uuid_controller> ino_controller;
 extern std::unique_ptr<client> this_client;
+extern std::unique_ptr<journal> journalctl;
 
 rpc_client::rpc_client(std::shared_ptr<Channel> channel) : stub_(remote_ops::NewStub(channel)){}
 
@@ -237,11 +238,9 @@ int rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_n
 			uuid returned_dir_ino = ino_controller->splice_prefix_and_postfix(Output.new_dir_ino_prefix(), Output.new_dir_ino_postfix());
 			shared_ptr<inode> i = std::make_shared<inode>(parent_i->get_ino(), this_client->get_client_uid(), this_client->get_client_gid(), mode | S_IFDIR, returned_dir_ino);
 			i->set_size(DIR_INODE_SIZE);
-			/* TODO : chself */
-			i->sync();
 
 			shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
-			new_d->sync();
+			journalctl->mkself(i);
 
 			new_dir_inode = i;
 		}

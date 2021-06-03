@@ -67,16 +67,15 @@ std::shared_ptr<inode> local_mkdir(shared_ptr<inode> parent_i, std::string new_c
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->create_child_inode(new_child_name, i);
 
-		i->set_size(DIR_INODE_SIZE);
-
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		parent_i->set_mtime(ts);
 		parent_i->set_ctime(ts);
 		journalctl->mkdir(parent_i, new_child_name, i->get_ino());
 
+		i->set_size(DIR_INODE_SIZE);
 		shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
-		new_d->sync();
+		journalctl->mkself(i);
 	}
 	return i;
 }
@@ -92,7 +91,7 @@ int local_rmdir_top(shared_ptr<inode> target_i, uuid target_ino) {
 		std::scoped_lock scl{target_dentry_table->dentry_table_mutex};
 		if (target_dentry_table->get_child_num() > 0)
 			return -ENOTEMPTY;
-		//meta_pool->remove(obj_category::DENTRY, uuid_to_string(target_ino));
+		journalctl->rmself(target_ino);
 		/* TODO : is it okay to delete dentry_table which is locked? */
 		indexing_table->delete_dentry_table(target_ino);
 	}
@@ -111,12 +110,11 @@ int local_rmdir_down(shared_ptr<inode> parent_i, uuid target_ino, std::string ta
 		/* TODO : is it okay to delete inode which is locked? */
 		parent_dentry_table->delete_child_inode(target_name);
 
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		parent_i->set_mtime(ts);
 		parent_i->set_ctime(ts);
 		journalctl->rmdir(parent_i, target_name, target_ino);
-		//meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
 
 		/* It may be failed if top and down both are local */
 		ret = indexing_table->delete_dentry_table(target_ino);
@@ -145,7 +143,7 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 
 		dst_parent_dentry_table->create_child_inode(*symlink_name, symlink_i);
 
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		journalctl->mkreg(dst_parent_i, *symlink_name, symlink_i);
 	}
@@ -186,7 +184,7 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		parent_i->set_mtime(ts);
 		parent_i->set_ctime(ts);
@@ -303,7 +301,7 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 
 		parent_dentry_table->create_child_inode(new_child_name, i);
 
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		parent_i->set_mtime(ts);
 		parent_i->set_ctime(ts);
@@ -333,7 +331,7 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 			/* parent dentry */
 			parent_dentry_table->delete_child_inode(child_name);
 
-			struct timespec ts;
+			struct timespec ts{};
 			timespec_get(&ts, TIME_UTC);
 			parent_i->set_mtime(ts);
 			parent_i->set_ctime(ts);
@@ -449,7 +447,7 @@ int local_truncate(const shared_ptr<inode> i, off_t offset) {
 		ret = data_pool->truncate(obj_category::DATA, uuid_to_string(i->get_ino()), offset);
 
 		i->set_size(offset);
-		struct timespec ts;
+		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		i->set_mtime(ts);
 		i->set_ctime(ts);

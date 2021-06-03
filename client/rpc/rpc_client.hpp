@@ -6,7 +6,7 @@
 #include "../meta/dentry.hpp"
 #include "../meta/remote_inode.hpp"
 #include "../meta/file_handler.hpp"
-
+#include "../journal/journal.hpp"
 
 using grpc::Channel;
 using grpc::ClientContext;
