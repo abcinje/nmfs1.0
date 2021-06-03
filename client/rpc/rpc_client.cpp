@@ -5,7 +5,7 @@ extern std::unique_ptr<uuid_controller> ino_controller;
 extern std::unique_ptr<client> this_client;
 
 rpc_client::rpc_client(std::shared_ptr<Channel> channel) : stub_(remote_ops::NewStub(channel)){}
-/* TODO : Handle -ENOTLEADER */
+
 /* dentry_table operations */
 uuid rpc_client::check_child_inode(uuid dentry_table_ino, std::string filename){
 	global_logger.log(rpc_client_ops, "Called check_child_inode()");

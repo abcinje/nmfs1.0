@@ -161,7 +161,7 @@ void inode::fill_stat(struct stat *s)
 	s->st_ctim.tv_sec	= core.i_ctime.tv_sec;
 	s->st_ctim.tv_sec	= core.i_ctime.tv_nsec;
 }
-/* TODO : what is difference this + VFTABLE_OFFSET and &i_mode */
+
 std::vector<char> inode::serialize()
 {
 	global_logger.log(inode_ops, "Called inode.serialize()");

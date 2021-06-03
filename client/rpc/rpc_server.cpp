@@ -36,7 +36,7 @@ Status rpc_server::rpc_check_child_inode(::grpc::ServerContext *context, const :
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
 		check_target_ino = parent_dentry_table->check_child_inode(request->filename());
 	}
-	/* TODO : uuid cannot be -1 */
+
 	response->set_checked_ino_prefix(ino_controller->get_prefix_from_uuid(check_target_ino));
 	response->set_checked_ino_postfix(ino_controller->get_postfix_from_uuid(check_target_ino));
 	response->set_ret(0);

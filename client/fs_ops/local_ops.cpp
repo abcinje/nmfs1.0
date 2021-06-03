@@ -186,13 +186,23 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		parent_i->set_mtime(ts);
+		parent_i->set_ctime(ts);
+
 		if (flags == 0) {
 			if (!check_dst_ino.is_nil()) {
+				/* TODO : directory inode location is different */
+				std::shared_ptr<inode> check_dst_inode = parent_dentry_table->get_child_inode(*new_name);
 				parent_dentry_table->delete_child_inode(*new_name);
-				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
+				journalctl->rmreg(parent_i, *new_name, check_dst_inode);
 			}
+
 			parent_dentry_table->delete_child_inode(*old_name);
+			journalctl->rmreg(parent_i, *old_name, target_i);
 			parent_dentry_table->create_child_inode(*new_name, target_i);
+			journalctl->mkreg(parent_i, *new_name, target_i);
 		} else {
 			return -ENOSYS;
 		}
@@ -217,6 +227,7 @@ std::shared_ptr<inode> local_rename_not_same_parent_src(shared_ptr<inode> src_pa
 		if (flags == 0) {
 			/* TODO : is it okay to delete inode which is locked? */
 			src_dentry_table->delete_child_inode(*old_name);
+			journalctl->rmreg(src_parent_i, *old_name, target_i);
 		} else {
 			throw std::runtime_error("NOT IMPLEMENTED");
 		}
@@ -235,11 +246,13 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, std::shared
 		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_inode->inode_mutex};
 		if (flags == 0) {
 			if (!check_dst_ino.is_nil()) {
+				std::shared_ptr<inode> check_dst_inode = dst_dentry_table->get_child_inode(*new_name);
 				dst_dentry_table->delete_child_inode(*new_name);
+				journalctl->rmreg(dst_parent_i, *new_name, check_dst_inode);
 				/* TODO : is it okay to delete inode which is locked? */
-				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
 			}
 			dst_dentry_table->create_child_inode(*new_name, target_inode);
+			journalctl->mkreg(dst_parent_i, *new_name, target_inode);
 		} else {
 			throw std::runtime_error("NOT IMPLEMENTED");
 		}
