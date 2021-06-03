@@ -103,7 +103,7 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 	return new_dentry_table;
 }
 
-shared_ptr<dentry_table> directory_table::lease_dentry_table_mkdir(std::shared_ptr<inode> new_dir_inode) {
+shared_ptr<dentry_table> directory_table::lease_dentry_table_mkdir(std::shared_ptr<inode> new_dir_inode, std::shared_ptr<dentry> new_dir_dentry) {
 	global_logger.log(directory_table_ops, "Called lease_dentry_table_mkdir(" + uuid_to_string(new_dir_inode->get_ino()) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
 	std::string temp_address;
@@ -115,9 +115,8 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table_mkdir(std::shared_p
 		//journalctl->check(ino);
 
 		/* Success to acquire lease */
-		new_dentry_table = std::make_shared<dentry_table>(new_dir_inode, LOCAL);
+		new_dentry_table = std::make_shared<dentry_table>(new_dir_inode, new_dir_dentry, LOCAL);
 		new_dentry_table->set_leader_ip(temp_address);
-		new_dentry_table->pull_child_metadata();
 		this->add_dentry_table(new_dir_inode->get_ino(), new_dentry_table);
 	} else if(ret == -1) {
 		throw std::runtime_error("New directory should have local dentry table");

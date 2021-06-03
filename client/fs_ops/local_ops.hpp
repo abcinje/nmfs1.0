@@ -10,7 +10,7 @@ void local_access(shared_ptr<inode> i, int mask);
 int local_opendir(shared_ptr<inode> i, struct fuse_file_info* file_info);
 int local_releasedir(shared_ptr<inode> i, struct fuse_file_info* file_info);
 void local_readdir(shared_ptr<inode> i, void* buffer, fuse_fill_dir_t filler);
-std::shared_ptr<inode> local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode);
+int local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, std::shared_ptr<inode>& new_dir_inode, std::shared_ptr<dentry>& new_dir_dentry);
 int local_rmdir_top(shared_ptr<inode> target_i, uuid target_ino);
 int local_rmdir_down(shared_ptr<inode> parent_i, uuid target_ino, std::string target_name);
 int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *dst);

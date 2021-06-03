@@ -11,7 +11,7 @@ int remote_getattr(shared_ptr<remote_inode> i, struct stat* stat);
 int remote_access(shared_ptr<remote_inode> i, int mask);
 int remote_opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 int remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler);
-int remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, std::shared_ptr<inode>& new_dir_inode);
+int remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, std::shared_ptr<inode>& new_dir_inode, std::shared_ptr<dentry>& new_dir_dentry);
 int remote_rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino);
 int remote_rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::string target_name);
 int remote_symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst);

@@ -58,26 +58,29 @@ void local_readdir(shared_ptr<inode> i, void *buffer, fuse_fill_dir_t filler) {
 	}
 }
 
-std::shared_ptr<inode> local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode) {
+int local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t mode, std::shared_ptr<inode>& new_dir_inode, std::shared_ptr<dentry>& new_dir_dentry) {
 	global_logger.log(local_fs_op, "Called mkdir()");
 
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-	shared_ptr<inode> i = std::make_shared<inode>(parent_i->get_ino(), this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFDIR);
+	shared_ptr<inode> new_i = std::make_shared<inode>(parent_i->get_ino(), this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFDIR);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
-		parent_dentry_table->create_child_inode(new_child_name, i);
+		parent_dentry_table->create_child_inode(new_child_name, new_i);
 
 		struct timespec ts{};
 		timespec_get(&ts, TIME_UTC);
 		parent_i->set_mtime(ts);
 		parent_i->set_ctime(ts);
-		journalctl->mkdir(parent_i, new_child_name, i->get_ino());
+		journalctl->mkdir(parent_i, new_child_name, new_i->get_ino());
 
-		i->set_size(DIR_INODE_SIZE);
-		shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
-		journalctl->mkself(i);
+		new_i->set_size(DIR_INODE_SIZE);
+		shared_ptr<dentry> new_d = std::make_shared<dentry>(new_i->get_ino(), true);
+		journalctl->mkself(new_i);
+
+		new_dir_inode = new_i;
+		new_dir_dentry = new_d;
 	}
-	return i;
+	return 0;
 }
 
 int local_rmdir_top(shared_ptr<inode> target_i, uuid target_ino) {
