@@ -5,6 +5,7 @@
 std::vector<char> transaction::serialize(void)
 {
 	global_logger.log(transaction_ops, "Called serialize()");
+
 	std::vector<char> vec;
 
 	/* total vector size */
@@ -72,6 +73,7 @@ std::vector<char> transaction::serialize(void)
 int transaction::deserialize(std::vector<char> raw)
 {
 	global_logger.log(transaction_ops, "Called deserialize()");
+
 	/* Consider vector size */
 	off_t index = 4;
 
@@ -135,6 +137,7 @@ transaction::transaction(const uuid &self_ino) : committed(false), status(self_s
 int transaction::mkself(std::shared_ptr<inode> self_inode)
 {
 	global_logger.log(transaction_ops, "Called transaction::mkself(" + uuid_to_string(self_inode->get_ino()) + ")");
+
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -149,6 +152,7 @@ int transaction::mkself(std::shared_ptr<inode> self_inode)
 int transaction::rmself(const uuid &self_ino)
 {
 	global_logger.log(transaction_ops, "Called transaction::rmself(" + uuid_to_string(self_ino) + ")");
+
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -162,6 +166,7 @@ int transaction::rmself(const uuid &self_ino)
 int transaction::chself(std::shared_ptr<inode> self_inode)
 {
 	global_logger.log(transaction_ops, "Called transaction::chself(" + uuid_to_string(self_inode->get_ino()) + ")");
+
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -174,7 +179,8 @@ int transaction::chself(std::shared_ptr<inode> self_inode)
 
 int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
-	global_logger.log(transaction_ops, "Called transaction::mkdir(" + uuid_to_string(self_inode->get_ino()) + d_name + ")");
+	global_logger.log(transaction_ops, "Called transaction::mkdir(" + uuid_to_string(self_inode->get_ino()) + ", " + d_name + ")");
+
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -201,7 +207,8 @@ int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 
 int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
-	global_logger.log(transaction_ops, "Called transaction::rmdir(" + uuid_to_string(self_inode->get_ino()) + d_name + ")");
+	global_logger.log(transaction_ops, "Called transaction::rmdir(" + uuid_to_string(self_inode->get_ino()) + "," + d_name + ")");
+
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -228,7 +235,8 @@ int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 
 int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
-	global_logger.log(transaction_ops, "Called transaction::mkreg(" + uuid_to_string(f_inode->get_ino()) + f_name + ")");
+	global_logger.log(transaction_ops, "Called transaction::mkreg(" + uuid_to_string(f_inode->get_ino()) + ", " + f_name + ")");
+
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -262,7 +270,8 @@ int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 
 int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
-	global_logger.log(transaction_ops, "Called transaction::rmreg(" + uuid_to_string(f_inode->get_ino()) + f_name + ")");
+	global_logger.log(transaction_ops, "Called transaction::rmreg(" + uuid_to_string(f_inode->get_ino()) + ", " + f_name + ")");
+
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -294,6 +303,7 @@ int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 int transaction::chreg(std::shared_ptr<inode> f_inode)
 {
 	global_logger.log(transaction_ops, "Called transaction::chreg(" + uuid_to_string(f_inode->get_ino()) + ")");
+
 	std::unique_lock lock(m);
 
 	if (committed)
@@ -308,6 +318,7 @@ int transaction::chreg(std::shared_ptr<inode> f_inode)
 void transaction::sync(std::shared_ptr<rados_io> meta)
 {
 	global_logger.log(transaction_ops, "Called sync()");
+
 	if (status == self_status::S_CREATED) {
 		s_inode->sync();
 		dentry self(s_ino, true);
@@ -349,6 +360,7 @@ void transaction::sync(std::shared_ptr<rados_io> meta)
 void transaction::commit(std::shared_ptr<rados_io> meta)
 {
 	global_logger.log(transaction_ops, "Called commit()");
+
 	{
 		std::unique_lock lock(m);
 
@@ -370,6 +382,7 @@ void transaction::commit(std::shared_ptr<rados_io> meta)
 void transaction::checkpoint(std::shared_ptr<rados_io> meta)
 {
 	global_logger.log(transaction_ops, "Called checkpoint()");
+
 	/* Synchronize */
 	sync(meta);
 
