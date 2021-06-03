@@ -14,7 +14,7 @@
 using namespace std::chrono;
 using namespace boost::uuids;
 
-#define LEASE_PERIOD_MS 600000
+#define LEASE_PERIOD_MS 200000000
 
 class lease_table {
 private:
