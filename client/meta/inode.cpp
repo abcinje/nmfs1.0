@@ -101,7 +101,7 @@ inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char 
 	uint32_t passed_link_target_len = strlen(passed_link_target_name);
 
 	global_logger.log(inode_ops,"Called inode(symlink)");
-	global_logger.log(inode_ops,"link_target_len : " + std::to_string(link_target_len) + " link_target_name : " + std::string(link_target_name));
+	global_logger.log(inode_ops,"link_target_len : " + std::to_string(passed_link_target_len) + " link_target_name : " + std::string(passed_link_target_name));
 	struct timespec ts;
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
