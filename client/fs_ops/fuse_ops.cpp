@@ -506,7 +506,7 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					dst_dentry_table->get_dir_ino(),
 					new_path);
 				while(true) {
-					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_inode->get_ino(), check_dst_ino, new_path, flags);
+					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_inode, check_dst_ino, new_path, flags);
 					if(ret == -ENOTLEADER) {
 						indexing_table->find_remote_dentry_table_again(dst_remote_i);
 						continue;
@@ -520,9 +520,9 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					src_dentry_table->get_leader_ip(),
 					src_dentry_table->get_dir_ino(),
 					old_path);
-				uuid target_ino{};
+				std::shared_ptr<inode> target_inode;
 				while(true) {
-					ret = remote_rename_not_same_parent_src(src_remote_i, old_path, flags, target_ino);
+					ret = remote_rename_not_same_parent_src(src_remote_i, old_path, flags, target_inode);
 					if(ret == -ENOTLEADER) {
 						indexing_table->find_remote_dentry_table_again(src_remote_i);
 						continue;
@@ -531,15 +531,15 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					} else
 						break;
 				}
-				ret = local_rename_not_same_parent_dst(dst_parent_i, nullptr, check_dst_ino, new_path, flags);
+				ret = local_rename_not_same_parent_dst(dst_parent_i, target_inode, check_dst_ino, new_path, flags);
 			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
 				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
 					src_dentry_table->get_leader_ip(),
 					src_dentry_table->get_dir_ino(),
 					old_path);
-				uuid target_ino;
+				std::shared_ptr<inode> target_inode;
 				while(true) {
-					ret = remote_rename_not_same_parent_src(src_remote_i, old_path, flags, target_ino);
+					ret = remote_rename_not_same_parent_src(src_remote_i, old_path, flags, target_inode);
 					if(ret == -ENOTLEADER) {
 						indexing_table->find_remote_dentry_table_again(src_remote_i);
 						continue;
@@ -553,7 +553,7 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 					dst_dentry_table->get_dir_ino(),
 					new_path);
 				while(true) {
-					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_ino, check_dst_ino, new_path, flags);
+					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_inode, check_dst_ino, new_path, flags);
 					if(ret == -ENOTLEADER) {
 						indexing_table->find_remote_dentry_table_again(dst_remote_i);
 						continue;

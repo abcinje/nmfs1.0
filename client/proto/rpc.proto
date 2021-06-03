@@ -37,8 +37,8 @@ message rpc_dentry_table_request {
 }
 
 message rpc_dentry_table_respond {
-  uint64 	checked_ino_prefix = 1;
-  uint64 	checked_ino_postfix = 2;
+  uint64  checked_ino_prefix = 1;
+  uint64  checked_ino_postfix = 2;
 
   sint32 ret = 3;
 }
@@ -54,7 +54,7 @@ message rpc_inode_request {
 }
 
 message rpc_inode_respond {
-  uint32 	i_mode = 1;
+  uint32  i_mode = 1;
 
   sint32 ret = 2;
 }
@@ -72,7 +72,7 @@ message rpc_access_request {
   uint64 dentry_table_ino_postfix = 2;
   string filename = 3;
 
-  uint32 	mask = 4;
+  uint32  mask = 4;
   bool target_is_parent = 5;
 }
 
@@ -136,12 +136,26 @@ message rpc_rename_not_same_parent_dst_request {
   uint64 dentry_table_ino_prefix = 1;
   uint64 dentry_table_ino_postfix = 2;
 
-  uint64 target_ino_prefix = 3;
-  uint64 target_ino_postfix = 4;
-  uint64 check_dst_ino_prefix = 5;
-  uint64 check_dst_ino_postfix = 6;
-  string new_path = 7;
-  uint32 flags = 8;
+  uint32 target_i_mode = 3;
+  uint32 target_i_uid = 4;
+  uint32 target_i_gid = 5;
+  uint64 target_i_ino_prefix = 6;
+  uint64 target_i_ino_postfix = 7;
+  uint64 target_i_nlink = 8;
+  int64 target_i_size = 9;
+  int64 target_a_sec = 10;
+  int64 target_a_nsec = 11;
+  int64 target_m_sec = 12;
+  int64 target_m_nsec = 13;
+  int64 target_c_sec = 14;
+  int64 target_c_nsec = 15;
+  uint32 target_i_link_target_len = 16;
+  string target_i_link_target_name = 17;
+
+  uint64 check_dst_ino_prefix = 18;
+  uint64 check_dst_ino_postfix = 19;
+  string new_path = 20;
+  uint32 flags = 21;
 }
 message rpc_create_request {
   uint64 dentry_table_ino_prefix = 1;
@@ -222,11 +236,11 @@ message rpc_common_respond {
 }
 
 message rpc_getattr_respond {
-  uint32 	i_mode = 1;
-  uint32	i_uid = 2;
+  uint32 i_mode = 1;
+  uint32 i_uid = 2;
   uint32 i_gid = 3;
-  uint64 	i_ino_prefix = 4;
-  uint64 	i_ino_postfix = 5;
+  uint64 i_ino_prefix = 4;
+  uint64 i_ino_postfix = 5;
   uint64 i_nlink = 6;
   int64 i_size = 7;
   int64 a_sec = 8;
@@ -253,17 +267,30 @@ message rpc_create_respond {
 }
 
 message rpc_mkdir_respond {
-  uint64 	new_dir_ino_prefix = 1;
-  uint64 	new_dir_ino_postfix = 2;
+  uint64  new_dir_ino_prefix = 1;
+  uint64  new_dir_ino_postfix = 2;
 
   sint32 ret = 3;
 }
 
 message rpc_rename_not_same_parent_src_respond {
-  uint64 	target_ino_prefix = 1;
-  uint64 	target_ino_postfix = 2;
+  uint32 target_i_mode = 1;
+  uint32 target_i_uid = 2;
+  uint32 target_i_gid = 3;
+  uint64 target_i_ino_prefix = 4;
+  uint64 target_i_ino_postfix = 5;
+  uint64 target_i_nlink = 6;
+  int64 target_i_size = 7;
+  int64 target_a_sec = 8;
+  int64 target_a_nsec = 9;
+  int64 target_m_sec = 10;
+  int64 target_m_nsec = 11;
+  int64 target_c_sec = 12;
+  int64 target_c_nsec = 13;
+  uint32 target_i_link_target_len = 14;
+  string target_i_link_target_name = 15;
 
-  sint32 ret = 3;
+  sint32 ret = 16;
 }
 
 message rpc_write_respond {

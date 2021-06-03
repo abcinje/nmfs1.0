@@ -110,25 +110,25 @@ int remote_rename_same_parent(shared_ptr<remote_inode> parent_i, const char* old
 	return ret;
 }
 
-int remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags, uuid& target_ino) {
+int remote_rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags, std::shared_ptr<inode>& target_inode) {
 	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_src()");
 	if(src_parent_i == nullptr)
 		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(src_parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	int ret = rc->rename_not_same_parent_src(src_parent_i, old_path, flags, target_ino);
+	int ret = rc->rename_not_same_parent_src(src_parent_i, old_path, flags, target_inode);
 	return ret;
 }
 
-int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags) {
+int remote_rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, std::shared_ptr<inode>& target_inode, uuid check_dst_ino, const char* new_path, unsigned int flags) {
 	global_logger.log(remote_fs_op, "Called remote_rename_not_same_parent_dst()");
 	if(dst_parent_i == nullptr)
 		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(dst_parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	int ret = rc->rename_not_same_parent_dst(dst_parent_i, target_ino, check_dst_ino, new_path, flags);
+	int ret = rc->rename_not_same_parent_dst(dst_parent_i, target_inode, check_dst_ino, new_path, flags);
 	return ret;
 }
 

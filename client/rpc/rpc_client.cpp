@@ -389,7 +389,7 @@ int rpc_client::rename_same_parent(shared_ptr<remote_inode> parent_i, const char
 	}
 }
 
-int rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags, uuid& target_ino) {
+int rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i, const char* old_path, unsigned int flags, std::shared_ptr<inode>& target_inode) {
 	global_logger.log(rpc_client_ops, "Called remote_rename_not_same_parent_src()");
 	ClientContext context;
 	rpc_rename_not_same_parent_src_request Input;
@@ -403,7 +403,7 @@ int rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i
 	Status status = stub_->rpc_rename_not_same_parent_src(&context, Input, &Output);
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER) {
-			target_ino = nil_uuid();
+			target_inode = nullptr;
 			return -ENOTLEADER;
 		}
 
@@ -412,27 +412,26 @@ int rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i
 		}
 
 		if(Output.ret() == 0)
-			target_ino = ino_controller->splice_prefix_and_postfix(Output.target_ino_prefix(), Output.target_ino_postfix());
+			target_inode->rename_src_response_to_inode(Output);
 
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		global_logger.log(rpc_client_ops, "rpc_client::remote_rename_not_same_parent_src() failed");
-		target_ino = nil_uuid();
+		target_inode = nullptr;
 		return -ENEEDRECOV;
 	}
 }
 
-int rpc_client::rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, uuid target_ino, uuid check_dst_ino, const char* new_path, unsigned int flags) {
+int rpc_client::rename_not_same_parent_dst(shared_ptr<remote_inode> dst_parent_i, std::shared_ptr<inode>& target_inode, uuid check_dst_ino, const char* new_path, unsigned int flags) {
 	global_logger.log(rpc_client_ops, "Called remote_rename_not_same_parent_dst()");
 	ClientContext context;
 	rpc_rename_not_same_parent_dst_request Input;
 	rpc_common_respond Output;
 
+	target_inode->inode_to_rename_dst_request(Input);
 	Input.set_dentry_table_ino_prefix(ino_controller->get_prefix_from_uuid(dst_parent_i->get_dentry_table_ino()));
 	Input.set_dentry_table_ino_postfix(ino_controller->get_postfix_from_uuid(dst_parent_i->get_dentry_table_ino()));
-	Input.set_target_ino_prefix(ino_controller->get_prefix_from_uuid(target_ino));
-	Input.set_target_ino_postfix(ino_controller->get_postfix_from_uuid(target_ino));
 	Input.set_check_dst_ino_prefix(ino_controller->get_prefix_from_uuid(check_dst_ino));
 	Input.set_check_dst_ino_postfix(ino_controller->get_postfix_from_uuid(check_dst_ino));
 	Input.set_new_path(new_path);

@@ -496,7 +496,6 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 		return Status::OK;
 	}
 
-	uuid target_ino;
 	shared_ptr<inode> target_i;
 	{
 		std::scoped_lock scl{src_dentry_table->dentry_table_mutex};
@@ -506,7 +505,6 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 	{
 		std::scoped_lock scl{src_dentry_table->dentry_table_mutex, target_i->inode_mutex};
 		std::shared_ptr<inode> src_parent_i = src_dentry_table->get_this_dir_inode();
-		target_ino = target_i->get_ino();
 
 		if (request->flags() == 0) {
 			src_dentry_table->delete_child_inode(*old_name);
@@ -516,8 +514,8 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 			return Status::OK;
 		}
 	}
-	response->set_target_ino_prefix(ino_controller->get_prefix_from_uuid(target_ino));
-	response->set_target_ino_postfix(ino_controller->get_postfix_from_uuid(target_ino));
+
+	target_i->inode_to_rename_src_response(response);
 	response->set_ret(0);
 	return Status::OK;
 }
@@ -529,7 +527,6 @@ Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context
 	uuid dentry_table_ino = ino_controller->splice_prefix_and_postfix(request->dentry_table_ino_prefix(), request->dentry_table_ino_postfix());
 
 	unique_ptr<std::string> new_name = get_filename_from_path(request->new_path());
-	uuid target_ino = ino_controller->splice_prefix_and_postfix(request->target_ino_prefix(), request->target_ino_postfix());
 	uuid check_dst_ino = ino_controller->splice_prefix_and_postfix(request->check_dst_ino_prefix(), request->check_dst_ino_postfix());
 
 	std::shared_ptr<dentry_table> dst_dentry_table;
@@ -540,9 +537,10 @@ Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context
 		return Status::OK;
 	}
 
-	/* TODO : need other method to use cache */
-	shared_ptr<inode> target_inode = std::make_shared<inode>(target_ino);
+	shared_ptr<inode> target_inode = std::make_shared<inode>(LOCAL);
+	target_inode->rename_dst_request_to_inode(request);
 	target_inode->set_p_ino(dentry_table_ino);
+
 	{
 		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_inode->inode_mutex};
 		std::shared_ptr<inode> dst_parent_i = dst_dentry_table->get_this_dir_inode();
