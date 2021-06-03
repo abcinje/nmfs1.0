@@ -323,12 +323,10 @@ void transaction::sync(std::shared_ptr<rados_io> meta)
 		s_inode->sync();
 		dentry self(s_ino, true);
 		self.sync();
-
 		return;
-	} else if (status == self_status::S_DELETED) {	
+	} else if (status == self_status::S_DELETED) {
 		meta->remove(obj_category::INODE, uuid_to_string(s_ino));
 		meta->remove(obj_category::DENTRY, uuid_to_string(s_ino));
-
 		return;
 	}
 
