@@ -430,7 +430,6 @@ int fuse_ops::rmdir(const char *path) {
 					parent_dentry_table->get_leader_ip(),
 					parent_dentry_table->get_dir_ino(),
 					*target_name);
-				ret = remote_rmdir_down(parent_remote_i, target_ino, *target_name);
 				while(true) {
 					ret = remote_rmdir_down(parent_remote_i, target_ino, *target_name);
 					if(ret == -ENOTLEADER) {
