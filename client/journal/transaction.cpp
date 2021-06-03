@@ -128,8 +128,35 @@ int transaction::deserialize(std::vector<char> raw)
 	return 0;
 }
 
-transaction::transaction(const uuid &self_ino) : committed(false), s_ino(self_ino), s_inode(nullptr)
+transaction::transaction(const uuid &self_ino) : committed(false), status(self_status::S_UNCHANGED), s_ino(self_ino), s_inode(nullptr)
 {
+}
+
+int transaction::mkself(std::shared_ptr<inode> self_inode)
+{
+	global_logger.log(transaction_ops, "Called transaction::mkself(" + uuid_to_string(self_inode->get_ino()) + ")");
+	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
+
+	s_inode = std::make_unique<inode>(*self_inode);
+	status = self_status::S_CREATED;
+
+	return 0;
+}
+
+int transaction::rmself(const uuid &self_ino)
+{
+	global_logger.log(transaction_ops, "Called transaction::rmself(" + uuid_to_string(self_ino) + ")");
+	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
+
+	status = self_status::S_DELETED;
+
+	return 0;
 }
 
 int transaction::chself(std::shared_ptr<inode> self_inode)
@@ -141,20 +168,6 @@ int transaction::chself(std::shared_ptr<inode> self_inode)
 		return -1;
 
 	s_inode = std::make_unique<inode>(*self_inode);
-
-	return 0;
-}
-
-int transaction::chreg(std::shared_ptr<inode> f_inode)
-{
-	global_logger.log(transaction_ops, "Called transaction::chreg(" + uuid_to_string(f_inode->get_ino()) + ")");
-	std::unique_lock lock(m);
-
-	if (committed)
-		return -1;
-
-	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
-	f_inodes_ret.first.value() = std::make_unique<inode>(*f_inode);
 
 	return 0;
 }
@@ -278,9 +291,36 @@ int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 	return 0;
 }
 
-void transaction::sync(void)
+int transaction::chreg(std::shared_ptr<inode> f_inode)
+{
+	global_logger.log(transaction_ops, "Called transaction::chreg(" + uuid_to_string(f_inode->get_ino()) + ")");
+	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
+
+	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
+	f_inodes_ret.first.value() = std::make_unique<inode>(*f_inode);
+
+	return 0;
+}
+
+void transaction::sync(std::shared_ptr<rados_io> meta)
 {
 	global_logger.log(transaction_ops, "Called sync()");
+	if (status == self_status::S_CREATED) {
+		s_inode->sync();
+		dentry self(s_ino, true);
+		self.sync();
+
+		return;
+	} else if (status == self_status::S_DELETED) {	
+		meta->remove(obj_category::INODE, uuid_to_string(s_ino));
+		meta->remove(obj_category::DENTRY, uuid_to_string(s_ino));
+
+		return;
+	}
+
 	/* s_inode */
 	if (s_inode)
 		s_inode->sync();
@@ -331,7 +371,7 @@ void transaction::checkpoint(std::shared_ptr<rados_io> meta)
 {
 	global_logger.log(transaction_ops, "Called checkpoint()");
 	/* Synchronize */
-	sync();
+	sync(meta);
 
 	/* Clear the checkpoint bit */
 	meta->write(obj_category::JOURNAL, uuid_to_string(s_ino), "\0", 1, offset);

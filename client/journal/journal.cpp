@@ -27,11 +27,31 @@ void journal::check(const uuid &self_ino)
 		std::vector<char> raw(&value[index], &value[index] + tx_size);
 		transaction tx(self_ino);
 		if (!tx.deserialize(raw)) {
-			tx.sync();
+			tx.sync(meta);
 		} else {
 			throw std::runtime_error("journal::check() failed (not implemented yet)");
 		}
 		index += tx_size;
+	}
+}
+
+void journal::mkself(std::shared_ptr<inode> self_inode)
+{
+	global_logger.log(journal_ops, "Called journal::mkself(" + uuid_to_string(self_inode->get_ino()) + ")");
+	while (true) {
+		auto tx = jtable.get_entry(self_inode->get_ino());
+		if (!tx->mkself(self_inode))
+			break;
+	}
+}
+
+void journal::rmself(const uuid &self_ino)
+{
+	global_logger.log(journal_ops, "Called journal::rmself(" + uuid_to_string(self_ino) + ")");
+	while (true) {
+		auto tx = jtable.get_entry(self_ino);
+		if (!tx->rmself(self_ino))
+			break;
 	}
 }
 
@@ -41,16 +61,6 @@ void journal::chself(std::shared_ptr<inode> self_inode)
 	while (true) {
 		auto tx = jtable.get_entry(self_inode->get_ino());
 		if (!tx->chself(self_inode))
-			break;
-	}
-}
-
-void journal::chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode)
-{
-	global_logger.log(journal_ops, "Called journal::chreg(" + uuid_to_string(self_ino) + ")");
-	while (true) {
-		auto tx = jtable.get_entry(self_ino);
-		if (!tx->chreg(f_inode))
 			break;
 	}
 }
@@ -91,6 +101,16 @@ void journal::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name
 	while (true) {
 		auto tx = jtable.get_entry(self_inode->get_ino());
 		if (!tx->rmreg(self_inode, f_name, f_inode))
+			break;
+	}
+}
+
+void journal::chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode)
+{
+	global_logger.log(journal_ops, "Called journal::chreg(" + uuid_to_string(self_ino) + ")");
+	while (true) {
+		auto tx = jtable.get_entry(self_ino);
+		if (!tx->chreg(f_inode))
 			break;
 	}
 }

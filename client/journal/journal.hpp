@@ -25,12 +25,19 @@ public:
 
 	void check(const uuid &self_ino);
 
+	/* self */
+	void mkself(std::shared_ptr<inode> self_inode);
+	void rmself(const uuid &self_ino);
 	void chself(std::shared_ptr<inode> self_inode);
-	void chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode);
+
+	/* directories */
 	void mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
 	void rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
+
+	/* regular files */
 	void mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
 	void rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
+	void chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode);
 };
 
 #endif /* _JOURNAL_HPP_ */
