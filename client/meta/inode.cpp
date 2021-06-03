@@ -41,7 +41,7 @@ inode::inode(const inode &copy)
 
 	link_target_len = copy.link_target_len;
 	if (S_ISLNK(this->core.i_mode) && (this->link_target_len > 0)) {
-		link_target_name = reinterpret_cast<char *>(malloc(link_target_len));
+		link_target_name = reinterpret_cast<char *>(calloc(this->link_target_len + 1, sizeof(char)));
 		memcpy(link_target_name, copy.link_target_name, link_target_len);
 	}
 }
@@ -97,8 +97,8 @@ inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid &prede
 }
 
 /* TODO : allocated target name should be freed later */
-inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char *link_target_name) {
-	int link_target_len = static_cast<int>(strlen(link_target_name));
+inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char *passed_link_target_name) {
+	uint32_t passed_link_target_len = strlen(passed_link_target_name);
 
 	global_logger.log(inode_ops,"Called inode(symlink)");
 	global_logger.log(inode_ops,"link_target_len : " + std::to_string(link_target_len) + " link_target_name : " + std::string(link_target_name));
@@ -121,8 +121,8 @@ inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char 
 
 	loc = LOCAL;
 
-	this->set_link_target_len(link_target_len);
-	this->set_link_target_name(link_target_name);
+	this->set_link_target_len(passed_link_target_len);
+	this->set_link_target_name(passed_link_target_name);
 }
 
 
@@ -138,10 +138,15 @@ inode::inode(uuid ino)
 	}
 }
 
-inode::inode(){
-	loc = REMOTE;
+inode::inode(enum meta_location loc) : loc(loc){
 }
 
+inode::~inode() {
+	if(S_ISLNK(this->core.i_mode)) {
+		if(link_target_len > 0)
+			free(this->link_target_name);
+	}
+}
 
 void inode::fill_stat(struct stat *s)
 {
@@ -182,7 +187,7 @@ void inode::deserialize(const char *value)
 	memcpy(&core, value, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->core.i_mode)){
-		char *raw = (char *)calloc(this->link_target_len + 1, sizeof(char));
+		char *raw = reinterpret_cast<char *>(calloc(this->link_target_len + 1, sizeof(char)));
 		meta_pool->read(obj_category::INODE, uuid_to_string(this->core.i_ino), raw, this->link_target_len, REG_INODE_SIZE);
 		this->link_target_name = raw;
 		global_logger.log(inode_ops, "deserialized link target name : " + std::string(this->link_target_name));
@@ -265,7 +270,7 @@ struct timespec inode::get_ctime(){
 uint64_t inode::get_loc() {
 	return this->loc;
 }
-int inode::get_link_target_len(){
+uint32_t inode::get_link_target_len(){
 	return this->link_target_len;
 }
 char *inode::get_link_target_name(){
@@ -304,7 +309,7 @@ void inode::set_ctime(struct timespec ctime){
 void inode::set_loc(uint64_t loc) {
 	this->loc = loc;
 }
-void inode::set_link_target_len(int len){
+void inode::set_link_target_len(uint32_t len){
 	this->link_target_len = len;
 }
 void inode::set_link_target_name(const char *name){
@@ -314,6 +319,86 @@ void inode::set_link_target_name(const char *name){
 
 void inode::set_p_ino(const uuid &p_ino) {
 	inode::p_ino = p_ino;
+}
+
+void inode::inode_to_rename_src_response(::rpc_rename_not_same_parent_src_respond *response) {
+	response->set_target_i_mode(this->core.i_mode);
+	response->set_target_i_uid(this->core.i_uid);
+	response->set_target_i_gid(this->core.i_gid);
+	response->set_target_i_ino_prefix(ino_controller->get_prefix_from_uuid(this->core.i_ino));
+	response->set_target_i_ino_postfix(ino_controller->get_postfix_from_uuid(this->core.i_ino));
+	response->set_target_i_nlink(this->core.i_nlink);
+	response->set_target_i_size(this->core.i_size);
+	response->set_target_a_sec(this->core.i_atime.tv_sec);
+	response->set_target_a_nsec(this->core.i_atime.tv_nsec);
+	response->set_target_m_sec(this->core.i_mtime.tv_sec);
+	response->set_target_m_nsec(this->core.i_mtime.tv_nsec);
+	response->set_target_c_sec(this->core.i_ctime.tv_sec);
+	response->set_target_c_nsec(this->core.i_ctime.tv_nsec);
+	if(S_ISLNK(this->core.i_mode)) {
+		response->set_target_i_link_target_len(this->link_target_len);
+		response->set_target_i_link_target_name(this->link_target_name);
+	}
+}
+
+void inode::rename_src_response_to_inode(::rpc_rename_not_same_parent_src_respond &response) {
+	this->core.i_mode = response.target_i_mode();
+	this->core.i_uid = response.target_i_uid();
+	this->core.i_gid = response.target_i_gid();
+	this->core.i_ino = ino_controller->splice_prefix_and_postfix(response.target_i_ino_prefix(), response.target_i_ino_postfix());
+	this->core.i_nlink = response.target_i_nlink();
+	this->core.i_size = response.target_i_size();
+	this->core.i_atime.tv_sec = response.target_a_sec();
+	this->core.i_atime.tv_nsec = response.target_a_nsec();
+	this->core.i_mtime.tv_sec = response.target_m_sec();
+	this->core.i_mtime.tv_nsec = response.target_m_nsec();
+	this->core.i_ctime.tv_sec = response.target_c_sec();
+	this->core.i_ctime.tv_nsec = response.target_c_nsec();
+	if(S_ISLNK(response.target_i_mode())) {
+		this->link_target_len = response.target_i_link_target_len();
+		this->link_target_name = reinterpret_cast<char *>(calloc(response.target_i_link_target_len() + 1 , sizeof(char)));
+		memcpy(this->link_target_name, response.target_i_link_target_name().data(), response.target_i_link_target_len());
+	}
+}
+
+void inode::inode_to_rename_dst_request(::rpc_rename_not_same_parent_dst_request &request) {
+	request.set_target_i_mode(this->core.i_mode);
+	request.set_target_i_uid(this->core.i_uid);
+	request.set_target_i_gid(this->core.i_gid);
+	request.set_target_i_ino_prefix(ino_controller->get_prefix_from_uuid(this->core.i_ino));
+	request.set_target_i_ino_postfix(ino_controller->get_postfix_from_uuid(this->core.i_ino));
+	request.set_target_i_nlink(this->core.i_nlink);
+	request.set_target_i_size(this->core.i_size);
+	request.set_target_a_sec(this->core.i_atime.tv_sec);
+	request.set_target_a_nsec(this->core.i_atime.tv_nsec);
+	request.set_target_m_sec(this->core.i_mtime.tv_sec);
+	request.set_target_m_nsec(this->core.i_mtime.tv_nsec);
+	request.set_target_c_sec(this->core.i_ctime.tv_sec);
+	request.set_target_c_nsec(this->core.i_ctime.tv_nsec);
+	if(S_ISLNK(this->core.i_mode)) {
+		request.set_target_i_link_target_len(this->link_target_len);
+		request.set_target_i_link_target_name(this->link_target_name);
+	}
+}
+
+void inode::rename_dst_request_to_inode(const ::rpc_rename_not_same_parent_dst_request *request) {
+	this->core.i_mode = request->target_i_mode();
+	this->core.i_uid = request->target_i_uid();
+	this->core.i_gid = request->target_i_gid();
+	this->core.i_ino = ino_controller->splice_prefix_and_postfix(request->target_i_ino_prefix(), request->target_i_ino_postfix());
+	this->core.i_nlink = request->target_i_nlink();
+	this->core.i_size = request->target_i_size();
+	this->core.i_atime.tv_sec = request->target_a_sec();
+	this->core.i_atime.tv_nsec = request->target_a_nsec();
+	this->core.i_mtime.tv_sec = request->target_m_sec();
+	this->core.i_mtime.tv_nsec = request->target_m_nsec();
+	this->core.i_ctime.tv_sec = request->target_c_sec();
+	this->core.i_ctime.tv_nsec = request->target_c_nsec();
+	if(S_ISLNK(request->target_i_mode())) {
+		this->link_target_len = request->target_i_link_target_len();
+		this->link_target_name = reinterpret_cast<char *>(calloc(request->target_i_link_target_len() + 1 , sizeof(char)));
+		memcpy(this->link_target_name, request->target_i_link_target_name().data(), request->target_i_link_target_len());
+	}
 }
 
 uuid alloc_new_ino() {

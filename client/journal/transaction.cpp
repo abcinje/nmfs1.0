@@ -83,7 +83,7 @@ int transaction::deserialize(std::vector<char> raw)
 	int32_t s_inode_size = *(reinterpret_cast<int32_t *>(&raw[index]));
 	index += sizeof(int32_t);
 	if (s_inode_size != -1) {	/* finished? */
-		s_inode = std::make_unique<inode>();
+		s_inode = std::make_unique<inode>(JOURNAL);
 		s_inode->deserialize(&raw[index]);
 		index += sizeof(inode);
 	}
@@ -117,7 +117,7 @@ int transaction::deserialize(std::vector<char> raw)
 		if (f_inode_size == -1)	/* finished? */
 			break;
 
-		auto i = std::make_unique<inode>();
+		auto i = std::make_unique<inode>(JOURNAL);
 		i->deserialize(&raw[index]);
 		auto ret = f_inodes.insert({uuid_to_string(i->get_ino()), std::move(i)});
 		if (!ret.second)

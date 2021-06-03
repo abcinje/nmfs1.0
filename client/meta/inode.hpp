@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <rpc.grpc.pb.h>
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../../lib/logger/logger.hpp"
 #include "../client/client.hpp"
@@ -27,7 +28,7 @@ enum meta_location {
     LOCAL = 0,
     REMOTE,
     UNKNOWN,
-    NOBODY /* temporaly status */
+    JOURNAL /* temporaly status */
 };
 
 class inode {
@@ -49,7 +50,7 @@ private:
 
 	uint64_t loc;
 
-	int link_target_len;
+	uint32_t link_target_len;
 	char *link_target_name;
 
 public:
@@ -70,14 +71,16 @@ public:
 
 	/* for normal reg file and root directory */
 	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, bool root = false);
-    /* for normal directory */
-    inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
+    	/* for normal directory */
+    	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
 	/* for symlink */
 	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
 	/* for pull metadata */
 	inode(uuid ino);
 	/* parent constructor for remote_inode and dummy_inode which used with file_handler */
-	inode();
+	inode(enum meta_location loc);
+
+	~inode();
 
 	void fill_stat(struct stat *s);
 	std::vector<char> serialize();
@@ -99,7 +102,7 @@ public:
 
 	uint64_t get_loc();
 
-	int get_link_target_len();
+	uint32_t get_link_target_len();
 	char *get_link_target_name();
 
 	// setter
@@ -116,8 +119,13 @@ public:
 	void set_ctime(struct timespec ctime);
 
 	void set_loc(uint64_t loc);
-	void set_link_target_len(int len);
+	void set_link_target_len(uint32_t len);
 	void set_link_target_name(const char *name);
+
+	void inode_to_rename_src_response(::rpc_rename_not_same_parent_src_respond *response);
+    	void rename_src_response_to_inode(::rpc_rename_not_same_parent_src_respond &response);
+    	void inode_to_rename_dst_request(::rpc_rename_not_same_parent_dst_request &request);
+    	void rename_dst_request_to_inode(const ::rpc_rename_not_same_parent_dst_request *request);
 };
 
 uuid alloc_new_ino();
