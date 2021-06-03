@@ -2,26 +2,21 @@
 
 extern std::shared_ptr<rados_io> meta_pool;
 
-dentry::dentry(uuid ino) : this_ino(ino)
+dentry::dentry(uuid ino, bool mkdir) : this_ino(ino)
 {
-	global_logger.log(dentry_ops, "Called dentry(" + uuid_to_string(ino) +")");
-	unique_ptr<char[]> raw_data = std::make_unique<char[]>(MAX_DENTRY_OBJ_SIZE);
-	try {
-		meta_pool->read(obj_category::DENTRY, uuid_to_string(ino), raw_data.get(), MAX_DENTRY_OBJ_SIZE, 0);
-		this->deserialize(raw_data.get());
-	} catch(rados_io::no_such_object &e){
-		throw std::runtime_error("Dentry Corrupted: inode number " + uuid_to_string(ino));
-	}
-}
-
-dentry::dentry(uuid ino, bool flag) : this_ino(ino)
-{
-	global_logger.log(dentry_ops, "Called dentry(" + uuid_to_string(ino) +") from mkdir");
-	if(flag){
+	if(mkdir){
+		global_logger.log(dentry_ops, "Called dentry(" + uuid_to_string(ino) +") from mkdir");
 		this->child_num = 0;
 		this->total_name_length = 0;
 	} else {
-		throw std::runtime_error("Something wrong in mkdir");
+		global_logger.log(dentry_ops, "Called dentry(" + uuid_to_string(ino) +")");
+		unique_ptr<char[]> raw_data = std::make_unique<char[]>(MAX_DENTRY_OBJ_SIZE);
+		try {
+			meta_pool->read(obj_category::DENTRY, uuid_to_string(ino), raw_data.get(), MAX_DENTRY_OBJ_SIZE, 0);
+			this->deserialize(raw_data.get());
+		} catch(rados_io::no_such_object &e){
+			throw std::runtime_error("Dentry Corrupted: inode number " + uuid_to_string(ino));
+		}
 	}
 }
 

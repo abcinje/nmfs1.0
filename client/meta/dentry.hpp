@@ -24,8 +24,7 @@ private:
 	std::map<std::string, uuid> child_list;
 
 public:
-	dentry(uuid ino);
-	dentry(uuid ino, bool flag);
+	dentry(uuid ino, bool mkdir = false);
 
 	void add_new_child(const std::string &filename, uuid ino);
 	void delete_child(const std::string &filename);
