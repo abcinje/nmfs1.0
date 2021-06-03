@@ -39,10 +39,10 @@ inode::inode(const inode &copy)
 	core.i_mtime = copy.core.i_mtime;
 	core.i_ctime = copy.core.i_ctime;
 
-	link_target_len = copy.link_target_len;
-	if (S_ISLNK(this->core.i_mode) && (this->link_target_len > 0)) {
-		link_target_name = reinterpret_cast<char *>(calloc(this->link_target_len + 1, sizeof(char)));
-		memcpy(link_target_name, copy.link_target_name, link_target_len);
+	core.link_target_len = copy.core.link_target_len;
+	if (S_ISLNK(this->core.i_mode) && (this->core.link_target_len > 0)) {
+		link_target_name = reinterpret_cast<char *>(calloc(this->core.link_target_len + 1, sizeof(char)));
+		memcpy(link_target_name, copy.link_target_name, core.link_target_len);
 	}
 }
 
@@ -62,12 +62,11 @@ inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, bool root) 
 			.i_size = 0,
 			.i_atime = ts,
 			.i_mtime = ts,
-			.i_ctime = ts
+			.i_ctime = ts,
+			.link_target_len = 0
 	};
 
 	loc = LOCAL;
-
-	link_target_len = 0;
 	link_target_name = nullptr;
 }
 
@@ -87,12 +86,11 @@ inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid &prede
 			.i_size = 0,
 			.i_atime = ts,
 			.i_mtime = ts,
-			.i_ctime = ts
+			.i_ctime = ts,
+			.link_target_len = 0
 	};
 
 	loc = LOCAL;
-
-	link_target_len = 0;
 	link_target_name = nullptr;
 }
 
@@ -143,7 +141,7 @@ inode::inode(enum meta_location loc) : loc(loc){
 
 inode::~inode() {
 	if(S_ISLNK(this->core.i_mode)) {
-		if(link_target_len > 0)
+		if(core.link_target_len > 0)
 			free(this->link_target_name);
 	}
 }
@@ -171,12 +169,12 @@ std::vector<char> inode::serialize()
 {
 	global_logger.log(inode_ops, "Called inode.serialize()");
 	global_logger.log(inode_ops, "serialized ino : " + uuid_to_string(this->core.i_ino));
-	std::vector<char> value(REG_INODE_SIZE + this->link_target_len);
+	std::vector<char> value(REG_INODE_SIZE + this->core.link_target_len);
 	memcpy(value.data(), &core, REG_INODE_SIZE);
 
-	if(S_ISLNK(this->core.i_mode) && (this->link_target_len > 0)){
+	if(S_ISLNK(this->core.i_mode) && (this->core.link_target_len > 0)){
 		global_logger.log(inode_ops, "serialize symbolic link inode");
-		memcpy(value.data() + REG_INODE_SIZE, (this->link_target_name), this->link_target_len);
+		memcpy(value.data() + REG_INODE_SIZE, (this->link_target_name), this->core.link_target_len);
 	}
 	return value;
 }
@@ -187,8 +185,8 @@ void inode::deserialize(const char *value)
 	memcpy(&core, value, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->core.i_mode)){
-		char *raw = reinterpret_cast<char *>(calloc(this->link_target_len + 1, sizeof(char)));
-		meta_pool->read(obj_category::INODE, uuid_to_string(this->core.i_ino), raw, this->link_target_len, REG_INODE_SIZE);
+		char *raw = reinterpret_cast<char *>(calloc(this->core.link_target_len + 1, sizeof(char)));
+		meta_pool->read(obj_category::INODE, uuid_to_string(this->core.i_ino), raw, this->core.link_target_len, REG_INODE_SIZE);
 		this->link_target_name = raw;
 		global_logger.log(inode_ops, "deserialized link target name : " + std::string(this->link_target_name));
 	}
@@ -201,7 +199,7 @@ void inode::sync()
 {
 	global_logger.log(inode_ops, "Called inode.sync()");
 	std::vector<char> raw = this->serialize();
-	meta_pool->write(obj_category::INODE, uuid_to_string(this->core.i_ino), raw.data(), REG_INODE_SIZE + this->link_target_len, 0);
+	meta_pool->write(obj_category::INODE, uuid_to_string(this->core.i_ino), raw.data(), REG_INODE_SIZE + this->core.link_target_len, 0);
 }
 
 void inode::permission_check(int mask){
@@ -271,7 +269,7 @@ uint64_t inode::get_loc() {
 	return this->loc;
 }
 uint32_t inode::get_link_target_len(){
-	return this->link_target_len;
+	return this->core.link_target_len;
 }
 char *inode::get_link_target_name(){
 	return this->link_target_name;
@@ -310,11 +308,11 @@ void inode::set_loc(uint64_t loc) {
 	this->loc = loc;
 }
 void inode::set_link_target_len(uint32_t len){
-	this->link_target_len = len;
+	this->core.link_target_len = len;
 }
 void inode::set_link_target_name(const char *name){
-	this->link_target_name = (char *)calloc(this->link_target_len + 1, sizeof(char));
-	memcpy(this->link_target_name, name, this->link_target_len);
+	this->link_target_name = (char *)calloc(this->core.link_target_len + 1, sizeof(char));
+	memcpy(this->link_target_name, name, this->core.link_target_len);
 }
 
 void inode::set_p_ino(const uuid &p_ino) {
@@ -335,8 +333,8 @@ void inode::inode_to_rename_src_response(::rpc_rename_not_same_parent_src_respon
 	response->set_target_m_nsec(this->core.i_mtime.tv_nsec);
 	response->set_target_c_sec(this->core.i_ctime.tv_sec);
 	response->set_target_c_nsec(this->core.i_ctime.tv_nsec);
+	response->set_target_i_link_target_len(this->core.link_target_len);
 	if(S_ISLNK(this->core.i_mode)) {
-		response->set_target_i_link_target_len(this->link_target_len);
 		response->set_target_i_link_target_name(this->link_target_name);
 	}
 }
@@ -354,8 +352,8 @@ void inode::rename_src_response_to_inode(::rpc_rename_not_same_parent_src_respon
 	this->core.i_mtime.tv_nsec = response.target_m_nsec();
 	this->core.i_ctime.tv_sec = response.target_c_sec();
 	this->core.i_ctime.tv_nsec = response.target_c_nsec();
+	this->core.link_target_len = response.target_i_link_target_len();
 	if(S_ISLNK(response.target_i_mode())) {
-		this->link_target_len = response.target_i_link_target_len();
 		this->link_target_name = reinterpret_cast<char *>(calloc(response.target_i_link_target_len() + 1 , sizeof(char)));
 		memcpy(this->link_target_name, response.target_i_link_target_name().data(), response.target_i_link_target_len());
 	}
@@ -375,8 +373,8 @@ void inode::inode_to_rename_dst_request(::rpc_rename_not_same_parent_dst_request
 	request.set_target_m_nsec(this->core.i_mtime.tv_nsec);
 	request.set_target_c_sec(this->core.i_ctime.tv_sec);
 	request.set_target_c_nsec(this->core.i_ctime.tv_nsec);
+	request.set_target_i_link_target_len(this->core.link_target_len);
 	if(S_ISLNK(this->core.i_mode)) {
-		request.set_target_i_link_target_len(this->link_target_len);
 		request.set_target_i_link_target_name(this->link_target_name);
 	}
 }
@@ -394,8 +392,8 @@ void inode::rename_dst_request_to_inode(const ::rpc_rename_not_same_parent_dst_r
 	this->core.i_mtime.tv_nsec = request->target_m_nsec();
 	this->core.i_ctime.tv_sec = request->target_c_sec();
 	this->core.i_ctime.tv_nsec = request->target_c_nsec();
+	this->core.link_target_len = request->target_i_link_target_len();
 	if(S_ISLNK(request->target_i_mode())) {
-		this->link_target_len = request->target_i_link_target_len();
 		this->link_target_name = reinterpret_cast<char *>(calloc(request->target_i_link_target_len() + 1 , sizeof(char)));
 		memcpy(this->link_target_name, request->target_i_link_target_name().data(), request->target_i_link_target_len());
 	}

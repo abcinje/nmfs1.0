@@ -47,11 +47,12 @@ private:
 		struct timespec i_atime;
 		struct timespec i_mtime;
 		struct timespec i_ctime;
+	    	uint32_t link_target_len;
 	} core;
 
 	uint64_t loc;
 
-	uint32_t link_target_len;
+
 	char *link_target_name;
 
 public:
