@@ -242,6 +242,7 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, std::shared
 	unique_ptr<std::string> new_name = get_filename_from_path(new_path);
 
 	shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
+	target_inode->set_loc(LOCAL);
 	target_inode->set_p_ino(dst_parent_i->get_ino());
 	{
 		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_inode->inode_mutex};

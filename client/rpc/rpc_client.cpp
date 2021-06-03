@@ -411,8 +411,10 @@ int rpc_client::rename_not_same_parent_src(shared_ptr<remote_inode> src_parent_i
 			throw std::runtime_error("Flag specific behaviors of rename operation are not implemented");
 		}
 
-		if(Output.ret() == 0)
+		if(Output.ret() == 0) {
+			target_inode = std::make_shared<inode>(NOBODY);
 			target_inode->rename_src_response_to_inode(Output);
+		}
 
 		return Output.ret();
 	} else {

@@ -28,7 +28,8 @@ enum meta_location {
     LOCAL = 0,
     REMOTE,
     UNKNOWN,
-    JOURNAL /* temporaly status */
+    JOURNAL,
+    NOBODY /* temporaly status */
 };
 
 class inode {
