@@ -8,6 +8,7 @@ extern std::unique_ptr<uuid_controller> ino_controller;
 extern std::unique_ptr<Server> remote_handle;
 extern std::unique_ptr<client> this_client;
 
+extern std::unique_ptr<journal> journalctl;
 void run_rpc_server(const std::string& remote_address){
 	rpc_server rpc_service;
 	ServerBuilder builder;
@@ -273,12 +274,19 @@ Status rpc_server::rpc_mkdir(::grpc::ServerContext *context, const ::rpc_mkdir_r
 		return Status::OK;
 	}
 
-	shared_ptr<inode> i = std::make_shared<inode>(dentry_table_ino, request->uid(), request->gid(), request->new_mode() | S_IFDIR);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		shared_ptr<inode> parent_i = parent_dentry_table->get_this_dir_inode();
+		shared_ptr<inode> i = std::make_shared<inode>(dentry_table_ino, request->uid(), request->gid(), request->new_mode() | S_IFDIR);
 		parent_dentry_table->create_child_inode(request->new_dir_name(), i);
 
 		i->set_size(DIR_INODE_SIZE);
+
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		parent_i->set_mtime(ts);
+		parent_i->set_ctime(ts);
+		journalctl->mkdir(parent_i, request->new_dir_name(), i->get_ino());
 
 		response->set_new_dir_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_ino()));
 		response->set_new_dir_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_ino()));
@@ -312,7 +320,8 @@ Status rpc_server::rpc_rmdir_top(::grpc::ServerContext *context, const ::rpc_rmd
 			return Status::OK;
 		}
 
-		meta_pool->remove(obj_category::DENTRY, uuid_to_string(target_ino));
+		/* TODO : rmreg */
+		//meta_pool->remove(obj_category::DENTRY, uuid_to_string(target_ino));
 		indexing_table->delete_dentry_table(target_ino);
 	}
 	response->set_ret(0);
@@ -336,9 +345,14 @@ Status rpc_server::rpc_rmdir_down(::grpc::ServerContext *context, const ::rpc_rm
 	uuid target_ino = ino_controller->splice_prefix_and_postfix(request->target_ino_prefix(), request->target_ino_postfix());
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		std::shared_ptr<inode> parent_i = parent_dentry_table->get_this_dir_inode();
 		parent_dentry_table->delete_child_inode(request->target_name());
 
-		meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		parent_i->set_mtime(ts);
+		parent_i->set_ctime(ts);
+		journalctl->rmdir(parent_i, request->target_name(), target_ino);
 
 		/* It may be failed if parent and child dir is located in same leader */
 		ret = indexing_table->delete_dentry_table(target_ino);
@@ -372,12 +386,16 @@ Status rpc_server::rpc_symlink(::grpc::ServerContext *context, const ::rpc_symli
 			return Status::OK;
 		}
 
+		shared_ptr<inode> dst_parent_i = dst_parent_dentry_table->get_this_dir_inode();
 		shared_ptr<inode> symlink_i = std::make_shared<inode>(dentry_table_ino, this_client->get_client_uid(), this_client->get_client_gid(), S_IFLNK | 0777, request->src().c_str());
 
 		symlink_i->set_size(static_cast<off_t>(request->src().length()));
 
 		dst_parent_dentry_table->create_child_inode(*symlink_name, symlink_i);
-		symlink_i->sync();
+
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		journalctl->mkreg(dst_parent_i, *symlink_name, symlink_i);
 	}
 	response->set_ret(0);
 	return Status::OK;
@@ -439,15 +457,19 @@ Status rpc_server::rpc_rename_same_parent(::grpc::ServerContext *context, const 
 
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex, target_i->inode_mutex};
+		std::shared_ptr<inode> parent_i = parent_dentry_table->get_this_dir_inode();
 		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
 		if (request->flags() == 0) {
 			if (!check_dst_ino.is_nil()) {
+				std::shared_ptr<inode> check_dst_inode = parent_dentry_table->get_child_inode(*new_name);
 				parent_dentry_table->delete_child_inode(*new_name);
-				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
+				journalctl->rmreg(parent_i, *new_name, check_dst_inode);
 			}
 			parent_dentry_table->delete_child_inode(*old_name);
+			journalctl->rmreg(parent_i, *old_name, target_i);
 			parent_dentry_table->create_child_inode(*new_name, target_i);
+			journalctl->mkreg(parent_i, *new_name, target_i);
 
 		} else {
 			response->set_ret(-ENOSYS);
@@ -483,10 +505,12 @@ Status rpc_server::rpc_rename_not_same_parent_src(::grpc::ServerContext *context
 
 	{
 		std::scoped_lock scl{src_dentry_table->dentry_table_mutex, target_i->inode_mutex};
+		std::shared_ptr<inode> src_parent_i = src_dentry_table->get_this_dir_inode();
 		target_ino = target_i->get_ino();
 
 		if (request->flags() == 0) {
 			src_dentry_table->delete_child_inode(*old_name);
+			journalctl->rmreg(src_parent_i, *old_name, target_i);
 		} else {
 			response->set_ret(-ENOSYS);
 			return Status::OK;
@@ -517,16 +541,19 @@ Status rpc_server::rpc_rename_not_same_parent_dst(::grpc::ServerContext *context
 	}
 
 	/* TODO : need other method to use cache */
-	shared_ptr<inode> target_i = std::make_shared<inode>(target_ino);
-	target_i->set_p_ino(dentry_table_ino);
+	shared_ptr<inode> target_inode = std::make_shared<inode>(target_ino);
+	target_inode->set_p_ino(dentry_table_ino);
 	{
-		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_i->inode_mutex};
+		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_inode->inode_mutex};
+		std::shared_ptr<inode> dst_parent_i = dst_dentry_table->get_this_dir_inode();
 		if (request->flags() == 0) {
 			if (!check_dst_ino.is_nil()) {
+				std::shared_ptr<inode> check_dst_inode = dst_dentry_table->get_child_inode(*new_name);
 				dst_dentry_table->delete_child_inode(*new_name);
-				meta_pool->remove(obj_category::INODE, uuid_to_string(check_dst_ino));
+				journalctl->rmreg(dst_parent_i, *new_name, check_dst_inode);
 			}
-			dst_dentry_table->create_child_inode(*new_name, target_i);
+			dst_dentry_table->create_child_inode(*new_name, target_inode);
+			journalctl->mkreg(dst_parent_i, *new_name, target_inode);
 		} else {
 			response->set_ret(-ENOSYS);
 			return Status::OK;
@@ -570,7 +597,7 @@ Status rpc_server::rpc_open(::grpc::ServerContext *context, const ::rpc_open_ope
 
 		if ((request->flags() & O_TRUNC) && !(request->flags() & O_PATH)) {
 			i->set_size(0);
-			i->sync();
+			journalctl->chreg(i->get_p_ino(), i);
 		}
 	}
 	response->set_ret(0);
@@ -590,12 +617,17 @@ Status rpc_server::rpc_create(::grpc::ServerContext *context, const ::rpc_create
 		return Status::OK;
 	}
 
-	shared_ptr<inode> i = std::make_shared<inode>(dentry_table_ino, this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFREG);
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
-		i->sync();
-
+		shared_ptr<inode> parent_i = parent_dentry_table->get_this_dir_inode();
+		shared_ptr<inode> i = std::make_shared<inode>(dentry_table_ino, this_client->get_client_uid(), this_client->get_client_gid(), request->new_mode() | S_IFREG);
 		parent_dentry_table->create_child_inode(request->new_file_name(), i);
+
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
+		parent_i->set_mtime(ts);
+		parent_i->set_ctime(ts);
+		journalctl->mkreg(parent_i, request->new_file_name(), i);
 
 		response->set_new_ino_prefix(ino_controller->get_prefix_from_uuid(i->get_ino()));
 		response->set_new_ino_postfix(ino_controller->get_postfix_from_uuid(i->get_ino()));
@@ -619,6 +651,7 @@ Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink
 
 	{
 		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		shared_ptr<inode> parent_i = parent_dentry_table->get_this_dir_inode();
 		std::shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(request->filename());
 		nlink_t nlink = target_i->get_nlink() - 1;
 		if (nlink == 0) {
@@ -626,14 +659,17 @@ Status rpc_server::rpc_unlink(::grpc::ServerContext *context, const ::rpc_unlink
 			/* data */
 			data_pool->remove(obj_category::DATA, uuid_to_string(target_ino));
 
-			/* inode */
-			meta_pool->remove(obj_category::INODE, uuid_to_string(target_ino));
-
 			/* parent dentry */
 			parent_dentry_table->delete_child_inode(request->filename());
+
+			struct timespec ts;
+			timespec_get(&ts, TIME_UTC);
+			parent_i->set_mtime(ts);
+			parent_i->set_ctime(ts);
+			journalctl->rmreg(parent_i, request->filename(), target_i);
 		} else {
 			target_i->set_nlink(nlink);
-			target_i->sync();
+			journalctl->chreg(target_i->get_p_ino(), target_i);
 		}
 	}
 	response->set_ret(0);
@@ -667,7 +703,8 @@ Status rpc_server::rpc_write(::grpc::ServerContext *context, const ::rpc_write_r
 
 		if (i->get_size() < offset + size) {
 			i->set_size(offset + size);
-			i->sync();
+
+			journalctl->chreg(i->get_p_ino(), i);
 		}
 	}
 	response->set_offset(offset);
@@ -706,7 +743,11 @@ Status rpc_server::rpc_chmod(::grpc::ServerContext *context, const ::rpc_chmod_r
 		mode_t type = i->get_mode() & S_IFMT;
 
 		i->set_mode(request->mode() | type);
-		i->sync();
+
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
 	}
 	response->set_ret(0);
 	return Status::OK;
@@ -745,7 +786,10 @@ Status rpc_server::rpc_chown(::grpc::ServerContext *context, const ::rpc_chown_r
 		if (((int32_t) request->gid()) >= 0)
 			i->set_gid(request->gid());
 
-		i->sync();
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
 	}
 	response->set_ret(0);
 	return Status::OK;
@@ -804,7 +848,10 @@ Status rpc_server::rpc_utimens(::grpc::ServerContext *context, const ::rpc_utime
 			i->set_mtime(tv);
 		}
 
-		i->sync();
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
 	}
 	response->set_ret(0);
 	return Status::OK;
@@ -843,7 +890,11 @@ Status rpc_server::rpc_truncate(::grpc::ServerContext *context, const ::rpc_trun
 		}
 
 		i->set_size(request->offset());
-		i->sync();
+
+		if(S_ISDIR(i->get_mode()))
+			journalctl->chself(i);
+		else
+			journalctl->chreg(i->get_p_ino(), i);
 	}
 	response->set_ret(0);
 	return Status::OK;

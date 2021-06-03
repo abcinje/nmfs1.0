@@ -44,14 +44,14 @@ int remote_readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t fil
 	return ret;
 }
 
-int remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, uuid& new_dir_ino) {
+int remote_mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, std::shared_ptr<inode>& new_dir_inode) {
 	global_logger.log(remote_fs_op, "Called remote_mkdir()");
 	if(parent_i == nullptr)
 		throw std::runtime_error("inode casting is failed");
 	std::string remote_address(parent_i->get_address());
 	std::shared_ptr<rpc_client> rc = get_rpc_client(remote_address);
 
-	int ret = rc->mkdir(parent_i, new_child_name, mode, new_dir_ino);
+	int ret = rc->mkdir(parent_i, new_child_name, mode, new_dir_inode);
 	return ret;
 }
 

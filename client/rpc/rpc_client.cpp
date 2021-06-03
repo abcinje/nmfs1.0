@@ -212,7 +212,7 @@ int rpc_client::readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_
 	}
 }
 
-int rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, uuid& new_dir_ino) {
+int rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, std::shared_ptr<inode>& new_dir_inode) {
 	global_logger.log(rpc_client_ops, "Called mkdir()");
 	ClientContext context;
 	rpc_mkdir_request Input;
@@ -229,7 +229,7 @@ int rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_n
 	Status status = stub_->rpc_mkdir(&context, Input, &Output);
 	if(status.ok()){
 		if(Output.ret() == -ENOTLEADER) {
-			new_dir_ino = nil_uuid();
+			new_dir_inode = nullptr;
 			return -ENOTLEADER;
 		}
 
@@ -237,19 +237,20 @@ int rpc_client::mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_n
 			uuid returned_dir_ino = ino_controller->splice_prefix_and_postfix(Output.new_dir_ino_prefix(), Output.new_dir_ino_postfix());
 			shared_ptr<inode> i = std::make_shared<inode>(parent_i->get_ino(), this_client->get_client_uid(), this_client->get_client_gid(), mode | S_IFDIR, returned_dir_ino);
 			i->set_size(DIR_INODE_SIZE);
+			/* TODO : chself */
 			i->sync();
 
 			shared_ptr<dentry> new_d = std::make_shared<dentry>(i->get_ino(), true);
 			new_d->sync();
 
-			new_dir_ino = returned_dir_ino;
+			new_dir_inode = i;
 		}
 
 		return Output.ret();
 	} else {
 		global_logger.log(rpc_client_ops, status.error_message());
 		global_logger.log(rpc_client_ops, "rpc_client::mkdir() failed");
-		new_dir_ino = nil_uuid();
+		new_dir_inode = nullptr;
 		return -ENEEDRECOV;
 	}
 }

@@ -315,7 +315,7 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 	global_logger.log(fuse_op, "Called mkdir()");
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
-	uuid new_dir_ino{};
+	std::shared_ptr<inode> new_dir_inode;
 	try {
 		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
 
@@ -324,7 +324,7 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 
 		int ret = 0;
 		if (parent_dentry_table->get_loc() == LOCAL) {
-			std::shared_ptr<inode> new_dir_inode = local_mkdir(parent_i, *target_name, mode);
+			new_dir_inode = local_mkdir(parent_i, *target_name, mode);
 			indexing_table->lease_dentry_table_mkdir(new_dir_inode);
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
@@ -332,8 +332,7 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 				parent_dentry_table->get_dir_ino(),
 				*target_name);
 			while(true) {
-				/* TODO : change to use inode pointer */
-				ret = remote_mkdir(remote_i, *target_name, mode, new_dir_ino);
+				ret = remote_mkdir(remote_i, *target_name, mode, new_dir_inode);
 				if (ret == -ENOTLEADER) {
 					indexing_table->find_remote_dentry_table_again(remote_i);
 					continue;
@@ -342,7 +341,7 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 				} else
 					break;
 			}
-			indexing_table->lease_dentry_table(new_dir_ino);
+			indexing_table->lease_dentry_table_mkdir(new_dir_inode);
 		}
 	} catch (inode::no_entry &e) {
 		return -ENOENT;

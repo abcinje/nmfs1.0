@@ -33,7 +33,7 @@ public:
 	int access(shared_ptr<remote_inode> i, int mask);
 	int opendir(shared_ptr<remote_inode> i, struct fuse_file_info* file_info);
 	int readdir(shared_ptr<remote_inode> i, void* buffer, fuse_fill_dir_t filler);
-	int mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, uuid& new_dir_ino);
+	int mkdir(shared_ptr<remote_inode> parent_i, std::string new_child_name, mode_t mode, std::shared_ptr<inode>& new_dir_inode);
 	int rmdir_top(shared_ptr<remote_inode> target_i, uuid target_ino);
 	int rmdir_down(shared_ptr<remote_inode> parent_i, uuid target_ino, std::string target_name);
 	int symlink(shared_ptr<remote_inode> dst_parent_i, const char *src, const char *dst);
