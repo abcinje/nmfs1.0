@@ -154,7 +154,7 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 }
 
 int local_readlink(shared_ptr<inode> i, char *buf, size_t size) {
-	global_logger.log(local_fs_op, "Called readdir()");
+	global_logger.log(local_fs_op, "Called readlink()");
 	{
 		std::scoped_lock scl{i->inode_mutex};
 		if (!S_ISLNK(i->get_mode()))
