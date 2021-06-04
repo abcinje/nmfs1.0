@@ -298,8 +298,13 @@ int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 	}
 
 	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
-	if (!f_inodes_ret.second && !f_inodes_ret.first->second)
-		throw std::logic_error("transaction::rmreg() failed (file doesn't exist)");
+	if (!f_inodes_ret.second) {
+		if (f_inodes_ret.first->second) {
+			f_inodes_ret.first.value() = nullptr;
+		} else {
+			throw std::logic_error("transaction::rmreg() failed (file doesn't exist)");
+		}
+	}
 
 	return 0;
 }
