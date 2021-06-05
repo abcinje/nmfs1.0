@@ -53,7 +53,7 @@ private:
 	uint64_t loc;
 
 
-	char *link_target_name;
+	std::shared_ptr<std::string> link_target_name;
 
 public:
 	std::recursive_mutex inode_mutex;
@@ -82,8 +82,6 @@ public:
 	/* parent constructor for remote_inode and dummy_inode which used with file_handler */
 	inode(enum meta_location loc);
 
-	~inode();
-
 	void fill_stat(struct stat *s);
 	std::vector<char> serialize();
 	void deserialize(const char *value);
@@ -105,7 +103,7 @@ public:
 	uint64_t get_loc();
 
 	uint32_t get_link_target_len();
-	char *get_link_target_name();
+    	std::shared_ptr<std::string> get_link_target_name();
 
 	// setter
 	void set_p_ino(const uuid &p_ino);
@@ -122,7 +120,7 @@ public:
 
 	void set_loc(uint64_t loc);
 	void set_link_target_len(uint32_t len);
-	void set_link_target_name(const char *name);
+	void set_link_target_name(const std::shared_ptr<std::string> name);
 
 	void inode_to_rename_src_response(::rpc_rename_not_same_parent_src_respond *response);
     	void rename_src_response_to_inode(::rpc_rename_not_same_parent_src_respond &response);

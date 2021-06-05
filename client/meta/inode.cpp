@@ -41,8 +41,9 @@ inode::inode(const inode &copy)
 
 	core.link_target_len = copy.core.link_target_len;
 	if (S_ISLNK(this->core.i_mode) && (this->core.link_target_len > 0)) {
-		link_target_name = reinterpret_cast<char *>(calloc(this->core.link_target_len + 1, sizeof(char)));
-		memcpy(link_target_name, copy.link_target_name, core.link_target_len);
+		link_target_name = copy.link_target_name;
+		//link_target_name = reinterpret_cast<char *>(calloc(this->core.link_target_len + 1, sizeof(char)));
+		//memcpy(link_target_name, copy.link_target_name, core.link_target_len);
 	}
 }
 
@@ -100,7 +101,7 @@ inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char 
 
 	global_logger.log(inode_ops,"Called inode(symlink)");
 	global_logger.log(inode_ops,"link_target_len : " + std::to_string(passed_link_target_len) + " link_target_name : " + std::string(passed_link_target_name));
-	struct timespec ts;
+	struct timespec ts{};
 	if (!timespec_get(&ts, TIME_UTC))
 		runtime_error("timespec_get() failed");
 
@@ -120,7 +121,7 @@ inode::inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char 
 	loc = LOCAL;
 
 	this->set_link_target_len(passed_link_target_len);
-	this->set_link_target_name(passed_link_target_name);
+	this->set_link_target_name(std::make_shared<std::string>(passed_link_target_name));
 }
 
 
@@ -137,13 +138,6 @@ inode::inode(uuid ino)
 }
 
 inode::inode(enum meta_location loc) : loc(loc){
-}
-
-inode::~inode() {
-	if(S_ISLNK(this->core.i_mode)) {
-		if(core.link_target_len > 0)
-			free(this->link_target_name);
-	}
 }
 
 void inode::fill_stat(struct stat *s)
@@ -174,7 +168,7 @@ std::vector<char> inode::serialize()
 
 	if(S_ISLNK(this->core.i_mode) && (this->core.link_target_len > 0)){
 		global_logger.log(inode_ops, "serialize symbolic link inode");
-		memcpy(value.data() + REG_INODE_SIZE, (this->link_target_name), this->core.link_target_len);
+		memcpy(value.data() + REG_INODE_SIZE, (this->link_target_name->data()), this->core.link_target_len);
 	}
 	return value;
 }
@@ -187,8 +181,9 @@ void inode::deserialize(const char *value)
 	if(S_ISLNK(this->core.i_mode)){
 		char *raw = reinterpret_cast<char *>(calloc(this->core.link_target_len + 1, sizeof(char)));
 		meta_pool->read(obj_category::INODE, uuid_to_string(this->core.i_ino), raw, this->core.link_target_len, REG_INODE_SIZE);
-		this->link_target_name = raw;
-		global_logger.log(inode_ops, "deserialized link target name : " + std::string(this->link_target_name));
+		this->link_target_name = std::make_shared<std::string>(raw);
+		global_logger.log(inode_ops, "deserialized link target name : " + *this->link_target_name);
+		free(raw);
 	}
 
 	global_logger.log(inode_ops, "deserialized ino : " + uuid_to_string(this->core.i_ino));
@@ -271,7 +266,7 @@ uint64_t inode::get_loc() {
 uint32_t inode::get_link_target_len(){
 	return this->core.link_target_len;
 }
-char *inode::get_link_target_name(){
+std::shared_ptr<std::string> inode::get_link_target_name(){
 	return this->link_target_name;
 }
 
@@ -310,9 +305,10 @@ void inode::set_loc(uint64_t loc) {
 void inode::set_link_target_len(uint32_t len){
 	this->core.link_target_len = len;
 }
-void inode::set_link_target_name(const char *name){
-	this->link_target_name = (char *)calloc(this->core.link_target_len + 1, sizeof(char));
-	memcpy(this->link_target_name, name, this->core.link_target_len);
+void inode::set_link_target_name(const std::shared_ptr<std::string> name){
+	this->link_target_name = name;
+	//this->link_target_name = (char *)calloc(this->core.link_target_len + 1, sizeof(char));
+	//memcpy(this->link_target_name, name, this->core.link_target_len);
 }
 
 void inode::set_p_ino(const uuid &p_ino) {
@@ -335,7 +331,7 @@ void inode::inode_to_rename_src_response(::rpc_rename_not_same_parent_src_respon
 	response->set_target_c_nsec(this->core.i_ctime.tv_nsec);
 	response->set_target_i_link_target_len(this->core.link_target_len);
 	if(S_ISLNK(this->core.i_mode)) {
-		response->set_target_i_link_target_name(this->link_target_name);
+		response->set_target_i_link_target_name(this->link_target_name->data());
 	}
 }
 
@@ -354,8 +350,9 @@ void inode::rename_src_response_to_inode(::rpc_rename_not_same_parent_src_respon
 	this->core.i_ctime.tv_nsec = response.target_c_nsec();
 	this->core.link_target_len = response.target_i_link_target_len();
 	if(S_ISLNK(response.target_i_mode())) {
-		this->link_target_name = reinterpret_cast<char *>(calloc(response.target_i_link_target_len() + 1 , sizeof(char)));
-		memcpy(this->link_target_name, response.target_i_link_target_name().data(), response.target_i_link_target_len());
+		this->link_target_name = std::make_shared<std::string>(response.target_i_link_target_name());
+		//this->link_target_name = reinterpret_cast<char *>(calloc(response.target_i_link_target_len() + 1 , sizeof(char)));
+		//memcpy(this->link_target_name, response.target_i_link_target_name().data(), response.target_i_link_target_len());
 	}
 }
 
@@ -375,7 +372,7 @@ void inode::inode_to_rename_dst_request(::rpc_rename_not_same_parent_dst_request
 	request.set_target_c_nsec(this->core.i_ctime.tv_nsec);
 	request.set_target_i_link_target_len(this->core.link_target_len);
 	if(S_ISLNK(this->core.i_mode)) {
-		request.set_target_i_link_target_name(this->link_target_name);
+		request.set_target_i_link_target_name(this->link_target_name->data());
 	}
 }
 
@@ -394,8 +391,9 @@ void inode::rename_dst_request_to_inode(const ::rpc_rename_not_same_parent_dst_r
 	this->core.i_ctime.tv_nsec = request->target_c_nsec();
 	this->core.link_target_len = request->target_i_link_target_len();
 	if(S_ISLNK(request->target_i_mode())) {
-		this->link_target_name = reinterpret_cast<char *>(calloc(request->target_i_link_target_len() + 1 , sizeof(char)));
-		memcpy(this->link_target_name, request->target_i_link_target_name().data(), request->target_i_link_target_len());
+		this->link_target_name = std::make_shared<std::string>(request->target_i_link_target_name());
+		//this->link_target_name = reinterpret_cast<char *>(calloc(request->target_i_link_target_len() + 1 , sizeof(char)));
+		//memcpy(this->link_target_name, request->target_i_link_target_name().data(), request->target_i_link_target_len());
 	}
 }
 

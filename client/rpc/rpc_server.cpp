@@ -426,7 +426,7 @@ Status rpc_server::rpc_readlink(::grpc::ServerContext *context, const ::rpc_read
 			return Status::OK;
 		}
 
-		response->set_filename(i->get_link_target_name());
+		response->set_filename(i->get_link_target_name()->data());
 	}
 	response->set_ret(0);
 	return Status::OK;

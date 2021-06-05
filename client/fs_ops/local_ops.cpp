@@ -161,7 +161,7 @@ int local_readlink(shared_ptr<inode> i, char *buf, size_t size) {
 			return -EINVAL;
 
 		size_t len = MIN(i->get_link_target_len(), size - 1);
-		memcpy(buf, i->get_link_target_name(), len);
+		memcpy(buf, i->get_link_target_name()->data(), len);
 		buf[len] = '\0';
 	}
 	return 0;
