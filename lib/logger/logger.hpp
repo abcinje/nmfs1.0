@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <iomanip>
+#include <mutex>
 
 enum code_location {
 	fuse_op = 0,
@@ -27,6 +28,7 @@ enum code_location {
 
 
 class logger {
+    std::recursive_mutex logger_mutex;
 public:
     	logger();
 	void log( enum code_location location, std::string message);

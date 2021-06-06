@@ -12,6 +12,7 @@ void logger::log(enum code_location location, std::string message)
 #ifdef DEBUG
 	std::string location_str;
 
+	std::scoped_lock scl{this->logger_mutex};
 	switch(location){
 		case fuse_op:
 			location_str = "fuse_operations";
