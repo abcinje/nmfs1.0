@@ -9,7 +9,8 @@
 #include "../../lib/logger/logger.hpp"
 #include "inode.hpp"
 
-#define MAX_DENTRY_OBJ_SIZE (4 * 1024 * 1024)
+#define MAX_DENTRY_OBJ_SIZE OBJ_SIZE
+
 using std::unique_ptr;
 using namespace boost::uuids;
 
