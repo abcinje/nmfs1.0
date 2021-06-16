@@ -41,26 +41,25 @@ void dentry::delete_child(const std::string &filename) {
 unique_ptr<char[]> dentry::serialize()
 {
 	global_logger.log(dentry_ops, "Called dentry.serialize()");
-	size_t raw_size = sizeof(uint64_t) + (this->get_child_num()) * sizeof(int) + (this->get_total_name_legth()) + (this->get_child_num())*sizeof(uuid) + 1;
-	unique_ptr<char[]> raw = std::make_unique<char[]>(raw_size);
+	size_t raw_size = sizeof(uint64_t) + (this->get_child_num()) * sizeof(int) + (this->get_total_name_legth()) + (this->get_child_num())*sizeof(uuid);
+	unique_ptr<char[]> raw = std::make_unique<char[]>(raw_size + 1);
 	char *pointer = raw.get();
 
-	memset(pointer, '\0', raw_size);
 	memcpy(pointer, &(this->child_num), sizeof(uint64_t));
 	pointer += sizeof(uint64_t);
 
-	for(auto it = this->child_list.begin(); it != this->child_list.end(); it++){
+	for(auto & it : this->child_list){
 		/* serialiize name length */
-		int name_length = static_cast<int>(it->first.length());
+		int name_length = static_cast<int>(it.first.length());
 		memcpy(pointer, &(name_length), sizeof(int));
 		pointer += sizeof(int);
 
 		/* serialize name */
-		memcpy(pointer, it->first.data(), name_length);
+		memcpy(pointer, it.first.data(), name_length);
 		pointer += name_length;
 
 		/* serialize ino */
-		memcpy(pointer, &(it->second), sizeof(uuid));
+		memcpy(pointer, &(it.second), sizeof(uuid));
 		pointer += sizeof(uuid);
 	}
 
@@ -88,12 +87,12 @@ void dentry::deserialize(char *raw)
 		memcpy(name, pointer, name_length);
 		pointer += name_length;
 
-		uuid ino;
+		uuid ino{};
 		memcpy(&ino, pointer, sizeof(uuid));
 		pointer += sizeof(uuid);
 
 		this->child_list.insert(std::pair<std::string, uuid>(name, ino));
-		this->total_name_length += name_length;
+		this->total_name_length += static_cast<uint64_t>(name_length);
 		global_logger.log(dentry_ops, "name_length : " + std::to_string(name_length) + "child name : " + std::string(name) + " child ino : " + uuid_to_string(ino));
 		free(name);
 	}
@@ -104,16 +103,16 @@ void dentry::sync()
 {
 	global_logger.log(dentry_ops,"Called dentry.sync()");
 
-	size_t raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(uuid) + 1;
+	size_t raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(uuid);
 	unique_ptr<char[]> raw = this->serialize();
-	meta_pool->write(obj_category::DENTRY, uuid_to_string(this->this_ino), raw.get(), raw_size - 1, 0);
+	meta_pool->write(obj_category::DENTRY, uuid_to_string(this->this_ino), raw.get(), raw_size, 0);
 }
 
 uuid dentry::get_child_ino(std::string child_name)
 {
 	global_logger.log(dentry_ops, "Called dentry.get_child_ino(" + child_name + ")");
 
-	std::map<std::string, uuid>::iterator ret = child_list.find(child_name);
+	auto ret = child_list.find(child_name);
 	if(ret == child_list.end())
 		return nil_uuid();
 	else
@@ -124,8 +123,8 @@ void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler)
 {
 	filler(buffer, ".", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 	filler(buffer, "..", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
-	for (auto it = this->child_list.begin(); it != this->child_list.end(); it++)
-		filler(buffer, it->first.c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
+	for (auto & it : this->child_list)
+		filler(buffer, it.first.c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 }
 
 uint64_t dentry::get_child_num() {
