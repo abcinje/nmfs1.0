@@ -179,11 +179,10 @@ void inode::deserialize(const char *value)
 	memcpy(&core, value, REG_INODE_SIZE);
 
 	if(S_ISLNK(this->core.i_mode)){
-		char *raw = reinterpret_cast<char *>(calloc(this->core.link_target_len + 1, sizeof(char)));
-		meta_pool->read(obj_category::INODE, uuid_to_string(this->core.i_ino), raw, this->core.link_target_len, REG_INODE_SIZE);
-		this->link_target_name = std::make_shared<std::string>(raw);
+		this->link_target_name = std::make_shared<std::string>();
+		(*this->link_target_name).resize(this->core.link_target_len);
+		meta_pool->read(obj_category::INODE, uuid_to_string(this->core.i_ino), &((*this->link_target_name)[0]), this->core.link_target_len, REG_INODE_SIZE);
 		global_logger.log(inode_ops, "deserialized link target name : " + *this->link_target_name);
-		free(raw);
 	}
 
 	global_logger.log(inode_ops, "deserialized ino : " + uuid_to_string(this->core.i_ino));
