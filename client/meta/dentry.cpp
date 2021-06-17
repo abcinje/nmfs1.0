@@ -24,18 +24,28 @@ void dentry::add_new_child(const std::string &filename, uuid ino){
 	global_logger.log(dentry_ops, "Called dentry.add_new_child()");
 	global_logger.log(dentry_ops, "file : " + filename + " inode number : " + uuid_to_string(ino));
 
-	this->child_list.insert(std::make_pair(filename, ino));
-	this->child_num++;
-	this->total_name_length += filename.length();
+	auto ret = this->child_list.insert(std::make_pair(filename, ino));
+	if(ret.second) {
+		this->child_num++;
+		this->total_name_length += filename.length();
+	} else {
+		global_logger.log(dentry_ops, "Replace file with new ino");
+		ret.first->second = ino;
+	}
 }
 
 void dentry::delete_child(const std::string &filename) {
 	global_logger.log(dentry_ops, "Called dentry.delete_child()");
 	global_logger.log(dentry_ops, "file : " + filename);
 
-	this->child_list.erase(filename);
-	this->child_num--;
-	this->total_name_length -= filename.length();
+	auto it = this->child_list.find(filename);
+	if(it != this->child_list.end()) {
+		this->child_list.erase(it);
+		this->child_num--;
+		this->total_name_length -= filename.length();
+	} else {
+		global_logger.log(dentry_ops, "Delete Completely");
+	}
 }
 
 unique_ptr<char[]> dentry::serialize()
