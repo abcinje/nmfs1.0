@@ -32,7 +32,7 @@ std::vector<char> transaction::serialize(void)
 	/* dentries */
 	for (auto &d : dentries) {
 		/* added or deleted */
-		vec.push_back(static_cast<char>(d.second.first));
+		vec.push_back(d.second.first ? 1 : 0);
 
 		/* entry name */
 		int32_t dentry_size = static_cast<uint32_t>(d.first.size());
@@ -45,7 +45,7 @@ std::vector<char> transaction::serialize(void)
 		/* ino */
 		vec.insert(vec.end(), d.second.second.begin(), d.second.second.end());
 	}
-	vec.push_back(-2);
+	vec.push_back(-1);
 
 	/* f_inodes */
 	for (auto &i : f_inodes)
@@ -92,8 +92,8 @@ int transaction::deserialize(std::vector<char> raw)
 
 	/* dentries */
 	while (true) {
-		int entry_count = static_cast<int>(raw[index++]);
-		if (entry_count == -2)	/* finished? */
+		char entry_stat = raw[index++];
+		if (entry_stat == -1)	/* finished? */
 			break;
 
 		/* entry name */
@@ -107,7 +107,7 @@ int transaction::deserialize(std::vector<char> raw)
 		std::copy(raw.begin() + index, raw.begin() + index + ino.size(), ino.begin());
 		index += ino.size();
 
-		auto ret = dentries.insert({dentry, {entry_count, ino}});
+		auto ret = dentries.insert({dentry, {static_cast<bool>(entry_stat), ino}});
 		if (!ret.second)
 			throw std::logic_error("transaction::deserialize() failed (a duplicated key exists)");
 	}
@@ -186,11 +186,10 @@ int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 	if (committed)
 		return -1;
 
-	auto dentries_ret = dentries.insert({d_name, {1, d_ino}});
+	auto dentries_ret = dentries.insert({d_name, {true, d_ino}});
 	if (!dentries_ret.second) {
-		int count = dentries_ret.first->second.first;
-		if (count < 1) {
-			dentries_ret.first.value() = {count + 1, d_ino};
+		if (!dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {true, d_ino};
 		} else {
 			throw std::logic_error("transaction::mkdir() failed (directory already exists)");
 		}
@@ -215,11 +214,10 @@ int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 	if (committed)
 		return -1;
 
-	auto dentries_ret = dentries.insert({d_name, {-1, d_ino}});
+	auto dentries_ret = dentries.insert({d_name, {false, d_ino}});
 	if (!dentries_ret.second) {
-		int count = dentries_ret.first->second.first;
-		if (count > -1) {
-			dentries_ret.first.value() = {count - 1, d_ino};
+		if (dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {false, d_ino};
 		} else {
 			throw std::logic_error("transaction::rmdir() failed (directory doesn't exist)");
 		}
@@ -244,11 +242,10 @@ int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 	if (committed)
 		return -1;
 
-	auto dentries_ret = dentries.insert({f_name, {1, f_inode->get_ino()}});
+	auto dentries_ret = dentries.insert({f_name, {true, f_inode->get_ino()}});
 	if (!dentries_ret.second) {
-		int count = dentries_ret.first->second.first;
-		if (count < 1) {
-			dentries_ret.first.value() = {count + 1, f_inode->get_ino()};
+		if (!dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {true, f_inode->get_ino()};
 		} else {
 			throw std::logic_error("transaction::mkreg() failed (file already exists)");
 		}
@@ -280,11 +277,10 @@ int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 	if (committed)
 		return -1;
 
-	auto dentries_ret = dentries.insert({f_name, {-1, f_inode->get_ino()}});
+	auto dentries_ret = dentries.insert({f_name, {false, f_inode->get_ino()}});
 	if (!dentries_ret.second) {
-		int count = dentries_ret.first->second.first;
-		if (count > -1) {
-			dentries_ret.first.value() = {count - 1, f_inode->get_ino()};
+		if (dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {false, f_inode->get_ino()};
 		} else {
 			throw std::logic_error("transaction::rmreg() failed (file doesn't exist)");
 		}
@@ -346,13 +342,13 @@ void transaction::sync(std::shared_ptr<rados_io> meta)
 	/* dentries */
 	dentry d(s_ino);
 	for (const auto &p : dentries) {
-		int count = p.second.first;
+		bool alive = p.second.first;
 		std::string name = p.first;
 		boost::uuids::uuid ino = p.second.second;
 
-		if (count == 1) {
+		if (alive) {
 			d.add_new_child(name, ino);
-		} else if (count == -1) {
+		} else {
 			d.delete_child(name);
 		}
 	}
