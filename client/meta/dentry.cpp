@@ -86,17 +86,16 @@ void dentry::deserialize(char *raw)
 		memcpy(&name_length, pointer, sizeof(int));
 		pointer += sizeof(int);
 
-		char* name=(char *)calloc(name_length + 1, sizeof(char));
-		memcpy(name, pointer, name_length);
+		unique_ptr<char[]> name = std::make_unique<char[]>(static_cast<size_t>(name_length) + 1);
+		memcpy(name.get(), pointer, static_cast<size_t>(name_length));
 		pointer += name_length;
 
 		uuid ino{};
 		memcpy(&ino, pointer, sizeof(uuid));
 		pointer += sizeof(uuid);
 
-		this->child_list.insert(std::pair<std::string, uuid>(name, ino));
-		global_logger.log(dentry_ops, "name_length : " + std::to_string(name_length) + "child name : " + std::string(name) + " child ino : " + uuid_to_string(ino));
-		free(name);
+		this->child_list.insert(std::pair<std::string, uuid>(name.get(), ino));
+		global_logger.log(dentry_ops, "name_length : " + std::to_string(name_length) + "child name : " + std::string(name.get()) + " child ino : " + uuid_to_string(ino));
 	}
 
 }
