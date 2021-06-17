@@ -18,8 +18,8 @@ dentry::dentry(uuid ino, bool mkdir) : this_ino(ino)
 	}
 }
 
-void dentry::add_new_child(const std::string &filename, uuid ino){
-	global_logger.log(dentry_ops, "Called dentry.add_new_child()");
+void dentry::add_child(const std::string &filename, uuid ino){
+	global_logger.log(dentry_ops, "Called dentry.add_child()");
 	global_logger.log(dentry_ops, "file : " + filename + " inode number : " + uuid_to_string(ino));
 
 	auto ret = this->child_list.insert(std::make_pair(filename, ino));

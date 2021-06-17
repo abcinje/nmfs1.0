@@ -342,7 +342,7 @@ void transaction::sync(std::shared_ptr<rados_io> meta)
 		boost::uuids::uuid ino = p.second.second;
 
 		if (alive) {
-			d.add_new_child(name, ino);
+			d.add_child(name, ino);
 		} else {
 			d.delete_child(name);
 		}

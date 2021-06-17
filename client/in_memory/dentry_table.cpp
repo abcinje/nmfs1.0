@@ -39,7 +39,7 @@ int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> ino
 	if (ret.second) {
 		ret.first->second = inode;
 
-		this->dentries->add_new_child(filename, inode->get_ino());
+		this->dentries->add_child(filename, inode->get_ino());
 		//this->dentries->sync();
 	} else {
 		global_logger.log(dentry_table_ops, "Already added file is tried to inserted");

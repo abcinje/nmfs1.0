@@ -25,7 +25,7 @@ private:
 public:
 	explicit dentry(uuid ino, bool mkdir = false);
 
-	void add_new_child(const std::string &filename, uuid ino);
+	void add_child(const std::string &filename, uuid ino);
 	void delete_child(const std::string &filename);
 
 	unique_ptr<char[]> serialize();
