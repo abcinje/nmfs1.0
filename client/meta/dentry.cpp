@@ -6,8 +6,6 @@ dentry::dentry(uuid ino, bool mkdir) : this_ino(ino)
 {
 	if(mkdir){
 		global_logger.log(dentry_ops, "Called dentry(" + uuid_to_string(ino) +") from mkdir");
-		this->child_num = 0;
-		this->total_name_length = 0;
 	} else {
 		global_logger.log(dentry_ops, "Called dentry(" + uuid_to_string(ino) +")");
 		unique_ptr<char[]> raw_data = std::make_unique<char[]>(MAX_DENTRY_OBJ_SIZE);
@@ -25,10 +23,7 @@ void dentry::add_new_child(const std::string &filename, uuid ino){
 	global_logger.log(dentry_ops, "file : " + filename + " inode number : " + uuid_to_string(ino));
 
 	auto ret = this->child_list.insert(std::make_pair(filename, ino));
-	if(ret.second) {
-		this->child_num++;
-		this->total_name_length += filename.length();
-	} else {
+	if(!ret.second) {
 		global_logger.log(dentry_ops, "Replace file with new ino");
 		ret.first->second = ino;
 	}
@@ -41,22 +36,21 @@ void dentry::delete_child(const std::string &filename) {
 	auto it = this->child_list.find(filename);
 	if(it != this->child_list.end()) {
 		this->child_list.erase(it);
-		this->child_num--;
-		this->total_name_length -= filename.length();
 	} else {
-		global_logger.log(dentry_ops, "Delete Completely");
+		global_logger.log(dentry_ops, "delete_child called for nonexistent file");
 	}
 }
 
 unique_ptr<char[]> dentry::serialize()
 {
 	global_logger.log(dentry_ops, "Called dentry.serialize()");
-	size_t raw_size = sizeof(uint64_t) + (this->get_child_num()) * sizeof(int) + (this->get_total_name_legth()) + (this->get_child_num())*sizeof(uuid);
+	size_t child_num = this->child_list.size();
+	size_t raw_size = sizeof(size_t) + (child_num) * sizeof(int) + (this->get_total_name_length()) + (child_num)*sizeof(uuid);
 	unique_ptr<char[]> raw = std::make_unique<char[]>(raw_size + 1);
 	char *pointer = raw.get();
 
-	memcpy(pointer, &(this->child_num), sizeof(uint64_t));
-	pointer += sizeof(uint64_t);
+	memcpy(pointer, &(child_num), sizeof(size_t));
+	pointer += sizeof(size_t);
 
 	for(auto & it : this->child_list){
 		/* serialiize name length */
@@ -65,7 +59,7 @@ unique_ptr<char[]> dentry::serialize()
 		pointer += sizeof(int);
 
 		/* serialize name */
-		memcpy(pointer, it.first.data(), name_length);
+		memcpy(pointer, it.first.data(), static_cast<size_t>(name_length));
 		pointer += name_length;
 
 		/* serialize ino */
@@ -81,14 +75,13 @@ void dentry::deserialize(char *raw)
 	global_logger.log(dentry_ops, "Called dentry.deserialize()");
 
 	char *pointer = raw;
+	size_t child_num;
+	memcpy(&(child_num), pointer, sizeof(size_t));
+	pointer = pointer + sizeof(size_t);
 
-	memcpy(&(this->child_num), pointer, sizeof(uint64_t));
-	pointer = pointer + sizeof(uint64_t);
+	global_logger.log(dentry_ops, "dentry child num : " + std::to_string(child_num));
 
-	global_logger.log(dentry_ops, "dentry child num : " + std::to_string(this->child_num));
-
-	this->total_name_length = 0;
-	for(int i = 0; i < this->child_num; i++){
+	for(int i = 0; i < child_num; i++){
 		int name_length;
 		memcpy(&name_length, pointer, sizeof(int));
 		pointer += sizeof(int);
@@ -102,7 +95,6 @@ void dentry::deserialize(char *raw)
 		pointer += sizeof(uuid);
 
 		this->child_list.insert(std::pair<std::string, uuid>(name, ino));
-		this->total_name_length += static_cast<uint64_t>(name_length);
 		global_logger.log(dentry_ops, "name_length : " + std::to_string(name_length) + "child name : " + std::string(name) + " child ino : " + uuid_to_string(ino));
 		free(name);
 	}
@@ -112,13 +104,13 @@ void dentry::deserialize(char *raw)
 void dentry::sync()
 {
 	global_logger.log(dentry_ops,"Called dentry.sync()");
-
-	size_t raw_size = sizeof(uint64_t) + (this->child_num) * sizeof(int) + (this->total_name_length) + (this->child_num)*sizeof(uuid);
+	size_t child_num = this->child_list.size();
+	size_t raw_size = sizeof(size_t) + (child_num) * sizeof(int) + (this->get_total_name_length()) + (child_num)*sizeof(uuid);
 	unique_ptr<char[]> raw = this->serialize();
 	meta_pool->write(obj_category::DENTRY, uuid_to_string(this->this_ino), raw.get(), raw_size, 0);
 }
 
-uuid dentry::get_child_ino(std::string child_name)
+uuid dentry::get_child_ino(const std::string& child_name)
 {
 	global_logger.log(dentry_ops, "Called dentry.get_child_ino(" + child_name + ")");
 
@@ -138,8 +130,15 @@ void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler)
 }
 
 uint64_t dentry::get_child_num() {
-	return this->child_num;
+	return this->child_list.size();
 }
-uint64_t dentry::get_total_name_legth() {
-	return this->total_name_length;
+
+uint64_t dentry::get_total_name_length() {
+	uint64_t total_name_length = 0;
+
+	for(auto& ret : this->child_list){
+		total_name_length += ret.first.size();
+	}
+
+	return total_name_length;
 }
