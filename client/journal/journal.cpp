@@ -85,6 +85,16 @@ void journal::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name
 	}
 }
 
+void journal::mvdir(std::shared_ptr<inode> self_inode, const std::string &src_d_name, const uuid &src_d_ino, const std::string &dst_d_name, const uuid &dst_d_ino)
+{
+	global_logger.log(journal_ops, "Called journal::mvdir(" + src_d_name + ", " + uuid_to_string(src_d_ino) + ", " + dst_d_name + ", " + uuid_to_string(dst_d_ino) + ")");
+	while (true) {
+		auto tx = jtable.get_entry(self_inode->get_ino());
+		if (!tx->mvdir(self_inode, src_d_name, src_d_ino, dst_d_name, dst_d_ino))
+			break;
+	}
+}
+
 void journal::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
 	global_logger.log(journal_ops, "Called journal::mkreg(" + uuid_to_string(f_inode->get_ino()) + f_name + ")");
@@ -101,6 +111,16 @@ void journal::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name
 	while (true) {
 		auto tx = jtable.get_entry(self_inode->get_ino());
 		if (!tx->rmreg(self_inode, f_name, f_inode))
+			break;
+	}
+}
+
+void journal::mvreg(std::shared_ptr<inode> self_inode, const std::string &src_f_name, const uuid &src_f_ino, const std::string &dst_f_name, const uuid &dst_f_ino)
+{
+	global_logger.log(journal_ops, "Called journal::mvreg(" + src_f_name + ", " + uuid_to_string(src_f_ino) + ", " + dst_f_name + ", " + uuid_to_string(dst_f_ino) + ")");
+	while (true) {
+		auto tx = jtable.get_entry(self_inode->get_ino());
+		if (!tx->mvreg(self_inode, src_f_name, src_f_ino, dst_f_name, dst_f_ino))
 			break;
 	}
 }

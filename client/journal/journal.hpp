@@ -33,10 +33,12 @@ public:
 	/* directories */
 	void mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
 	void rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
+	void mvdir(std::shared_ptr<inode> self_inode, const std::string &src_d_name, const uuid &src_d_ino, const std::string &dst_d_name, const uuid &dst_d_ino = nil_uuid());
 
 	/* regular files */
 	void mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
 	void rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
+	void mvreg(std::shared_ptr<inode> self_inode, const std::string &src_f_name, const uuid &src_f_ino, const std::string &dst_f_name, const uuid &dst_f_ino = nil_uuid());
 	void chreg(const uuid &self_ino, std::shared_ptr<inode> f_inode);
 };
 

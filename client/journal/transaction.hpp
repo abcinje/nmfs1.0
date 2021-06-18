@@ -61,10 +61,12 @@ public:
 	/* directories */
 	int mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
 	int rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino);
+	int mvdir(std::shared_ptr<inode> self_inode, const std::string &src_d_name, const uuid &src_d_ino, const std::string &dst_d_name, const uuid &dst_d_ino);
 
 	/* regular files */
 	int mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
 	int rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode);
+	int mvreg(std::shared_ptr<inode> self_inode, const std::string &src_f_name, const uuid &src_f_ino, const std::string &dst_f_name, const uuid &dst_f_ino);
 	int chreg(std::shared_ptr<inode> f_inode);
 
 	std::vector<char> serialize(void);

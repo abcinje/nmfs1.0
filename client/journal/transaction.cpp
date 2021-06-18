@@ -233,6 +233,37 @@ int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 	return 0;
 }
 
+int transaction::mvdir(std::shared_ptr<inode> self_inode, const std::string &src_d_name, const uuid &src_d_ino, const std::string &dst_d_name, const uuid &dst_d_ino)
+{
+	global_logger.log(journal_ops, "Called transaction::mvdir(" + src_d_name + ", " + uuid_to_string(src_d_ino) + ", " + dst_d_name + ", " + uuid_to_string(dst_d_ino) + ")");
+
+	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
+
+	auto dentries_ret = dentries.insert({src_d_name, {false, src_d_ino}});
+	if (!dentries_ret.second) {
+		if (dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {false, src_d_ino};
+		} else {
+			throw std::logic_error("transaction::mvdir() failed (src directory doesn't exist)");
+		}
+	}
+	dentries_ret = dentries.insert({dst_d_name, {true, src_d_ino}});
+	if (!dentries_ret.second)
+		dentries_ret.first.value() = {true, src_d_ino};
+
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
+
+	return 0;
+}
+
 int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
 	global_logger.log(transaction_ops, "Called transaction::mkreg(" + uuid_to_string(f_inode->get_ino()) + ", " + f_name + ")");
@@ -300,6 +331,43 @@ int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 		} else {
 			throw std::logic_error("transaction::rmreg() failed (file doesn't exist)");
 		}
+	}
+
+	return 0;
+}
+
+int transaction::mvreg(std::shared_ptr<inode> self_inode, const std::string &src_f_name, const uuid &src_f_ino, const std::string &dst_f_name, const uuid &dst_f_ino)
+{
+	global_logger.log(journal_ops, "Called transaction::mvreg(" + src_f_name + ", " + uuid_to_string(src_f_ino) + ", " + dst_f_name + ", " + uuid_to_string(dst_f_ino) + ")");
+
+	std::unique_lock lock(m);
+
+	if (committed)
+		return -1;
+
+	auto dentries_ret = dentries.insert({src_f_name, {false, src_f_ino}});
+	if (!dentries_ret.second) {
+		if (dentries_ret.first->second.first) {
+			dentries_ret.first.value() = {false, src_f_ino};
+		} else {
+			throw std::logic_error("transaction::mvreg() failed (src file doesn't exist)");
+		}
+	}
+	dentries_ret = dentries.insert({dst_f_name, {true, src_f_ino}});
+	if (!dentries_ret.second)
+		dentries_ret.first.value() = {true, src_f_ino};
+
+	if (s_inode) {
+		s_inode->set_mtime(self_inode->get_mtime());
+		s_inode->set_ctime(self_inode->get_ctime());
+	} else {
+		s_inode = std::make_unique<inode>(*self_inode);
+	}
+
+	if (!dst_f_ino.is_nil()) {
+		auto f_inodes_ret = f_inodes.insert({uuid_to_string(dst_f_ino), nullptr});
+		if (!f_inodes_ret.second)
+			f_inodes_ret.first.value() = nullptr;
 	}
 
 	return 0;
