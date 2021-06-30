@@ -71,6 +71,7 @@ size_t rados_io::write_obj(const string &key, const char *value, size_t len, off
 
 void rados_io::zerofill(obj_category category, const string &key, size_t len, off_t offset)
 {
+	/* TODO : should be modified for non acceptable offset input (e.g ior) */
 	char *zeros = new char[MAX(len, OBJ_SIZE)]();
 
 	string p_key = get_prefix(category) + key;
