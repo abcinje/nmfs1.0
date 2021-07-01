@@ -10,7 +10,7 @@ extern std::unique_ptr<journal> journalctl;
 void local_getattr(shared_ptr<inode> i, struct stat *stat) {
 	global_logger.log(local_fs_op, "Called getattr()");
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::shared_lock inode_sl{i->inode_mutex};
 		i->fill_stat(stat);
 	}
 }
@@ -18,7 +18,7 @@ void local_getattr(shared_ptr<inode> i, struct stat *stat) {
 void local_access(shared_ptr<inode> i, int mask) {
 	global_logger.log(local_fs_op, "Called access()");
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::shared_lock inode_sl{i->inode_mutex};
 		i->permission_check(mask);
 	}
 }
@@ -26,7 +26,7 @@ void local_access(shared_ptr<inode> i, int mask) {
 int local_opendir(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called opendir()");
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::shared_lock inode_sl{i->inode_mutex};
 		if (!S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
 
@@ -53,7 +53,7 @@ void local_readdir(shared_ptr<inode> i, void *buffer, fuse_fill_dir_t filler) {
 	global_logger.log(local_fs_op, "Called readdir()");
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(i->get_ino());
 	{
-		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		std::shared_lock dtable_sl{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->fill_filler(buffer, filler);
 	}
 }
@@ -64,7 +64,7 @@ int local_mkdir(shared_ptr<inode> parent_i, std::string new_child_name, mode_t m
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 	shared_ptr<inode> new_i = std::make_shared<inode>(parent_i->get_ino(), this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFDIR);
 	{
-		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		std::unique_lock dtable_ul{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->create_child_inode(new_child_name, new_i);
 
 		struct timespec ts{};
@@ -91,7 +91,7 @@ int local_rmdir_top(shared_ptr<inode> target_i, uuid target_ino) {
 	}
 
 	{
-		std::scoped_lock scl{target_dentry_table->dentry_table_mutex};
+		std::unique_lock dtable_ul{target_dentry_table->dentry_table_mutex};
 		if (target_dentry_table->get_child_num() > 0)
 			return -ENOTEMPTY;
 		journalctl->rmself(target_ino);
@@ -109,7 +109,7 @@ int local_rmdir_down(shared_ptr<inode> parent_i, uuid target_ino, std::string ta
 		throw std::runtime_error("directory table is corrupted : Can't find leased directory");
 	}
 	{
-		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		std::unique_lock dtable_ul{parent_dentry_table->dentry_table_mutex};
 		/* TODO : is it okay to delete inode which is locked? */
 		parent_dentry_table->delete_child_inode(target_name);
 
@@ -134,7 +134,7 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 
 	unique_ptr<std::string> symlink_name = get_filename_from_path(dst);
 	{
-		std::scoped_lock scl{dst_parent_dentry_table->dentry_table_mutex};
+		std::unique_lock dtable_ul{dst_parent_dentry_table->dentry_table_mutex};
 		if (!dst_parent_dentry_table->check_child_inode(*symlink_name).is_nil())
 			return -EEXIST;
 
@@ -156,7 +156,7 @@ int local_symlink(shared_ptr<inode> dst_parent_i, const char *src, const char *d
 int local_readlink(shared_ptr<inode> i, char *buf, size_t size) {
 	global_logger.log(local_fs_op, "Called readlink()");
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::shared_lock inode_sl{i->inode_mutex};
 		if (!S_ISLNK(i->get_mode()))
 			return -EINVAL;
 
@@ -179,12 +179,10 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 	shared_ptr<inode> target_i;
 	{
-		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		std::unique_lock dtable_ul{parent_dentry_table->dentry_table_mutex};
 		target_i = parent_dentry_table->get_child_inode(*old_name);
-	}
 
-	{
-		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex, target_i->inode_mutex};
+		std::unique_lock inode_ul{target_i->inode_mutex};
 		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
 		struct timespec ts{};
@@ -219,12 +217,10 @@ std::shared_ptr<inode> local_rename_not_same_parent_src(shared_ptr<inode> src_pa
 	shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
 	shared_ptr<inode> target_i;
 	{
-		std::scoped_lock scl{src_dentry_table->dentry_table_mutex};
+		std::unique_lock dtable_ul{src_dentry_table->dentry_table_mutex};
 		target_i = src_dentry_table->get_child_inode(*old_name);
-	}
 
-	{
-		std::scoped_lock scl{src_dentry_table->dentry_table_mutex, target_i->inode_mutex};
+		std::unique_lock inode_ul{target_i->inode_mutex};
 		if (flags == 0) {
 			/* TODO : is it okay to delete inode which is locked? */
 			src_dentry_table->delete_child_inode(*old_name);
@@ -245,7 +241,10 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, std::shared
 	target_inode->set_loc(LOCAL);
 	target_inode->set_p_ino(dst_parent_i->get_ino());
 	{
-		std::scoped_lock scl{dst_dentry_table->dentry_table_mutex, target_inode->inode_mutex};
+		/* TODO : src and dst should performed atomically */
+		std::unique_lock dtable_ul{dst_dentry_table->dentry_table_mutex, std::defer_lock};
+		std::unique_lock inode_ul{target_inode->inode_mutex, std::defer_lock};
+		std::scoped_lock scl{dtable_ul, inode_ul};
 		if (flags == 0) {
 			if (!check_dst_ino.is_nil()) {
 				std::shared_ptr<inode> check_dst_inode = dst_dentry_table->get_child_inode(*new_name);
@@ -265,7 +264,7 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, std::shared
 int local_open(shared_ptr<inode> i, struct fuse_file_info *file_info) {
 	global_logger.log(local_fs_op, "Called open()");
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::shared_lock inode_sl{i->inode_mutex};
 		if ((file_info->flags & O_DIRECTORY) && !S_ISDIR(i->get_mode()))
 			return -ENOTDIR;
 
@@ -301,8 +300,7 @@ void local_create(shared_ptr<inode> parent_i, std::string new_child_name, mode_t
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 	shared_ptr<inode> i = std::make_shared<inode>(parent_i->get_ino(), this_client->get_client_uid(), this_client->get_client_gid(),mode | S_IFREG);
 	{
-		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
-
+		std::unique_lock dtable_ul{parent_dentry_table->dentry_table_mutex};
 		parent_dentry_table->create_child_inode(new_child_name, i);
 
 		struct timespec ts{};
@@ -325,7 +323,7 @@ void local_unlink(shared_ptr<inode> parent_i, std::string child_name) {
 	global_logger.log(local_fs_op, "Called unlink()");
 	shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 	{
-		std::scoped_lock scl{parent_dentry_table->dentry_table_mutex};
+		std::unique_lock dtable_ul{parent_dentry_table->dentry_table_mutex};
 		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(child_name);
 		nlink_t nlink = target_i->get_nlink() - 1;
 		if (nlink == 0) {
@@ -360,7 +358,7 @@ ssize_t local_write(shared_ptr<inode> i, const char *buffer, size_t size, off_t 
 	size_t written_len = 0;
 
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::unique_lock inode_ul{i->inode_mutex};
 		if (flags & O_APPEND) {
 			offset = i->get_size();
 		}
@@ -379,7 +377,7 @@ ssize_t local_write(shared_ptr<inode> i, const char *buffer, size_t size, off_t 
 void local_chmod(shared_ptr<inode> i, mode_t mode) {
 	global_logger.log(local_fs_op, "Called chmod()");
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::unique_lock inode_ul{i->inode_mutex};
 		mode_t type = i->get_mode() & S_IFMT;
 
 		i->set_mode(mode | type);
@@ -394,7 +392,7 @@ void local_chmod(shared_ptr<inode> i, mode_t mode) {
 void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid) {
 	global_logger.log(local_fs_op, "Called chown()");
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::unique_lock inode_ul{i->inode_mutex};
 		if (((int32_t) uid) >= 0)
 			i->set_uid(uid);
 
@@ -411,7 +409,7 @@ void local_chown(shared_ptr<inode> i, uid_t uid, gid_t gid) {
 void local_utimens(shared_ptr<inode> i, const struct timespec tv[2]) {
 	global_logger.log(local_fs_op, "Called utimens()");
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::unique_lock inode_ul{i->inode_mutex};
 		if (tv[0].tv_nsec == UTIME_NOW) {
 			struct timespec ts{};
 			if (!timespec_get(&ts, TIME_UTC))
@@ -444,7 +442,7 @@ int local_truncate(const shared_ptr<inode> i, off_t offset) {
 	/*TODO : clear setuid, setgid*/
 	int ret;
 	{
-		std::scoped_lock scl{i->inode_mutex};
+		std::unique_lock inode_ul{i->inode_mutex};
 		if (S_ISDIR(i->get_mode()))
 			return -EISDIR;
 

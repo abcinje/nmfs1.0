@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <shared_mutex>
 #include <rpc.grpc.pb.h>
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../../lib/logger/logger.hpp"
@@ -56,7 +57,7 @@ private:
 	std::shared_ptr<std::string> link_target_name;
 
 public:
-	std::recursive_mutex inode_mutex;
+	std::shared_mutex inode_mutex;
 	class no_entry : public runtime_error {
 	public:
 		explicit no_entry(const string &msg);
