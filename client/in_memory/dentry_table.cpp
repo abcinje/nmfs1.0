@@ -8,7 +8,7 @@ const char *dentry_table::not_leader::what(void) {
 	return nullptr;
 }
 
-dentry_table::dentry_table(uuid dir_ino, enum meta_location loc) : dir_ino(dir_ino), loc(loc){
+dentry_table::dentry_table(uuid dir_ino, enum meta_location loc) : dir_ino(dir_ino), loc(loc), status(VALID) {
 	if(loc == LOCAL) {
 		this->this_dir_inode = std::make_shared<inode>(dir_ino);
 		this->this_dir_inode->set_loc(LOCAL);
@@ -19,7 +19,7 @@ dentry_table::dentry_table(uuid dir_ino, enum meta_location loc) : dir_ino(dir_i
 	 */
 }
 
-dentry_table::dentry_table(std::shared_ptr<inode> new_dir_inode, std::shared_ptr<dentry> new_dir_dentry, enum meta_location loc) : loc(loc){
+dentry_table::dentry_table(std::shared_ptr<inode> new_dir_inode, std::shared_ptr<dentry> new_dir_dentry, enum meta_location loc) : loc(loc), status(VALID){
 	if(loc == LOCAL) {
 		this->this_dir_inode = new_dir_inode;
 		this->dentries = new_dir_dentry;
@@ -118,13 +118,14 @@ uuid dentry_table::check_child_inode(std::string filename){
 	return nil_uuid();
 }
 
-int dentry_table::pull_child_metadata() {
+int dentry_table::pull_child_metadata(const std::shared_ptr<dentry_table>& this_dentry_table) {
 	global_logger.log(dentry_table_ops, "Called pull_child_metadata()");
 	this->dentries = std::make_shared<dentry>(this->dir_ino);
 	std::map<std::string, uuid>::iterator it;
 	for(it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
 		shared_ptr<inode> child_i = std::make_shared<inode>(it->second);
 		child_i->set_p_ino(this->dir_ino);
+		child_i->set_parent_dentry_table(this_dentry_table);
 		if(S_ISDIR(child_i->get_mode())){
 			child_i->set_loc(UNKNOWN);
 		} else {
@@ -139,6 +140,10 @@ int dentry_table::pull_child_metadata() {
 
 enum meta_location dentry_table::get_loc() {
 	return this->loc;
+}
+
+void dentry_table::set_status(enum dentry_table_status new_status) {
+	this->status = new_status;
 }
 
 void dentry_table::set_leader_ip(std::string new_leader_ip) {
@@ -180,4 +185,11 @@ shared_ptr<inode> dentry_table::get_this_dir_inode() {
 
 const string &dentry_table::get_leader_ip(){
 	return this->leader_ip;
+}
+
+bool dentry_table::is_valid() {
+	if (status == VALID)
+		return true;
+	else
+		return false;
 }
