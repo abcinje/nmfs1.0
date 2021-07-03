@@ -1,5 +1,5 @@
 #include "inode.hpp"
-
+#include "../in_memory/dentry_table.hpp"
 #include <cstring>
 
 using std::runtime_error;
@@ -270,6 +270,14 @@ std::shared_ptr<std::string> inode::get_link_target_name(){
 }
 
 // setter
+void inode::set_p_ino(const uuid &p_ino) {
+	inode::p_ino = p_ino;
+}
+
+void inode::set_parent_dentry_table(const std::shared_ptr<dentry_table> parent) {
+	this->parent_dentry_table = parent;
+}
+
 void inode::set_mode(mode_t mode){
 	this->core.i_mode = mode;
 }
@@ -308,10 +316,6 @@ void inode::set_link_target_name(const std::shared_ptr<std::string> name){
 	this->link_target_name = name;
 	//this->link_target_name = (char *)calloc(this->core.link_target_len + 1, sizeof(char));
 	//memcpy(this->link_target_name, name, this->core.link_target_len);
-}
-
-void inode::set_p_ino(const uuid &p_ino) {
-	inode::p_ino = p_ino;
 }
 
 void inode::inode_to_rename_src_response(::rpc_rename_not_same_parent_src_respond *response) {
@@ -393,6 +397,15 @@ void inode::rename_dst_request_to_inode(const ::rpc_rename_not_same_parent_dst_r
 		this->link_target_name = std::make_shared<std::string>(request->target_i_link_target_name());
 		//this->link_target_name = reinterpret_cast<char *>(calloc(request->target_i_link_target_len() + 1 , sizeof(char)));
 		//memcpy(this->link_target_name, request->target_i_link_target_name().data(), request->target_i_link_target_len());
+	}
+}
+
+bool inode::is_valid() {
+	if(parent_dentry_table.expired())
+		return false;
+	else {
+		std::shared_ptr<dentry_table> shared_parent = parent_dentry_table.lock();
+		return shared_parent->is_valid();
 	}
 }
 
