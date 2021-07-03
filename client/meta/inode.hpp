@@ -74,9 +74,9 @@ public:
 
 	inode(const inode &copy);
 
-	/* for normal reg file and root directory */
+	/* for normal reg file and directory */
 	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, bool root = false);
-    	/* for normal directory */
+    	/* for directory whose parent is located remotely*/
     	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
 	/* for symlink */
 	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
