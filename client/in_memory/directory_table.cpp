@@ -89,7 +89,7 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 		/* Success to acquire lease */
 		new_dentry_table = std::make_shared<dentry_table>(ino, LOCAL);
 		new_dentry_table->set_leader_ip(temp_address);
-		new_dentry_table->pull_child_metadata();
+		new_dentry_table->pull_child_metadata(new_dentry_table);
 		this->add_dentry_table(ino, new_dentry_table);
 	} else if(ret == -1) {
 		global_logger.log(directory_table_ops, "Fail to acquire lease, this dir already has the leader");
@@ -137,6 +137,7 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino, bool remote
 			if (valid) {
 				return it->second;
 			} else {
+				it->second->set_status(INVALID);
 				this->dentry_tables.erase(it);
 				throw dentry_table::not_leader("Lease is expired at remote side");
 			}
@@ -151,6 +152,7 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino, bool remote
 			if (valid) {
 				return it->second;
 			} else {
+				it->second->set_status(INVALID);
 				this->dentry_tables.erase(it);
 				shared_ptr<dentry_table> new_dentry_table = lease_dentry_table(ino);
 				return new_dentry_table;

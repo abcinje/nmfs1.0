@@ -25,6 +25,8 @@ using std::runtime_error;
 using std::string;
 using namespace boost::uuids;
 
+class dentry_table;
+
 enum meta_location {
     LOCAL = 0,
     REMOTE,
@@ -36,6 +38,7 @@ enum meta_location {
 class inode {
 private:
 	uuid p_ino;
+	std::weak_ptr<dentry_table> parent_dentry_table;
 
 	struct _core {
 		mode_t i_mode;
@@ -72,9 +75,9 @@ public:
 
 	inode(const inode &copy);
 
-	/* for normal reg file and root directory */
+	/* for normal reg file and directory */
 	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, bool root = false);
-    	/* for normal directory */
+    	/* for directory whose parent is located remotely*/
     	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
 	/* for symlink */
 	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
@@ -108,7 +111,7 @@ public:
 
 	// setter
 	void set_p_ino(const uuid &p_ino);
-
+	void set_parent_dentry_table(std::shared_ptr<dentry_table> parent);
 	void set_mode(mode_t mode);
 	void set_uid(uid_t uid);
 	void set_gid(gid_t gid);
@@ -121,12 +124,15 @@ public:
 
 	void set_loc(uint64_t loc);
 	void set_link_target_len(uint32_t len);
-	void set_link_target_name(const std::shared_ptr<std::string> name);
+	void set_link_target_name(std::shared_ptr<std::string> name);
 
 	void inode_to_rename_src_response(::rpc_rename_not_same_parent_src_respond *response);
     	void rename_src_response_to_inode(::rpc_rename_not_same_parent_src_respond &response);
     	void inode_to_rename_dst_request(::rpc_rename_not_same_parent_dst_request &request);
     	void rename_dst_request_to_inode(const ::rpc_rename_not_same_parent_dst_request *request);
+
+    	/* Only used in local_ops because remote inodes don't have parente dentry table locally */
+    	bool is_valid();
 };
 
 uuid alloc_new_ino();
