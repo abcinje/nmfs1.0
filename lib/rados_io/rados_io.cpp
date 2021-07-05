@@ -198,7 +198,7 @@ size_t rados_io::write(obj_category category, const string &key, const char *val
 	/* Fill the "hole" with zeros if the given offset is greater than the file size.
 	   To do this, get the file size and do zerofill via zerofill(). */
 	int ret;
-	size_t inf_file_size;
+	size_t lb_file_size;
 
 	for (int64_t prev_obj_num = offset >> OBJ_BITS; prev_obj_num >= 0; prev_obj_num--) {
 		uint64_t size;
@@ -208,7 +208,7 @@ size_t rados_io::write(obj_category category, const string &key, const char *val
 
 		ret = ioctx.stat(prev_obj_key, &size, &mtime);
 		if (ret >= 0) {
-			inf_file_size = (prev_obj_num << OBJ_BITS) + size;
+			lb_file_size = (prev_obj_num << OBJ_BITS) + size;
 			break;
 		} else if (ret != -ENOENT) {
 			throw runtime_error("rados_io::write() failed (stat() failed)");
@@ -217,12 +217,12 @@ size_t rados_io::write(obj_category category, const string &key, const char *val
 
 	/* There are no such RADOS objects. */
 	if (ret == -ENOENT)
-		inf_file_size = 0;
+		lb_file_size = 0;
 
 	/* Do zerofill */
-	/* If inf_file_size < offset, inf_file_size is equal to the file size */
-	if (inf_file_size < offset)
-		zerofill(category, key, offset - inf_file_size, inf_file_size);
+	/* If lb_file_size < offset, lb_file_size is equal to the file size */
+	if (lb_file_size < offset)
+		zerofill(category, key, offset - lb_file_size, lb_file_size);
 
 	/* Now it's time to write. */
 	off_t cursor = offset;
@@ -329,7 +329,7 @@ int rados_io::truncate(obj_category category, const string &key, size_t offset){
 	string p_key = get_prefix(category) + key;
 
 	int ret;
-	size_t inf_file_size;
+	size_t lb_file_size;
 
 	for (int64_t prev_obj_num = offset >> OBJ_BITS; prev_obj_num >= 0; prev_obj_num--) {
 		uint64_t size;
@@ -339,7 +339,7 @@ int rados_io::truncate(obj_category category, const string &key, size_t offset){
 
 		ret = ioctx.stat(prev_obj_key, &size, &mtime);
 		if (ret >= 0) {
-			inf_file_size = (prev_obj_num << OBJ_BITS) + size;
+			lb_file_size = (prev_obj_num << OBJ_BITS) + size;
 			break;
 		} else if (ret != -ENOENT) {
 			throw runtime_error("rados_io::truncate() failed (stat() failed)");
@@ -353,9 +353,9 @@ int rados_io::truncate(obj_category category, const string &key, size_t offset){
 	}
 
 	/* Do zerofill */
-	/* If inf_file_size < offset, inf_file_size is equal to the file size */
-	if (inf_file_size < offset) {
-		zerofill(category, key, offset - inf_file_size, inf_file_size);
+	/* If lb_file_size < offset, lb_file_size is equal to the file size */
+	if (lb_file_size < offset) {
+		zerofill(category, key, offset - lb_file_size, lb_file_size);
 		return 0;
 	}
 
