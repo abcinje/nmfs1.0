@@ -103,7 +103,7 @@ int transaction::deserialize(std::vector<char> raw)
 		index += dentry_size;
 
 		/* ino */
-		boost::uuids::uuid ino;
+		uuid ino;
 		std::copy(raw.begin() + index, raw.begin() + index + ino.size(), ino.begin());
 		index += ino.size();
 
@@ -407,7 +407,7 @@ void transaction::sync(std::shared_ptr<rados_io> meta)
 	for (const auto &p : dentries) {
 		bool alive = p.second.first;
 		std::string name = p.first;
-		boost::uuids::uuid ino = p.second.second;
+		uuid ino = p.second.second;
 
 		if (alive) {
 			d.add_child(name, ino);
