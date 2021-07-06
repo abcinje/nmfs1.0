@@ -4,7 +4,12 @@
 #include <chrono>
 #include <shared_mutex>
 #include <tuple>
+
+#include <boost/functional/hash.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <tsl/robin_map.h>
+
 #include "../meta/uuid_controller.hpp"
 #include "../../lib/logger/logger.hpp"
 
@@ -29,7 +34,7 @@ private:
 	};
 
 	std::shared_mutex sm;
-	tsl::robin_map<std::string, lease_entry *> map;
+	tsl::robin_map<uuid, lease_entry *, boost::hash<uuid>> map;
 
 public:
 	lease_table_client(void) = default;

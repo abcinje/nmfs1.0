@@ -48,12 +48,12 @@ lease_table_client::~lease_table_client(void)
 
 bool lease_table_client::is_valid(uuid ino)
 {
-	global_logger.log(lease_ops, "Called is_valid(" + uuid_to_string(ino) + ")");
+	global_logger.log(lease_ops, "Called is_valid(" + to_string(ino) + ")");
 	lease_entry *e;
 
 	{
 		std::shared_lock lock(sm);
-		auto it = map.find(uuid_to_string(ino));
+		auto it = map.find(ino);
 		if (it != map.end()) {
 			global_logger.log(lease_ops, "Find lease in the table!");
 			e = it->second;
@@ -76,14 +76,14 @@ bool lease_table_client::is_valid(uuid ino)
 
 bool lease_table_client::is_mine(uuid ino)
 {
-	global_logger.log(lease_ops, "Called is_mine(" + uuid_to_string(ino) + ")");
+	global_logger.log(lease_ops, "Called is_mine(" + to_string(ino) + ")");
 	lease_entry *e;
 	system_clock::time_point latest_due;
 	bool mine;
 
 	{
 		std::shared_lock lock(sm);
-		auto it = map.find(uuid_to_string(ino));
+		auto it = map.find(ino);
 		if (it != map.end()) {
 			e = it->second;
 		} else {
@@ -97,7 +97,7 @@ bool lease_table_client::is_mine(uuid ino)
 
 void lease_table_client::update(uuid ino, const system_clock::time_point &new_due, bool mine)
 {
-	global_logger.log(lease_ops, "Called update(" + uuid_to_string(ino) + ")");
+	global_logger.log(lease_ops, "Called update(" + to_string(ino) + ")");
 	global_logger.log(lease_ops, "new_due: " + serializeTimePoint(new_due, "UTC: %Y-%m-%d %H:%M:%S"));
 
 	lease_entry *e;
@@ -105,7 +105,7 @@ void lease_table_client::update(uuid ino, const system_clock::time_point &new_du
 
 	{
 		std::shared_lock lock(sm);
-		auto it = map.find(uuid_to_string(ino));
+		auto it = map.find(ino);
 		if (it != map.end()) {
 			found = true;
 			e = it->second;
@@ -119,7 +119,7 @@ void lease_table_client::update(uuid ino, const system_clock::time_point &new_du
 
 	{
 		std::unique_lock lock(sm);
-		auto ret = map.insert({uuid_to_string(ino), nullptr});
+		auto ret = map.insert({ino, nullptr});
 		if (ret.second) {
 			ret.first.value() = new lease_entry(new_due, mine);
 		} else {
