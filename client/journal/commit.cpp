@@ -18,7 +18,6 @@ void commit::operator()(void)
 		auto map = table->replace_map();
 		for (const auto &p : *map) {
 			/* Write a transaction to its journal */
-			std::string ino = p.first;
 			auto tx = p.second;
 			tx->commit(meta);
 

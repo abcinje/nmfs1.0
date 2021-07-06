@@ -6,11 +6,16 @@
 #include <mutex>
 #include <stdexcept>
 #include <vector>
+
+#include <boost/functional/hash.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <tsl/robin_map.h>
 
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../meta/inode.hpp"
+
+using namespace boost::uuids;
 
 class transaction {
 public:
@@ -47,7 +52,7 @@ private:
 	tsl::robin_map<std::string, std::pair<bool, uuid>> dentries;
 
 	/* An unique pointer whose value is null means the file has been deleted. */
-	tsl::robin_map<std::string, std::unique_ptr<inode>> f_inodes;
+	tsl::robin_map<uuid, std::unique_ptr<inode>, boost::hash<uuid>> f_inodes;
 
 public:
 	transaction(const uuid &self_ino);

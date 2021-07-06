@@ -121,7 +121,7 @@ int transaction::deserialize(std::vector<char> raw)
 
 		auto i = std::make_unique<inode>(JOURNAL);
 		i->deserialize(&raw[index]);
-		auto ret = f_inodes.insert({uuid_to_string(i->get_ino()), std::move(i)});
+		auto ret = f_inodes.insert({i->get_ino(), std::move(i)});
 		if (!ret.second)
 			throw std::logic_error("transaction::deserialize() failed (a duplicated key exists)");
 		index += f_inode_size;
@@ -136,7 +136,7 @@ transaction::transaction(const uuid &self_ino) : committed(false), status(self_s
 
 int transaction::mkself(std::shared_ptr<inode> self_inode)
 {
-	global_logger.log(transaction_ops, "Called transaction::mkself(" + uuid_to_string(self_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::mkself(" + to_string(self_inode->get_ino()) + ")");
 
 	std::unique_lock lock(m);
 
@@ -151,7 +151,7 @@ int transaction::mkself(std::shared_ptr<inode> self_inode)
 
 int transaction::rmself(const uuid &self_ino)
 {
-	global_logger.log(transaction_ops, "Called transaction::rmself(" + uuid_to_string(self_ino) + ")");
+	global_logger.log(transaction_ops, "Called transaction::rmself(" + to_string(self_ino) + ")");
 
 	std::unique_lock lock(m);
 
@@ -165,7 +165,7 @@ int transaction::rmself(const uuid &self_ino)
 
 int transaction::chself(std::shared_ptr<inode> self_inode)
 {
-	global_logger.log(transaction_ops, "Called transaction::chself(" + uuid_to_string(self_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::chself(" + to_string(self_inode->get_ino()) + ")");
 
 	std::unique_lock lock(m);
 
@@ -179,7 +179,7 @@ int transaction::chself(std::shared_ptr<inode> self_inode)
 
 int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
-	global_logger.log(transaction_ops, "Called transaction::mkdir(" + uuid_to_string(self_inode->get_ino()) + ", " + d_name + ")");
+	global_logger.log(transaction_ops, "Called transaction::mkdir(" + to_string(self_inode->get_ino()) + ", " + d_name + ")");
 
 	std::unique_lock lock(m);
 
@@ -207,7 +207,7 @@ int transaction::mkdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 
 int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_name, const uuid &d_ino)
 {
-	global_logger.log(transaction_ops, "Called transaction::rmdir(" + uuid_to_string(self_inode->get_ino()) + "," + d_name + ")");
+	global_logger.log(transaction_ops, "Called transaction::rmdir(" + to_string(self_inode->get_ino()) + "," + d_name + ")");
 
 	std::unique_lock lock(m);
 
@@ -235,7 +235,7 @@ int transaction::rmdir(std::shared_ptr<inode> self_inode, const std::string &d_n
 
 int transaction::mvdir(std::shared_ptr<inode> self_inode, const std::string &src_d_name, const uuid &src_d_ino, const std::string &dst_d_name, const uuid &dst_d_ino)
 {
-	global_logger.log(journal_ops, "Called transaction::mvdir(" + src_d_name + ", " + uuid_to_string(src_d_ino) + ", " + dst_d_name + ", " + uuid_to_string(dst_d_ino) + ")");
+	global_logger.log(journal_ops, "Called transaction::mvdir(" + src_d_name + ", " + to_string(src_d_ino) + ", " + dst_d_name + ", " + to_string(dst_d_ino) + ")");
 
 	std::unique_lock lock(m);
 
@@ -266,7 +266,7 @@ int transaction::mvdir(std::shared_ptr<inode> self_inode, const std::string &src
 
 int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
-	global_logger.log(transaction_ops, "Called transaction::mkreg(" + uuid_to_string(f_inode->get_ino()) + ", " + f_name + ")");
+	global_logger.log(transaction_ops, "Called transaction::mkreg(" + to_string(f_inode->get_ino()) + ", " + f_name + ")");
 
 	std::unique_lock lock(m);
 
@@ -289,7 +289,7 @@ int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 		s_inode = std::make_unique<inode>(*self_inode);
 	}
 
-	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
+	auto f_inodes_ret = f_inodes.insert({f_inode->get_ino(), nullptr});
 	if (f_inodes_ret.second || !f_inodes_ret.first->second) {
 		f_inodes_ret.first.value() = std::make_unique<inode>(*f_inode);
 	} else {
@@ -301,7 +301,7 @@ int transaction::mkreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 
 int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_name, std::shared_ptr<inode> f_inode)
 {
-	global_logger.log(transaction_ops, "Called transaction::rmreg(" + uuid_to_string(f_inode->get_ino()) + ", " + f_name + ")");
+	global_logger.log(transaction_ops, "Called transaction::rmreg(" + to_string(f_inode->get_ino()) + ", " + f_name + ")");
 
 	std::unique_lock lock(m);
 
@@ -324,7 +324,7 @@ int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 		s_inode = std::make_unique<inode>(*self_inode);
 	}
 
-	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
+	auto f_inodes_ret = f_inodes.insert({f_inode->get_ino(), nullptr});
 	if (!f_inodes_ret.second) {
 		if (f_inodes_ret.first->second) {
 			f_inodes_ret.first.value() = nullptr;
@@ -338,7 +338,7 @@ int transaction::rmreg(std::shared_ptr<inode> self_inode, const std::string &f_n
 
 int transaction::mvreg(std::shared_ptr<inode> self_inode, const std::string &src_f_name, const uuid &src_f_ino, const std::string &dst_f_name, const uuid &dst_f_ino)
 {
-	global_logger.log(journal_ops, "Called transaction::mvreg(" + src_f_name + ", " + uuid_to_string(src_f_ino) + ", " + dst_f_name + ", " + uuid_to_string(dst_f_ino) + ")");
+	global_logger.log(journal_ops, "Called transaction::mvreg(" + src_f_name + ", " + to_string(src_f_ino) + ", " + dst_f_name + ", " + to_string(dst_f_ino) + ")");
 
 	std::unique_lock lock(m);
 
@@ -365,7 +365,7 @@ int transaction::mvreg(std::shared_ptr<inode> self_inode, const std::string &src
 	}
 
 	if (!dst_f_ino.is_nil()) {
-		auto f_inodes_ret = f_inodes.insert({uuid_to_string(dst_f_ino), nullptr});
+		auto f_inodes_ret = f_inodes.insert({dst_f_ino, nullptr});
 		if (!f_inodes_ret.second)
 			f_inodes_ret.first.value() = nullptr;
 	}
@@ -375,14 +375,14 @@ int transaction::mvreg(std::shared_ptr<inode> self_inode, const std::string &src
 
 int transaction::chreg(std::shared_ptr<inode> f_inode)
 {
-	global_logger.log(transaction_ops, "Called transaction::chreg(" + uuid_to_string(f_inode->get_ino()) + ")");
+	global_logger.log(transaction_ops, "Called transaction::chreg(" + to_string(f_inode->get_ino()) + ")");
 
 	std::unique_lock lock(m);
 
 	if (committed)
 		return -1;
 
-	auto f_inodes_ret = f_inodes.insert({uuid_to_string(f_inode->get_ino()), nullptr});
+	auto f_inodes_ret = f_inodes.insert({f_inode->get_ino(), nullptr});
 	f_inodes_ret.first.value() = std::make_unique<inode>(*f_inode);
 
 	return 0;
@@ -393,8 +393,8 @@ void transaction::sync(std::shared_ptr<rados_io> meta)
 	global_logger.log(transaction_ops, "Called sync()");
 
 	if (status == self_status::S_DELETED) {
-		meta->remove(obj_category::INODE, uuid_to_string(s_ino));
-		meta->remove(obj_category::DENTRY, uuid_to_string(s_ino));
+		meta->remove(obj_category::INODE, to_string(s_ino));
+		meta->remove(obj_category::DENTRY, to_string(s_ino));
 		return;
 	}
 
@@ -438,8 +438,8 @@ void transaction::commit(std::shared_ptr<rados_io> meta)
 	auto raw = serialize();
 
 	size_t obj_size;
-	meta->stat(obj_category::JOURNAL, uuid_to_string(s_ino), obj_size);
-	meta->write(obj_category::JOURNAL, uuid_to_string(s_ino), raw.data(), raw.size(), obj_size);
+	meta->stat(obj_category::JOURNAL, to_string(s_ino), obj_size);
+	meta->write(obj_category::JOURNAL, to_string(s_ino), raw.data(), raw.size(), obj_size);
 
 	/* Update offset */
 	offset = obj_size;
@@ -453,5 +453,5 @@ void transaction::checkpoint(std::shared_ptr<rados_io> meta)
 	sync(meta);
 
 	/* Clear the checkpoint bit */
-	meta->write(obj_category::JOURNAL, uuid_to_string(s_ino), "\0", 1, offset);
+	meta->write(obj_category::JOURNAL, to_string(s_ino), "\0", 1, offset);
 }

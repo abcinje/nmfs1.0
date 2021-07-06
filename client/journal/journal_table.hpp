@@ -3,11 +3,17 @@
 
 #include <memory>
 #include <shared_mutex>
+
+#include <boost/functional/hash.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <tsl/robin_map.h>
 
 #include "transaction.hpp"
 
-using journal_map = tsl::robin_map<std::string, std::shared_ptr<transaction>>;
+using namespace boost::uuids;
+
+using journal_map = tsl::robin_map<uuid, std::shared_ptr<transaction>, boost::hash<uuid>>;
 
 class journal_table {
 private:
