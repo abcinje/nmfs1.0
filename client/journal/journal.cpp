@@ -2,15 +2,17 @@
 
 journal::journal(std::shared_ptr<rados_io> meta_pool, std::shared_ptr<lease_client> lease) : meta(meta_pool), lc(lease), stopped(false)
 {
-	commit_thr = std::make_unique<std::thread>(commit(&stopped, meta, &jtable, &q));
-	checkpoint_thr = std::make_unique<std::thread>(checkpoint(meta, &q));
+	commit_thr = std::make_unique<std::thread>(commit(&stopped, meta, &jtable, q));
+	for (int i = 0; i < NUM_CP_THREAD; i++)
+		checkpoint_thr[i] = std::make_unique<std::thread>(checkpoint(meta, &q[i]));
 }
 
 journal::~journal(void)
 {
 	stopped = true;
 	commit_thr->join();
-	checkpoint_thr->join();
+	for (int i = 0; i < NUM_CP_THREAD; i++)
+		checkpoint_thr[i]->join();
 }
 
 void journal::check(const uuid &self_ino)

@@ -9,6 +9,8 @@
 #include "mqueue.hpp"
 #include "../lease/lease_client.hpp"
 
+#define NUM_CP_THREAD 8
+
 class journal {
 private:
 	std::shared_ptr<rados_io> meta;
@@ -16,8 +18,8 @@ private:
 
 	bool stopped;
 	journal_table jtable;
-	mqueue<std::shared_ptr<transaction>> q;
-	std::unique_ptr<std::thread> commit_thr, checkpoint_thr;
+	mqueue<std::shared_ptr<transaction>> q[NUM_CP_THREAD];
+	std::unique_ptr<std::thread> commit_thr, checkpoint_thr[NUM_CP_THREAD];
 
 public:
 	journal(std::shared_ptr<rados_io> meta_pool, std::shared_ptr<lease_client> lease);
