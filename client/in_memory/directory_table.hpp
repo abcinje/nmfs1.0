@@ -6,6 +6,11 @@
 #include <memory>
 #include <mutex>
 
+#include <boost/functional/hash.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <tsl/robin_map.h>
+
 #include "dentry_table.hpp"
 #include "../meta/inode.hpp"
 #include "../meta/dentry.hpp"
@@ -15,10 +20,11 @@
 #include "../journal/journal.hpp"
 
 using std::shared_ptr;
+using namespace boost::uuids;
 
 class directory_table {
 private:
-	std::map<uuid, shared_ptr<dentry_table>> dentry_tables;
+	tsl::robin_map<uuid, shared_ptr<dentry_table>, boost::hash<uuid>> dentry_tables;
 
 public:
 	std::recursive_mutex directory_table_mutex;
@@ -29,11 +35,10 @@ public:
 	int delete_dentry_table(uuid ino);
 
 	shared_ptr<inode> path_traversal(const std::string &path);
-    	shared_ptr<dentry_table> lease_dentry_table(uuid ino);
-    	shared_ptr<dentry_table> lease_dentry_table_mkdir(std::shared_ptr<inode> new_dir_inode, std::shared_ptr<dentry> new_dir_dentry);
+	shared_ptr<dentry_table> lease_dentry_table(uuid ino);
+	shared_ptr<dentry_table> lease_dentry_table_mkdir(std::shared_ptr<inode> new_dir_inode, std::shared_ptr<dentry> new_dir_dentry);
 	shared_ptr<dentry_table> get_dentry_table(uuid ino, bool remote = false);
 	void find_remote_dentry_table_again(const std::shared_ptr<remote_inode>& remote_i);
 };
 
 #endif //NMFS0_DIRECTORY_TABLE_HPP
-

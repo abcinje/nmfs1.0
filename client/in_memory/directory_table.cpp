@@ -28,14 +28,14 @@ directory_table::directory_table() {
 directory_table::~directory_table() {
 	global_logger.log(directory_table_ops, "Called ~directory_table()");
 
-	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
-	for(it = this->dentry_tables.begin(); it != this->dentry_tables.end(); it++) {
-		it->second = nullptr;
+	for(auto it = this->dentry_tables.begin(); it != this->dentry_tables.end(); it++) {
+		it.value() = nullptr;
 	}
 }
 
 shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 	global_logger.log(directory_table_ops, "Called path_traverse(" + path + ")");
+
 	shared_ptr<dentry_table> parent_dentry_table = this->get_dentry_table(get_root_ino());
 	shared_ptr<inode> target_inode = parent_dentry_table->get_this_dir_inode();;
 	uuid check_target_ino;
@@ -78,6 +78,7 @@ shared_ptr<inode> directory_table::path_traversal(const std::string &path) {
 shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 	global_logger.log(directory_table_ops, "Called lease_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
+
 	std::string temp_address;
 	int ret = lc->acquire(ino, temp_address);
 	shared_ptr<dentry_table> new_dentry_table = nullptr;
@@ -106,6 +107,7 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table(uuid ino){
 shared_ptr<dentry_table> directory_table::lease_dentry_table_mkdir(std::shared_ptr<inode> new_dir_inode, std::shared_ptr<dentry> new_dir_dentry) {
 	global_logger.log(directory_table_ops, "Called lease_dentry_table_mkdir(" + uuid_to_string(new_dir_inode->get_ino()) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
+
 	std::string temp_address;
 	int ret = lc->acquire(new_dir_inode->get_ino(), temp_address);
 	shared_ptr<dentry_table> new_dentry_table = nullptr;
@@ -128,8 +130,8 @@ shared_ptr<dentry_table> directory_table::lease_dentry_table_mkdir(std::shared_p
 shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino, bool remote) {
 	global_logger.log(directory_table_ops, "get_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
-	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
-	it = this->dentry_tables.find(ino);
+
+	auto it = this->dentry_tables.find(ino);
 	if (remote) {
 		if (it != this->dentry_tables.end()) { /* LOCAL, REMOTE */
 			global_logger.log(directory_table_ops, "dentry_table : HIT");
@@ -166,9 +168,10 @@ shared_ptr<dentry_table> directory_table::get_dentry_table(uuid ino, bool remote
 int directory_table::add_dentry_table(uuid ino, shared_ptr<dentry_table> dtable){
 	global_logger.log(directory_table_ops, "Called add_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
+
 	auto ret = dentry_tables.insert(std::make_pair(ino, nullptr));
 	if(ret.second) {
-		ret.first->second = dtable;
+		ret.first.value() = dtable;
 	} else {
 		global_logger.log(directory_table_ops, "Already added dentry table is tried to inserted");
 		return -1;
@@ -179,9 +182,8 @@ int directory_table::add_dentry_table(uuid ino, shared_ptr<dentry_table> dtable)
 int directory_table::delete_dentry_table(uuid ino){
 	global_logger.log(directory_table_ops, "Called delete_dentry_table(" + uuid_to_string(ino) + ")");
 	std::scoped_lock scl{this->directory_table_mutex};
-	std::map<uuid, shared_ptr<dentry_table>>::iterator it;
-	it = this->dentry_tables.find(ino);
 
+	auto it = this->dentry_tables.find(ino);
 	if(it == this->dentry_tables.end()) {
 		global_logger.log(directory_table_ops, "Non-existed dentry table is tried to delete");
 		return -1;
@@ -194,6 +196,7 @@ int directory_table::delete_dentry_table(uuid ino){
 
 void directory_table::find_remote_dentry_table_again(const std::shared_ptr<remote_inode>& remote_i) {
 	global_logger.log(directory_table_ops, "Called find_remote_dentry_table_again()");
+
 	shared_ptr<dentry_table> target_dentry_table = this->get_dentry_table(remote_i->get_dentry_table_ino());
 	if(target_dentry_table->get_loc() == REMOTE) {
 		global_logger.log(directory_table_ops, "Remote dentry table moves to other leader");
