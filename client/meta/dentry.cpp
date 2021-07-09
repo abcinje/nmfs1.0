@@ -25,7 +25,7 @@ void dentry::add_child(const std::string &filename, uuid ino){
 	auto ret = this->child_list.insert(std::make_pair(filename, ino));
 	if(!ret.second) {
 		global_logger.log(dentry_ops, "Replace file with new ino");
-		ret.first->second = ino;
+		ret.first.value() = ino;
 	}
 }
 

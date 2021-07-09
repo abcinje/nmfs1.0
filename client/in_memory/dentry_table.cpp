@@ -30,11 +30,13 @@ dentry_table::dentry_table(std::shared_ptr<inode> new_dir_inode, std::shared_ptr
 
 dentry_table::~dentry_table() {
 	global_logger.log(dentry_table_ops, "Called ~dentry_table(" + uuid_to_string(this->dir_ino)+")");
+
 	this->child_inodes.clear();
 }
 
 int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called create_child_ino(" + filename + ")");
+
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if (ret.second) {
 		ret.first->second = inode;
@@ -51,6 +53,7 @@ int dentry_table::create_child_inode(std::string filename, shared_ptr<inode> ino
 
 int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode){
 	global_logger.log(dentry_table_ops, "Called add_child_ino(" + filename + ")");
+
 	auto ret = this->child_inodes.insert(std::make_pair(filename, nullptr));
 	if(ret.second) {
 		ret.first->second = inode;
@@ -63,9 +66,8 @@ int dentry_table::add_child_inode(std::string filename, shared_ptr<inode> inode)
 
 int dentry_table::delete_child_inode(std::string filename) {
 	global_logger.log(dentry_table_ops, "Called delete_child_inode(" + filename + ")");
-	std::map<std::string, shared_ptr<inode >>::iterator it;
-	it = this->child_inodes.find(filename);
 
+	auto it = this->child_inodes.find(filename);
 	if (it == this->child_inodes.end()) {
 		global_logger.log(dentry_table_ops, "Non-existing file is tried to deleted");
 		return -1;
@@ -81,10 +83,9 @@ int dentry_table::delete_child_inode(std::string filename) {
 
 shared_ptr<inode> dentry_table::get_child_inode(std::string filename, uuid target_ino){
 	global_logger.log(dentry_table_ops, "Called get_child_inode(" + filename + ", " + uuid_to_string(target_ino) + ")");
-	if(this->get_loc() == LOCAL) {
-		std::map<std::string, shared_ptr<inode>>::iterator it;
-		it = this->child_inodes.find(filename);
 
+	if(this->get_loc() == LOCAL) {
+		auto it = this->child_inodes.find(filename);
 		if(it == this->child_inodes.end()) {
 			throw inode::no_entry("No such file or directory : get_child_inode");
 		}
@@ -102,6 +103,7 @@ shared_ptr<inode> dentry_table::get_child_inode(std::string filename, uuid targe
 
 uuid dentry_table::check_child_inode(std::string filename){
 	global_logger.log(dentry_table_ops, "Called check_child_inode(" + filename + ")");
+
 	if(this->loc == LOCAL) {
 		if(filename == "/")
 			return get_root_ino();
@@ -120,9 +122,10 @@ uuid dentry_table::check_child_inode(std::string filename){
 
 int dentry_table::pull_child_metadata() {
 	global_logger.log(dentry_table_ops, "Called pull_child_metadata()");
+
 	this->dentries = std::make_shared<dentry>(this->dir_ino);
-	std::map<std::string, uuid>::iterator it;
-	for(it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
+
+	for(auto it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
 		shared_ptr<inode> child_i = std::make_shared<inode>(it->second);
 		child_i->set_p_ino(this->dir_ino);
 		if(S_ISDIR(child_i->get_mode())){
@@ -167,6 +170,7 @@ uuid dentry_table::get_dir_ino(){
 
 shared_ptr<inode> dentry_table::get_this_dir_inode() {
 	global_logger.log(dentry_table_ops, "Called get_this_dir_inode(" + uuid_to_string(this->dir_ino) + ")");
+
 	if(this->loc == LOCAL) {
 		return this->this_dir_inode;
 	} else if (this->loc == REMOTE){

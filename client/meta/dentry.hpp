@@ -4,6 +4,9 @@
 #include <map>
 #include <utility>
 #include <mutex>
+
+#include <tsl/robin_map.h>
+
 #include "../fs_ops/fuse_ops.hpp"
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../../lib/logger/logger.hpp"
@@ -20,7 +23,7 @@ class dentry_table;
 class dentry {
 private:
 	uuid this_ino;
-	std::map<std::string, uuid> child_list;
+	tsl::robin_map<std::string, uuid> child_list;
 
 public:
 	explicit dentry(uuid ino, bool mkdir = false);
