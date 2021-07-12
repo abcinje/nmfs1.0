@@ -38,7 +38,7 @@ enum meta_location {
 class inode {
 private:
 	uuid p_ino;
-	std::weak_ptr<dentry_table> parent_dentry_table;
+	std::weak_ptr<dentry_table> brooding_table;
 
 	struct _core {
 		mode_t i_mode;
@@ -111,7 +111,7 @@ public:
 
 	// setter
 	void set_p_ino(const uuid &p_ino);
-	void set_parent_dentry_table(std::shared_ptr<dentry_table> parent);
+	void set_brooding_table(std::shared_ptr<dentry_table> table);
 	void set_mode(mode_t mode);
 	void set_uid(uid_t uid);
 	void set_gid(gid_t gid);
