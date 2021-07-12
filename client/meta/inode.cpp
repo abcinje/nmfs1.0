@@ -396,8 +396,9 @@ bool inode::is_valid() {
 	if (brooding_table.expired())
 		return false;
 	else {
-		std::shared_ptr<dentry_table> shared_parent = brooding_table.lock();
-		return shared_parent->is_valid();
+		std::shared_ptr<dentry_table> shared_brooding = brooding_table.lock();
+		std::shared_lock dtable_sl{shared_brooding->dentry_table_mutex};
+		return shared_brooding->is_valid();
 	}
 }
 
