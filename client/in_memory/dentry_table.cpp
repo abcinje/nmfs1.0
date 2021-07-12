@@ -125,7 +125,9 @@ int dentry_table::pull_child_metadata(const std::shared_ptr<dentry_table>& this_
 	for(it = this->dentries->child_list.begin(); it != this->dentries->child_list.end(); it++) {
 		shared_ptr<inode> child_i = std::make_shared<inode>(it->second);
 		child_i->set_p_ino(this->dir_ino);
-		child_i->set_parent_dentry_table(this_dentry_table);
+		if(!S_ISDIR(child_i->get_mode()))
+			child_i->set_brooding_table(this_dentry_table);
+
 		if(S_ISDIR(child_i->get_mode())){
 			child_i->set_loc(UNKNOWN);
 		} else {
@@ -188,6 +190,7 @@ const string &dentry_table::get_leader_ip(){
 }
 
 bool dentry_table::is_valid() {
+	/* TODO : atomically operate */
 	if (status == VALID)
 		return true;
 	else
