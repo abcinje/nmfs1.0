@@ -95,7 +95,15 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 		}
 
 		if (i->get_loc() == LOCAL) {
-			local_getattr(i, stat);
+			while(true) {
+				ret = local_getattr(i, stat);
+				if(ret == -ERETRAV){
+					/* TODO : treat open file differently */
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true){
 				ret = remote_getattr(std::dynamic_pointer_cast<remote_inode>(i), stat);
@@ -126,7 +134,14 @@ int fuse_ops::access(const char *path, int mask) {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
-			local_access(i, mask);
+			while(true) {
+				ret = local_access(i, mask);
+				if(ret == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true){
 				ret = remote_access(std::dynamic_pointer_cast<remote_inode>(i), mask);
@@ -162,7 +177,14 @@ int fuse_ops::symlink(const char *src, const char *dst) {
 			dst_parent_i->get_ino());
 
 		if (dst_parent_dentry_table->get_loc() == LOCAL) {
-			ret = local_symlink(dst_parent_i, src, dst);
+			while(true) {
+				ret = local_symlink(dst_parent_i, src, dst);
+				if(ret == -ERETRAV){
+					dst_parent_i = indexing_table->path_traversal(*dst_parent_name);
+					continue;
+				} else
+					break;
+			}
 		} else if (dst_parent_dentry_table->get_loc() == REMOTE) {
 			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
 				dst_parent_dentry_table->get_leader_ip(),
@@ -198,7 +220,14 @@ int fuse_ops::readlink(const char *path, char *buf, size_t size) {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
-			ret = local_readlink(i, buf, size);
+			while (true) {
+				ret = local_readlink(i, buf, size);
+				if(ret == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true){
 				ret = remote_readlink(std::dynamic_pointer_cast<remote_inode>(i), buf, size);
@@ -231,7 +260,14 @@ int fuse_ops::opendir(const char *path, struct fuse_file_info *file_info) {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
-			ret = local_opendir(i, file_info);
+			while(true) {
+				ret = local_opendir(i, file_info);
+				if(ret == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true) {
 				ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
@@ -291,7 +327,14 @@ int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(i->get_ino());
 
 	if (target_dentry_table->get_loc() == LOCAL) {
-		local_readdir(i, buffer, filler);
+		while(true) {
+			ret = local_readdir(i, buffer, filler);
+			if(ret == -ERETRAV){
+				i = indexing_table->path_traversal(path);
+				continue;
+			} else
+				break;
+		}
 	} else if (target_dentry_table->get_loc() == REMOTE) {
 		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(),
 										   target_dentry_table->get_dir_ino(),
@@ -325,7 +368,14 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 
 		int ret = 0;
 		if (parent_dentry_table->get_loc() == LOCAL) {
-			ret = local_mkdir(parent_i, *target_name, mode, new_dir_inode, new_dir_dentry);
+			while(true) {
+				ret = local_mkdir(parent_i, *target_name, mode, new_dir_inode, new_dir_dentry);
+				if(ret == -ERETRAV){
+					parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+					continue;
+				} else
+					break;
+			}
 			indexing_table->lease_dentry_table_mkdir(new_dir_inode, new_dir_dentry);
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
@@ -614,7 +664,14 @@ int fuse_ops::open(const char *path, struct fuse_file_info *file_info) {
 		shared_ptr<inode> i = indexing_table->path_traversal(path);
 
 		if (i->get_loc() == LOCAL) {
-			ret = local_open(i, file_info);
+			while(true) {
+				ret = local_open(i, file_info);
+				if(ret == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true) {
 				ret = remote_open(std::dynamic_pointer_cast<remote_inode>(i), file_info);
@@ -673,7 +730,14 @@ int fuse_ops::create(const char *path, mode_t mode, struct fuse_file_info *file_
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		if (parent_dentry_table->get_loc() == LOCAL) {
-			local_create(parent_i, *target_name, mode, file_info);
+			while(true) {
+				ret = local_create(parent_i, *target_name, mode, file_info);
+				if(ret == -ERETRAV){
+					parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+					continue;
+				} else
+					break;
+			}
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
 				parent_dentry_table->get_leader_ip(),
@@ -711,7 +775,14 @@ int fuse_ops::unlink(const char *path) {
 		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
 		if (parent_dentry_table->get_loc() == LOCAL) {
-			local_unlink(parent_i, *target_name);
+			while(true) {
+				ret = local_unlink(parent_i, *target_name);
+				if(ret == -ERETRAV){
+					parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+					continue;
+				} else
+					break;
+			}
 		} else if (parent_dentry_table->get_loc() == REMOTE) {
 			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
 				parent_dentry_table->get_leader_ip(),
@@ -779,7 +850,14 @@ int fuse_ops::write(const char *path, const char *buffer, size_t size, off_t off
 		}
 
 		if (i->get_loc() == LOCAL) {
-			written_len = local_write(i, buffer, size, offset, file_info->flags);
+			while(true) {
+				written_len = local_write(i, buffer, size, offset, file_info->flags);
+				if(written_len == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true) {
 				written_len = remote_write(std::dynamic_pointer_cast<remote_inode>(i), buffer, size, offset, file_info->flags);
@@ -816,7 +894,14 @@ int fuse_ops::chmod(const char *path, mode_t mode, struct fuse_file_info *file_i
 		}
 
 		if (i->get_loc() == LOCAL) {
-			local_chmod(i, mode);
+			while(true) {
+				ret = local_chmod(i, mode);
+				if(ret == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true) {
 				ret = remote_chmod(std::dynamic_pointer_cast<remote_inode>(i), mode);
@@ -853,7 +938,14 @@ int fuse_ops::chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_inf
 		}
 
 		if (i->get_loc() == LOCAL) {
-			local_chown(i, uid, gid);
+			while(true) {
+				ret = local_chown(i, uid, gid);
+				if(ret == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true) {
 				ret = remote_chown(std::dynamic_pointer_cast<remote_inode>(i), uid, gid);
@@ -891,7 +983,14 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 		}
 
 		if (i->get_loc() == LOCAL) {
-			local_utimens(i, tv);
+			while(true) {
+				ret = local_utimens(i, tv);
+				if(ret == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true) {
 				ret = remote_utimens(std::dynamic_pointer_cast<remote_inode>(i), tv);
@@ -929,7 +1028,14 @@ int fuse_ops::truncate(const char *path, off_t offset, struct fuse_file_info *fi
 		}
 
 		if (i->get_loc() == LOCAL) {
-			ret = local_truncate(i, offset);
+			while(true) {
+				ret = local_truncate(i, offset);
+				if(ret == -ERETRAV){
+					i = indexing_table->path_traversal(path);
+					continue;
+				} else
+					break;
+			}
 		} else if (i->get_loc() == REMOTE) {
 			while(true) {
 				ret = remote_truncate(std::dynamic_pointer_cast<remote_inode>(i), offset);
