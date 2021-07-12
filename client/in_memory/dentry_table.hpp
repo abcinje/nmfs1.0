@@ -28,7 +28,7 @@ private:
 	std::string leader_ip;
 
 public:
-	std::recursive_mutex dentry_table_mutex;
+	std::shared_mutex dentry_table_mutex;
 
 	class not_leader : public runtime_error {
     	public:
