@@ -190,7 +190,6 @@ const string &dentry_table::get_leader_ip(){
 }
 
 bool dentry_table::is_valid() {
-	/* TODO : atomically operate */
 	if (status == VALID)
 		return true;
 	else
