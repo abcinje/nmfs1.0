@@ -19,6 +19,7 @@
 #define DIR_INODE_SIZE 4096
 #define ENOTLEADER 8000
 #define ENEEDRECOV 8001
+#define ERETRAV 8002
 
 using std::unique_ptr;
 using std::runtime_error;
