@@ -13,11 +13,11 @@
 #include "lib/logger/logger.hpp"
 #include "lib/rados_io/rados_io.hpp"
 #include "util/path.hpp"
+#include "util/uuid.hpp"
 
 #include "rpc.grpc.pb.h"
 
 #include "../client/client.hpp"
-#include "uuid_controller.hpp"
 
 #define REG_INODE_SIZE (sizeof(struct _core))
 #define DIR_INODE_SIZE 4096

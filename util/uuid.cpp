@@ -1,4 +1,4 @@
-#include "uuid_controller.hpp"
+#include "uuid.hpp"
 
 uuid uuid_controller::alloc_new_uuid() {
 	global_logger.log(inode_ops, "Called alloc_new_uuid()");

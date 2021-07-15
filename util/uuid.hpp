@@ -1,19 +1,22 @@
-#ifndef NMFS_UUID_CONTROLLER_H
-#define NMFS_UUID_CONTROLLER_H
+#ifndef _UTIL_HPP_
+#define _UTIL_HPP_
 
-#include <sys/stat.h>
 #include <string>
+#include <sys/stat.h>
+
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
-#include "../../lib/logger/logger.hpp"
+
+#include "lib/logger/logger.hpp"
+
 using namespace boost::uuids;
+
 class uuid_controller {
 private:
 	random_generator generator;
-public:
-	uuid_controller() = default;
 
+public:
 	uuid alloc_new_uuid();
 	static uint64_t get_prefix_from_uuid(const uuid& id);
 	static uint64_t get_postfix_from_uuid(const uuid& id);
@@ -22,4 +25,5 @@ public:
 
 uuid get_root_ino();
 std::string uuid_to_string(uuid id);
-#endif //NMFS_UUID_CONTROLLER_H
+
+#endif /* _UTIL_HPP_ */

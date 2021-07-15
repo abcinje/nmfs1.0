@@ -10,7 +10,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <tsl/robin_map.h>
 
-#include "../../client/meta/uuid_controller.hpp"
+#include "util/uuid.hpp"
 
 using namespace std::chrono;
 using namespace boost::uuids;

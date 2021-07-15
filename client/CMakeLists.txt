@@ -66,7 +66,6 @@ add_executable(
   meta/remote_inode.cpp
   meta/dentry.cpp
   meta/file_handler.cpp
-  meta/uuid_controller.cpp
 
   # client
   client/client.cpp
@@ -102,6 +101,7 @@ add_executable(
   # util
   ${CMAKE_SOURCE_DIR}/util/dump.cpp
   ${CMAKE_SOURCE_DIR}/util/path.cpp
+  ${CMAKE_SOURCE_DIR}/util/uuid.cpp
 )
 
 target_link_libraries(

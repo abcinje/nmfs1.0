@@ -35,11 +35,19 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 set(_target "manager")
 set(
   _source
+
+  # main
   "main.cpp"
+
+  # lease
   "lease/lease_impl.cpp"
   "lease/lease_table.cpp"
+
+  # session
   "session/session_impl.cpp"
-  "../client/meta/uuid_controller.cpp"
+
+  # util
+  "${CMAKE_SOURCE_DIR}/util/uuid.cpp"
 )
 
 # Generate binary files
