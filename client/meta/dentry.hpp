@@ -35,11 +35,11 @@ public:
 	void deserialize(char *raw);
 	void sync();
 
-	uuid get_child_ino(const std::string& child_name);
-	void fill_filler(void *buffer, fuse_fill_dir_t filler);
+	uuid get_child_ino(const std::string& child_name) const;
+	void fill_filler(void *buffer, fuse_fill_dir_t filler) const;
 
-	uint64_t get_child_num();
-	uint64_t get_total_name_length();
+	uint64_t get_child_num() const;
+	uint64_t get_total_name_length() const;
 
 	friend class dentry_table;
 };

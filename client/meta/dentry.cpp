@@ -109,7 +109,7 @@ void dentry::sync()
 	meta_pool->write(obj_category::DENTRY, uuid_to_string(this->this_ino), raw.get(), raw_size, 0);
 }
 
-uuid dentry::get_child_ino(const std::string& child_name)
+uuid dentry::get_child_ino(const std::string& child_name) const
 {
 	global_logger.log(dentry_ops, "Called dentry.get_child_ino(" + child_name + ")");
 
@@ -120,7 +120,7 @@ uuid dentry::get_child_ino(const std::string& child_name)
 		return ret->second;
 }
 
-void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler)
+void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler) const
 {
 	filler(buffer, ".", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 	filler(buffer, "..", nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
@@ -128,11 +128,13 @@ void dentry::fill_filler(void *buffer, fuse_fill_dir_t filler)
 		filler(buffer, it.first.c_str(), nullptr, 0, static_cast<fuse_fill_dir_flags>(0));
 }
 
-uint64_t dentry::get_child_num() {
+uint64_t dentry::get_child_num() const
+{
 	return this->child_list.size();
 }
 
-uint64_t dentry::get_total_name_length() {
+uint64_t dentry::get_total_name_length() const
+{
 	uint64_t total_name_length = 0;
 
 	for(auto& ret : this->child_list){
