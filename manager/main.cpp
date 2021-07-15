@@ -2,8 +2,6 @@
 #include <memory>
 #include <string>
 
-using std::string;
-
 #include "lib/rados_io/rados_io.hpp"
 
 #include "lease/lease_impl.hpp"
@@ -21,7 +19,7 @@ int main(int argc, char *argv[])
 	rados_io::conn_info ci = {"client.admin", "ceph", 0};
 	auto meta_pool = std::make_shared<rados_io>(ci, META_POOL);
 
-	string server_address(string(argv[1]) + ":" + string(argv[2]));
+	std::string server_address(std::string(argv[1]) + ":" + std::string(argv[2]));
 	lease_impl lease_service;
 	session_impl session_service(meta_pool);
 
