@@ -8,10 +8,12 @@
 #include <vector>
 #include <mutex>
 #include <rpc.grpc.pb.h>
+
+#include "util.hpp"
 #include "../../lib/rados_io/rados_io.hpp"
 #include "../../lib/logger/logger.hpp"
+
 #include "../client/client.hpp"
-#include "../util.hpp"
 #include "uuid_controller.hpp"
 
 #define REG_INODE_SIZE (sizeof(struct _core))

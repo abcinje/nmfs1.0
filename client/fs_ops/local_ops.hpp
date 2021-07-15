@@ -1,9 +1,11 @@
 #ifndef NMFS0_LOCAL_OPS_HPP
 #define NMFS0_LOCAL_OPS_HPP
+
+#include "util.hpp"
+
 #include "../in_memory/directory_table.hpp"
 #include "../meta/file_handler.hpp"
 #include "../journal/journal.hpp"
-#include "../util.hpp"
 
 void local_getattr(shared_ptr<inode> i, struct stat* stat);
 void local_access(shared_ptr<inode> i, int mask);

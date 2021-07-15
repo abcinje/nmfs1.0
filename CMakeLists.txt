@@ -29,5 +29,8 @@ add_compile_options(-Wconversion -g)
 include_directories("lib/logger/" "lib/rados_io/")
 add_subdirectory(lib)
 
+# Utilities
+include_directories("util/")
+
 add_subdirectory(client)
 add_subdirectory(manager)

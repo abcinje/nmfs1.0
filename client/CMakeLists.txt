@@ -61,9 +61,6 @@ add_executable(
   fs_ops/fuse_ops.cpp
   fs_ops/remote_ops.cpp
 
-  # util
-  util.cpp
-
   # meta
   meta/inode.cpp
   meta/remote_inode.cpp
@@ -101,6 +98,9 @@ add_executable(
   #rpc
   rpc/rpc_client.cpp
   rpc/rpc_server.cpp
+
+  # util
+  ../util/util.cpp
 )
 
 target_link_libraries(

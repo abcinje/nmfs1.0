@@ -1,10 +1,11 @@
 #ifndef NMFS0_REMOTE_OPS_HPP
 #define NMFS0_REMOTE_OPS_HPP
 
+#include "util.hpp"
+
 #include "../in_memory/directory_table.hpp"
 #include "../meta/remote_inode.hpp"
 #include "../meta/file_handler.hpp"
-#include "../util.hpp"
 #include "../rpc/rpc_client.hpp"
 
 int remote_getattr(shared_ptr<remote_inode> i, struct stat* stat);
