@@ -95,7 +95,7 @@ add_executable(
   lease/lease_client.cpp
   lease/lease_table_client.cpp
 
-  #rpc
+  # rpc
   rpc/rpc_client.cpp
   rpc/rpc_server.cpp
 
