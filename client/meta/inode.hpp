@@ -25,11 +25,11 @@ using std::string;
 using namespace boost::uuids;
 
 enum meta_location {
-    LOCAL = 0,
-    REMOTE,
-    UNKNOWN,
-    JOURNAL,
-    NOBODY /* temporaly status */
+	LOCAL = 0,
+	REMOTE,
+	UNKNOWN,
+	JOURNAL,
+	NOBODY /* temporaly status */
 };
 
 class inode {
@@ -47,7 +47,7 @@ private:
 		struct timespec i_atime;
 		struct timespec i_mtime;
 		struct timespec i_ctime;
-	    	uint32_t link_target_len;
+		uint32_t link_target_len;
 	} core;
 
 	uint64_t loc;
@@ -73,8 +73,8 @@ public:
 
 	/* for normal reg file and root directory */
 	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, bool root = false);
-    	/* for normal directory */
-    	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
+	/* for normal directory */
+	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, uuid& predefined_ino);
 	/* for symlink */
 	inode(uuid parent_ino, uid_t owner, gid_t group, mode_t mode, const char *link_target_name);
 	/* for pull metadata */
@@ -103,7 +103,7 @@ public:
 	uint64_t get_loc();
 
 	uint32_t get_link_target_len();
-    	std::shared_ptr<std::string> get_link_target_name();
+	std::shared_ptr<std::string> get_link_target_name();
 
 	// setter
 	void set_p_ino(const uuid &p_ino);
@@ -123,9 +123,9 @@ public:
 	void set_link_target_name(const std::shared_ptr<std::string> name);
 
 	void inode_to_rename_src_response(::rpc_rename_not_same_parent_src_respond *response);
-    	void rename_src_response_to_inode(::rpc_rename_not_same_parent_src_respond &response);
-    	void inode_to_rename_dst_request(::rpc_rename_not_same_parent_dst_request &request);
-    	void rename_dst_request_to_inode(const ::rpc_rename_not_same_parent_dst_request *request);
+	void rename_src_response_to_inode(::rpc_rename_not_same_parent_src_respond &response);
+	void inode_to_rename_dst_request(::rpc_rename_not_same_parent_dst_request &request);
+	void rename_dst_request_to_inode(const ::rpc_rename_not_same_parent_dst_request *request);
 };
 
 uuid alloc_new_ino();
