@@ -4,7 +4,7 @@
 
 using std::string;
 
-#include "../lib/rados_io/rados_io.hpp"
+#include "lib/rados_io/rados_io.hpp"
 
 #include "lease/lease_impl.hpp"
 #include "session/session_impl.hpp"
