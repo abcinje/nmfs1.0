@@ -2,13 +2,14 @@
 #define _LEASE_TABLE_HPP_
 
 #include <chrono>
+#include <iostream>
 #include <shared_mutex>
 #include <string>
 #include <tuple>
-#include <tsl/robin_map.h>
+
 #include <boost/uuid/uuid.hpp>
-#include <iostream>
-#include <string>
+#include <tsl/robin_map.h>
+
 #include "../../client/meta/uuid_controller.hpp"
 
 using namespace std::chrono;
