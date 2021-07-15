@@ -1,7 +1,5 @@
 #include "inode.hpp"
 
-#include <cstring>
-
 using std::runtime_error;
 
 extern std::shared_ptr<rados_io> meta_pool;

@@ -1,4 +1,5 @@
 #include "remote_inode.hpp"
+
 #include "../rpc/rpc_client.hpp"
 
 /* <address, channel> */

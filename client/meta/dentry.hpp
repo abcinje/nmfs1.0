@@ -2,15 +2,16 @@
 #define NMFS0_DENTRY_HPP
 
 #include <map>
-#include <utility>
 #include <mutex>
+#include <utility>
 
 #include <tsl/robin_map.h>
 
-#include "../fs_ops/fuse_ops.hpp"
-#include "../../lib/rados_io/rados_io.hpp"
-#include "../../lib/logger/logger.hpp"
+#include "lib/logger/logger.hpp"
+#include "lib/rados_io/rados_io.hpp"
+
 #include "inode.hpp"
+#include "../fs_ops/fuse_ops.hpp"
 
 #define MAX_DENTRY_OBJ_SIZE OBJ_SIZE
 

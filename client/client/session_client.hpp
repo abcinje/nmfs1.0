@@ -5,8 +5,8 @@
 
 #include <grpcpp/grpcpp.h>
 
-#include <session.pb.h>
-#include <session.grpc.pb.h>
+#include "session.pb.h"
+#include "session.grpc.pb.h"
 
 using grpc::Channel;
 

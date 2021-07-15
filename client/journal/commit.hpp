@@ -2,10 +2,13 @@
 #define _COMMIT_HPP_
 
 #include <memory>
+#include <thread>
 
+#include "lib/rados_io/rados_io.hpp"
+
+#include "journal.hpp"
 #include "journal_table.hpp"
 #include "mqueue.hpp"
-#include "../../lib/rados_io/rados_io.hpp"
 
 #define JOURNALING_PERIOD_MS 5000
 

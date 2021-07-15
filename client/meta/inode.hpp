@@ -1,17 +1,20 @@
 #ifndef _INODE_HPP_
 #define _INODE_HPP_
 
+#include <cstring>
 #include <memory>
-#include <sys/stat.h>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <mutex>
-#include <rpc.grpc.pb.h>
 
-#include "util.hpp"
-#include "../../lib/rados_io/rados_io.hpp"
-#include "../../lib/logger/logger.hpp"
+#include <sys/stat.h>
+
+#include "lib/logger/logger.hpp"
+#include "lib/rados_io/rados_io.hpp"
+#include "util/path.hpp"
+
+#include "rpc.grpc.pb.h"
 
 #include "../client/client.hpp"
 #include "uuid_controller.hpp"

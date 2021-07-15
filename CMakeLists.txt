@@ -25,12 +25,10 @@ set(GRPC_GRPCPP gRPC::grpc++)
 
 add_compile_options(-Wconversion -g)
 
-# Libraries
-include_directories("lib/logger/" "lib/rados_io/")
+# Libraries and Utilities
+include_directories(".")
 add_subdirectory(lib)
 
-# Utilities
-include_directories("util/")
-
+# Target
 add_subdirectory(client)
 add_subdirectory(manager)

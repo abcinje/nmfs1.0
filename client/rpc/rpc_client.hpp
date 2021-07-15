@@ -2,11 +2,13 @@
 #define NMFS_RPC_CLIENT_HPP
 
 #include <grpcpp/grpcpp.h>
-#include <rpc.grpc.pb.h>
-#include "../meta/dentry.hpp"
-#include "../meta/remote_inode.hpp"
-#include "../meta/file_handler.hpp"
+
+#include "rpc.grpc.pb.h"
+
 #include "../journal/journal.hpp"
+#include "../meta/dentry.hpp"
+#include "../meta/file_handler.hpp"
+#include "../meta/remote_inode.hpp"
 
 using grpc::Channel;
 using grpc::ClientContext;

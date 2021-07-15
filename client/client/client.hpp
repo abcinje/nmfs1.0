@@ -4,7 +4,8 @@
 #include <atomic>
 #include <mutex>
 
-#include "../../lib/rados_io/rados_io.hpp"
+#include "lib/rados_io/rados_io.hpp"
+
 #include "session_client.hpp"
 
 class client {

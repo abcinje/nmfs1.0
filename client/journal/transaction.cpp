@@ -1,7 +1,5 @@
 #include "transaction.hpp"
 
-#include "../meta/dentry.hpp"
-
 std::vector<char> transaction::serialize(void)
 {
 	global_logger.log(transaction_ops, "Called serialize()");

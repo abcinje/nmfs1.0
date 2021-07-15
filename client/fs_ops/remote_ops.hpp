@@ -1,7 +1,7 @@
 #ifndef NMFS0_REMOTE_OPS_HPP
 #define NMFS0_REMOTE_OPS_HPP
 
-#include "util.hpp"
+#include "util/path.hpp"
 
 #include "../in_memory/directory_table.hpp"
 #include "../meta/remote_inode.hpp"

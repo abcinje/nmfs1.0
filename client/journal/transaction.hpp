@@ -12,7 +12,9 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <tsl/robin_map.h>
 
-#include "../../lib/rados_io/rados_io.hpp"
+#include "lib/rados_io/rados_io.hpp"
+
+#include "../meta/dentry.hpp"
 #include "../meta/inode.hpp"
 
 using namespace boost::uuids;

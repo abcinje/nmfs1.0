@@ -100,7 +100,8 @@ add_executable(
   rpc/rpc_server.cpp
 
   # util
-  ../util/util.cpp
+  ${CMAKE_SOURCE_DIR}/util/dump.cpp
+  ${CMAKE_SOURCE_DIR}/util/path.cpp
 )
 
 target_link_libraries(

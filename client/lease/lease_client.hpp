@@ -4,11 +4,12 @@
 #include <memory>
 #include <string>
 
+#include <boost/uuid/uuid.hpp>
 #include <grpcpp/grpcpp.h>
 
-#include <lease.pb.h>
-#include <lease.grpc.pb.h>
-#include <boost/uuid/uuid.hpp>
+#include "lease.pb.h"
+#include "lease.grpc.pb.h"
+
 #include "lease_table_client.hpp"
 
 using grpc::Channel;

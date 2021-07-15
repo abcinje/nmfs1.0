@@ -11,10 +11,11 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <tsl/robin_map.h>
 
+#include "lib/logger/logger.hpp"
+
 #include "dentry_table.hpp"
 #include "../meta/inode.hpp"
 #include "../meta/dentry.hpp"
-#include "../logger/logger.hpp"
 #include "../client/client.hpp"
 #include "../lease/lease_client.hpp"
 #include "../journal/journal.hpp"

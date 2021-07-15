@@ -1,9 +1,9 @@
 #ifndef NMFS_RPC_SERVER_HPP
 #define NMFS_RPC_SERVER_HPP
 
-#include "util.hpp"
+#include "util/path.hpp"
 
-#include <rpc.grpc.pb.h>
+#include "rpc.grpc.pb.h"
 
 #include "../in_memory/directory_table.hpp"
 #include "../meta/file_handler.hpp"

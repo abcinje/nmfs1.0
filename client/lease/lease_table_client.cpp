@@ -1,10 +1,5 @@
 #include "lease_table_client.hpp"
 
-#include <iostream>
-#include <chrono>
-#include <iomanip>
-#include <sstream>
-
 std::string serializeTimePoint(const std::chrono::system_clock::time_point& time, const std::string& format)
 {
 	std::time_t tt = std::chrono::system_clock::to_time_t(time);
