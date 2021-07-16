@@ -3,7 +3,8 @@
 #include <mutex>
 #include <thread>
 
-#include <libconfig.h++>
+#include "lib/rados_io/rados_io.hpp"
+#include "util/config.hpp"
 
 #include "fuse_ops.hpp"
 #include "local_ops.hpp"
@@ -14,7 +15,6 @@
 #include "../rpc/rpc_server.hpp"
 
 using namespace std;
-using namespace libconfig;
 
 /* global variables */
 
@@ -34,17 +34,6 @@ std::unique_ptr<thread> remote_server_thread;
 std::unique_ptr<client> this_client;
 unsigned int fuse_capable;
 
-template <typename T>
-static T lookup_config(const Config &config, const char *field)
-{
-	try {
-		return config.lookup(field);
-	} catch (const SettingNotFoundException &e) {
-		std::cerr << "No \'" << field << "\' setting in configuration file." << std::endl;
-		exit(1);
-	}
-}
-
 void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 {
 	global_logger.log(fuse_op, "Called init()");
@@ -54,13 +43,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
 	/* Get configuration */
 
 	Config cfg;
-
-	try {
-		cfg.readFile(reinterpret_cast<const char *>(fuse_ctx->private_data));
-	} catch (const FileIOException &e) {
-		std::cerr << "I/O error while reading file." << std::endl;
-		exit(1);
-	}
+	read_config(cfg, reinterpret_cast<const char *>(fuse_ctx->private_data));
 
 	std::string manager_ip = lookup_config<std::string>(cfg, "manager_ip");
 	std::string manager_port = lookup_config<std::string>(cfg, "manager_port");

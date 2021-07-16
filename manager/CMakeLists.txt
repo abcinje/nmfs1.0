@@ -47,6 +47,7 @@ set(
   "session/session_impl.cpp"
 
   # util
+  "${CMAKE_SOURCE_DIR}/util/config.cpp"
   "${CMAKE_SOURCE_DIR}/util/uuid.cpp"
 )
 

@@ -99,6 +99,7 @@ add_executable(
   rpc/rpc_server.cpp
 
   # util
+  ${CMAKE_SOURCE_DIR}/util/config.cpp
   ${CMAKE_SOURCE_DIR}/util/dump.cpp
   ${CMAKE_SOURCE_DIR}/util/path.cpp
   ${CMAKE_SOURCE_DIR}/util/uuid.cpp
