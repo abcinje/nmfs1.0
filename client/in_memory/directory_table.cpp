@@ -198,6 +198,7 @@ int directory_table::delete_dentry_table(uuid ino){
 	return 0;
 }
 
+/*
 void directory_table::find_remote_dentry_table_again(const std::shared_ptr<remote_inode>& remote_i) {
 	global_logger.log(directory_table_ops, "Called find_remote_dentry_table_again()");
 	shared_ptr<dentry_table> target_dentry_table = this->get_dentry_table(remote_i->get_dentry_table_ino());
@@ -209,4 +210,4 @@ void directory_table::find_remote_dentry_table_again(const std::shared_ptr<remot
 
 	remote_i->set_leader_ip(target_dentry_table->get_leader_ip());
 }
-
+*/
