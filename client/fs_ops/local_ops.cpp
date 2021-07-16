@@ -109,6 +109,9 @@ int local_rmdir_top(shared_ptr<inode> target_i, uuid target_ino) {
 
 	{
 		std::unique_lock dtable_ul{target_dentry_table->dentry_table_mutex};
+		if(!target_dentry_table->is_valid())
+			return -ERETRAV;
+
 		if (target_dentry_table->get_child_num() > 0)
 			return -ENOTEMPTY;
 		journalctl->rmself(target_ino);
@@ -127,6 +130,9 @@ int local_rmdir_down(shared_ptr<inode> parent_i, uuid target_ino, std::string ta
 	}
 	{
 		std::unique_lock dtable_ul{parent_dentry_table->dentry_table_mutex};
+		if(!parent_dentry_table->is_valid())
+			return -ERETRAV;
+
 		/* TODO : is it okay to delete inode which is locked? */
 		parent_dentry_table->delete_child_inode(target_name);
 
@@ -203,9 +209,13 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 	shared_ptr<inode> target_i;
 	{
 		std::unique_lock dtable_ul{parent_dentry_table->dentry_table_mutex};
+		if(!parent_dentry_table->is_valid())
+			return -ERETRAV;
 		target_i = parent_dentry_table->get_child_inode(*old_name);
 
 		std::unique_lock inode_ul{target_i->inode_mutex};
+		if(!target_i->is_valid())
+			return -ERETRAV;
 		uuid check_dst_ino = parent_dentry_table->check_child_inode(*new_name);
 
 		struct timespec ts{};
@@ -232,18 +242,21 @@ int local_rename_same_parent(shared_ptr<inode> parent_i, const char *old_path, c
 	return 0;
 }
 
-std::shared_ptr<inode> local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char *old_path, unsigned int flags) {
+int local_rename_not_same_parent_src(shared_ptr<inode> src_parent_i, const char *old_path, unsigned int flags, std::shared_ptr<inode>& target_inode) {
 	global_logger.log(local_fs_op, "Called rename_not_same_parent_src()");
 	unique_ptr<std::string> old_name = get_filename_from_path(old_path);
 
-	uuid target_ino;
 	shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
 	shared_ptr<inode> target_i;
 	{
 		std::unique_lock dtable_ul{src_dentry_table->dentry_table_mutex};
+		if(!src_dentry_table->is_valid())
+			return -ERETRAV;
 		target_i = src_dentry_table->get_child_inode(*old_name);
 
 		std::unique_lock inode_ul{target_i->inode_mutex};
+		if(!target_i->is_valid())
+			return -ERETRAV;
 		if (flags == 0) {
 			/* TODO : is it okay to delete inode which is locked? */
 			src_dentry_table->delete_child_inode(*old_name);
@@ -251,8 +264,9 @@ std::shared_ptr<inode> local_rename_not_same_parent_src(shared_ptr<inode> src_pa
 		} else {
 			throw std::runtime_error("NOT IMPLEMENTED");
 		}
+		target_inode = target_i;
 	}
-	return target_i;
+	return 0;
 }
 
 int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, std::shared_ptr<inode> target_inode, uuid check_dst_ino,
@@ -268,6 +282,11 @@ int local_rename_not_same_parent_dst(shared_ptr<inode> dst_parent_i, std::shared
 		std::unique_lock dtable_ul{dst_dentry_table->dentry_table_mutex, std::defer_lock};
 		std::unique_lock inode_ul{target_inode->inode_mutex, std::defer_lock};
 		std::scoped_lock scl{dtable_ul, inode_ul};
+		if(!dst_dentry_table->is_valid())
+			return -ERETRAV;
+		if(!target_inode->is_valid())
+			return -ERETRAV;
+
 		if (flags == 0) {
 			if (!check_dst_ino.is_nil()) {
 				std::shared_ptr<inode> check_dst_inode = dst_dentry_table->get_child_inode(*new_name);
