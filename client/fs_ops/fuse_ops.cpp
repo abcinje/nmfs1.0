@@ -1,16 +1,22 @@
-#include "fuse_ops.hpp"
-#include "../in_memory/directory_table.hpp"
-#include "local_ops.hpp"
-#include "remote_ops.hpp"
-#include "../rpc/rpc_server.hpp"
-#include "../journal/journal.hpp"
 #include <cstring>
+#include <iostream>
 #include <mutex>
 #include <thread>
 
+#include <libconfig.h++>
+
+#include "fuse_ops.hpp"
+#include "local_ops.hpp"
+#include "remote_ops.hpp"
+
+#include "../in_memory/directory_table.hpp"
+#include "../journal/journal.hpp"
+#include "../rpc/rpc_server.hpp"
+
 using namespace std;
-#define META_POOL "nmfs.meta"
-#define DATA_POOL "nmfs.data"
+using namespace libconfig;
+
+/* global variables */
 
 std::shared_ptr<rados_io> meta_pool;
 std::shared_ptr<rados_io> data_pool;
@@ -28,23 +34,49 @@ std::unique_ptr<thread> remote_server_thread;
 std::unique_ptr<client> this_client;
 unsigned int fuse_capable;
 
-void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
+template <typename T>
+static T lookup_config(const Config &config, const char *field)
+{
+	try {
+		return config.lookup(field);
+	} catch (const SettingNotFoundException &e) {
+		std::cerr << "No \'" << field << "\' setting in configuration file." << std::endl;
+		exit(1);
+	}
+}
+
+void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config)
+{
 	global_logger.log(fuse_op, "Called init()");
 
-	/* argument parsing */
 	fuse_context *fuse_ctx = fuse_get_context();
-	std::string arg((char *) fuse_ctx->private_data);
-	size_t dot_pos = arg.find(',');
-	std::string manager_ip = arg.substr(0, dot_pos);
-	std::string remote_handle_ip = arg.substr(dot_pos + 1);
-	global_logger.log(fuse_op, "manager IP: " + manager_ip + " remote_handle IP: " + remote_handle_ip);
+
+	/* Get configuration */
+
+	Config cfg;
+
+	try {
+		cfg.readFile(reinterpret_cast<const char *>(fuse_ctx->private_data));
+	} catch (const FileIOException &e) {
+		std::cerr << "I/O error while reading file." << std::endl;
+		exit(1);
+	}
+
+	std::string manager_ip = lookup_config<std::string>(cfg, "manager_ip");
+	std::string manager_port = lookup_config<std::string>(cfg, "manager_port");
+
+	std::string remote_service_ip = lookup_config<std::string>(cfg, "remote_service_ip");
+	std::string remote_service_port = lookup_config<std::string>(cfg, "remote_service_port");
+
+	std::string meta_pool_name = lookup_config<std::string>(cfg, "meta_pool_name");
+	std::string data_pool_name = lookup_config<std::string>(cfg, "data_pool_name");
 
 	rados_io::conn_info ci = {"client.admin", "ceph", 0};
-	meta_pool = std::make_shared<rados_io>(ci, META_POOL);
-	data_pool = std::make_shared<rados_io>(ci, DATA_POOL);
+	meta_pool = std::make_shared<rados_io>(ci, meta_pool_name);
+	data_pool = std::make_shared<rados_io>(ci, data_pool_name);
 
-	auto channel = grpc::CreateChannel(manager_ip, grpc::InsecureChannelCredentials());
-	lc = std::make_shared<lease_client>(channel, remote_handle_ip);
+	auto channel = grpc::CreateChannel(manager_ip + ":" + manager_port, grpc::InsecureChannelCredentials());
+	lc = std::make_shared<lease_client>(channel, remote_service_ip + ":" + remote_service_port);
 	this_client = std::make_unique<client>(channel);
 	this_client->set_client_uid(fuse_ctx->uid);
 	this_client->set_client_gid(fuse_ctx->gid);
@@ -70,7 +102,7 @@ void *fuse_ops::init(struct fuse_conn_info *info, struct fuse_config *config) {
 	config->nullpath_ok = 0;
 	fuse_capable = info->capable;
 
-	remote_server_thread = std::make_unique<thread>(run_rpc_server, remote_handle_ip);
+	remote_server_thread = std::make_unique<thread>(run_rpc_server, remote_service_ip + ":" + remote_service_port);
 	return nullptr;
 }
 

@@ -108,6 +108,7 @@ target_link_libraries(
   nmfs
   log
   rio
+  ${LIBCONFIG++}
   ${REFLECTION}
   ${GRPC_GRPCPP}
   ${PROTOBUF_LIBPROTOBUF}
