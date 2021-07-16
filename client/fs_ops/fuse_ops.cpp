@@ -86,35 +86,31 @@ int fuse_ops::getattr(const char *path, struct stat *stat, struct fuse_file_info
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i;
-		if(file_info){
-			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
-			i = handler->get_open_inode_info();
-		} else {
-			i = indexing_table->path_traversal(path);
-		}
+		while(true) {
+			shared_ptr<inode> i;
+			if (file_info) {
+				shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+				/* TODO : treat open file differently */
+				i = handler->get_open_inode_info();
+			} else {
+				i = indexing_table->path_traversal(path);
+			}
 
-		if (i->get_loc() == LOCAL) {
-			while(true) {
+			if (i->get_loc() == LOCAL) {
 				ret = local_getattr(i, stat);
-				if(ret == -ERETRAV){
-					/* TODO : treat open file differently */
-					i = indexing_table->path_traversal(path);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true){
+			} else if (i->get_loc() == REMOTE) {
 				ret = remote_getattr(std::dynamic_pointer_cast<remote_inode>(i), stat);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
-			};
+			}
 		}
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
@@ -131,30 +127,25 @@ int fuse_ops::access(const char *path, int mask) {
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		while(true) {
+			shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (i->get_loc() == LOCAL) {
-			while(true) {
+			if (i->get_loc() == LOCAL) {
 				ret = local_access(i, mask);
-				if(ret == -ERETRAV){
-					i = indexing_table->path_traversal(path);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true){
+			} else if (i->get_loc() == REMOTE) {
 				ret = remote_access(std::dynamic_pointer_cast<remote_inode>(i), mask);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
-			};
+			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -171,37 +162,28 @@ int fuse_ops::symlink(const char *src, const char *dst) {
 
 	int ret = 0;
 	try {
-		unique_ptr<std::string> dst_parent_name = get_parent_dir_path(dst);
-		shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_name);
-		shared_ptr<dentry_table> dst_parent_dentry_table = indexing_table->get_dentry_table(
-			dst_parent_i->get_ino());
+		while(true) {
+			unique_ptr<std::string> dst_parent_name = get_parent_dir_path(dst);
+			shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_name);
+			shared_ptr<dentry_table> dst_parent_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
-		if (dst_parent_dentry_table->get_loc() == LOCAL) {
-			while(true) {
+			if (dst_parent_dentry_table->get_loc() == LOCAL) {
 				ret = local_symlink(dst_parent_i, src, dst);
-				if(ret == -ERETRAV){
-					dst_parent_i = indexing_table->path_traversal(*dst_parent_name);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (dst_parent_dentry_table->get_loc() == REMOTE) {
-			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
-				dst_parent_dentry_table->get_leader_ip(),
-				dst_parent_dentry_table->get_dir_ino(),
-				*dst_parent_name);
-			while(true){
+			} else if (dst_parent_dentry_table->get_loc() == REMOTE) {
+				shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(dst_parent_dentry_table->get_leader_ip(), dst_parent_dentry_table->get_dir_ino(), *dst_parent_name);
 				ret = remote_symlink(remote_i, src, dst);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(remote_i);
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
 			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -217,30 +199,25 @@ int fuse_ops::readlink(const char *path, char *buf, size_t size) {
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		while(true) {
+			shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (i->get_loc() == LOCAL) {
-			while (true) {
+			if (i->get_loc() == LOCAL) {
 				ret = local_readlink(i, buf, size);
-				if(ret == -ERETRAV){
-					i = indexing_table->path_traversal(path);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true){
+			} else if (i->get_loc() == REMOTE) {
 				ret = remote_readlink(std::dynamic_pointer_cast<remote_inode>(i), buf, size);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+				if (ret == -ENOTLEADER) {
 					continue;
-				}  else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
 			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -255,32 +232,26 @@ int fuse_ops::opendir(const char *path, struct fuse_file_info *file_info) {
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	int ret = 0;
-
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		while(true) {
+			shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (i->get_loc() == LOCAL) {
-			while(true) {
+			if (i->get_loc() == LOCAL) {
 				ret = local_opendir(i, file_info);
-				if(ret == -ERETRAV){
-					i = indexing_table->path_traversal(path);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true) {
+			} else if (i->get_loc() == REMOTE) {
 				ret = remote_opendir(std::dynamic_pointer_cast<remote_inode>(i), file_info);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
 			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -317,40 +288,33 @@ int fuse_ops::readdir(const char *path, void *buffer, fuse_fill_dir_t filler, of
 	global_logger.log(fuse_op, "path : " + std::string(path));
 
 	int ret = 0;
-	shared_ptr<inode> i;
-	if(file_info){
-		shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
-		i = handler->get_open_inode_info();
-	} else {
-		i = indexing_table->path_traversal(path);
-	}
-	shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(i->get_ino());
+	while(true) {
+		shared_ptr<inode> i;
+		if (file_info) {
+			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+			i = handler->get_open_inode_info();
+		} else {
+			i = indexing_table->path_traversal(path);
+		}
+		shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(i->get_ino());
 
-	if (target_dentry_table->get_loc() == LOCAL) {
-		while(true) {
+		if (target_dentry_table->get_loc() == LOCAL) {
 			ret = local_readdir(i, buffer, filler);
-			if(ret == -ERETRAV){
-				i = indexing_table->path_traversal(path);
+			if (ret == -ERETRAV) {
 				continue;
 			} else
 				break;
-		}
-	} else if (target_dentry_table->get_loc() == REMOTE) {
-		shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(),
-										   target_dentry_table->get_dir_ino(),
-										   *(get_filename_from_path(path)));
-		while(true) {
+		} else if (target_dentry_table->get_loc() == REMOTE) {
+			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(), target_dentry_table->get_dir_ino(), *(get_filename_from_path(path)));
 			ret = remote_readdir(remote_i, buffer, filler);
-			if(ret == -ENOTLEADER) {
-				indexing_table->find_remote_dentry_table_again(remote_i);
+			if (ret == -ENOTLEADER) {
 				continue;
-			} else if(ret == -ENEEDRECOV) {
+			} else if (ret == -ENEEDRECOV) {
 				throw std::runtime_error("Need Recovery of remote dentry_table");
 			} else
 				break;
 		}
 	}
-
 	return ret;
 }
 
@@ -360,39 +324,34 @@ int fuse_ops::mkdir(const char *path, mode_t mode) {
 
 	std::shared_ptr<inode> new_dir_inode;
 	std::shared_ptr<dentry> new_dir_dentry;
+	int ret = 0;
 	try {
-		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
+		while(true) {
+			std::unique_ptr<std::string> target_name = get_filename_from_path(path);
 
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		int ret = 0;
-		if (parent_dentry_table->get_loc() == LOCAL) {
-			while(true) {
+			if (parent_dentry_table->get_loc() == LOCAL) {
 				ret = local_mkdir(parent_i, *target_name, mode, new_dir_inode, new_dir_dentry);
-				if(ret == -ERETRAV){
-					parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+				if (ret == -ERETRAV) {
 					continue;
-				} else
+				} else {
+					indexing_table->lease_dentry_table_mkdir(new_dir_inode, new_dir_dentry);
 					break;
-			}
-			indexing_table->lease_dentry_table_mkdir(new_dir_inode, new_dir_dentry);
-		} else if (parent_dentry_table->get_loc() == REMOTE) {
-			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
-				parent_dentry_table->get_leader_ip(),
-				parent_dentry_table->get_dir_ino(),
-				*target_name);
-			while(true) {
+				}
+			} else if (parent_dentry_table->get_loc() == REMOTE) {
+				shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(), parent_dentry_table->get_dir_ino(), *target_name);
 				ret = remote_mkdir(remote_i, *target_name, mode, new_dir_inode, new_dir_dentry);
 				if (ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(remote_i);
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
-				} else
+				} else {
+					indexing_table->lease_dentry_table_mkdir(new_dir_inode, new_dir_dentry);
 					break;
+				}
 			}
-			indexing_table->lease_dentry_table_mkdir(new_dir_inode, new_dir_dentry);
 		}
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
@@ -409,86 +368,82 @@ int fuse_ops::rmdir(const char *path) {
 
 	int ret = 0;
 	try {
-		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
+		while(true) {
+			std::unique_ptr<std::string> target_name = get_filename_from_path(path);
 
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		uuid target_ino = parent_dentry_table->check_child_inode(*target_name);
-		shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(*(get_filename_from_path(path).get()));
-		if(!S_ISDIR(target_i->get_mode()))
-			return -ENOTDIR;
+			uuid target_ino = parent_dentry_table->check_child_inode(*target_name);
+			shared_ptr<inode> target_i = parent_dentry_table->get_child_inode(*(get_filename_from_path(path).get()));
+			if (!S_ISDIR(target_i->get_mode()))
+				return -ENOTDIR;
 
-		shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_ino);
+			shared_ptr<dentry_table> target_dentry_table = indexing_table->get_dentry_table(target_ino);
 
-		if ((parent_dentry_table->get_loc() == LOCAL) && (target_dentry_table->get_loc() == LOCAL)) {
-			ret = local_rmdir_top(target_i, target_ino);
-			if(ret == 0)
-				local_rmdir_down(parent_i, target_ino, *target_name);
-		} else if ((parent_dentry_table->get_loc() == LOCAL) && (target_dentry_table->get_loc() == REMOTE)) {
-			shared_ptr<remote_inode> target_remote_i = std::make_shared<remote_inode>(
-				target_dentry_table->get_leader_ip(),
-				target_dentry_table->get_dir_ino(),
-				*target_name);
-			while(true) {
-				ret = remote_rmdir_top(target_remote_i, target_ino);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(target_remote_i);
+			if ((parent_dentry_table->get_loc() == LOCAL) && (target_dentry_table->get_loc() == LOCAL)) {
+				ret = local_rmdir_top(target_i, target_ino);
+				if (ret == -ERETRAV) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
-					throw std::runtime_error("Need Recovery of remote dentry_table");
-				} else
-					break;
-			}
-			if(ret == 0)
-				local_rmdir_down(parent_i, target_ino, *target_name);
-		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == LOCAL)) {
-			ret = local_rmdir_top(target_i, target_ino);
-			if(ret == 0) {
-				shared_ptr<remote_inode> parent_remote_i = std::make_shared<remote_inode>(
-					parent_dentry_table->get_leader_ip(),
-					parent_dentry_table->get_dir_ino(),
-					*target_name);
-				while(true) {
-					ret = remote_rmdir_down(parent_remote_i, target_ino, *target_name);
-					if(ret == -ENOTLEADER) {
-						indexing_table->find_remote_dentry_table_again(parent_remote_i);
-						continue;
-					} else if(ret == -ENEEDRECOV) {
-						throw std::runtime_error("Need Recovery of remote dentry_table");
-					} else
-						break;
 				}
-			}
-		} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == REMOTE)) {
-			shared_ptr<remote_inode> target_remote_i = std::make_shared<remote_inode>(
-				target_dentry_table->get_leader_ip(),
-				target_dentry_table->get_dir_ino(),
-				*target_name);
-			while(true) {
-				ret = remote_rmdir_top(target_remote_i, target_ino);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(target_remote_i);
+
+				ret = local_rmdir_down(parent_i, target_ino, *target_name);
+				if (ret == -ERETRAV) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
-					throw std::runtime_error("Need Recovery of remote dentry_table");
-				} else
+				} else {
+					/* TODO : down might fail and restart from rmdir_down */
 					break;
-			}
-			if(ret == 0) {
-				shared_ptr<remote_inode> parent_remote_i = std::make_shared<remote_inode>(
-					parent_dentry_table->get_leader_ip(),
-					parent_dentry_table->get_dir_ino(),
-					*target_name);
-				while(true) {
-					ret = remote_rmdir_down(parent_remote_i, target_ino, *target_name);
-					if(ret == -ENOTLEADER) {
-						indexing_table->find_remote_dentry_table_again(parent_remote_i);
-						continue;
-					} else if(ret == -ENEEDRECOV) {
-						throw std::runtime_error("Need Recovery of remote dentry_table");
-					} else
-						break;
+				}
+			} else if ((parent_dentry_table->get_loc() == LOCAL) && (target_dentry_table->get_loc() == REMOTE)) {
+				shared_ptr<remote_inode> target_remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(), target_dentry_table->get_dir_ino(), *target_name);
+				ret = remote_rmdir_top(target_remote_i, target_ino);
+				if (ret == -ENOTLEADER) {
+					continue;
+				} else if (ret == -ENEEDRECOV) {
+					throw std::runtime_error("Need Recovery of remote dentry_table");
+				}
+
+				ret = local_rmdir_down(parent_i, target_ino, *target_name);
+				if (ret == -ERETRAV) {
+					continue;
+				} else {
+					/* TODO : down might fail and restart from rmdir_down */
+					break;
+				}
+			} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == LOCAL)) {
+				ret = local_rmdir_top(target_i, target_ino);
+				if (ret == -ERETRAV) {
+					continue;
+				}
+
+				shared_ptr<remote_inode> parent_remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(), parent_dentry_table->get_dir_ino(), *target_name);
+				ret = remote_rmdir_down(parent_remote_i, target_ino, *target_name);
+				if (ret == -ENOTLEADER) {
+					continue;
+				} else if (ret == -ENEEDRECOV) {
+					throw std::runtime_error("Need Recovery of remote dentry_table");
+				}else {
+					/* TODO : down might fail and restart from rmdir_down */
+					break;
+				}
+			} else if ((parent_dentry_table->get_loc() == REMOTE) && (target_dentry_table->get_loc() == REMOTE)) {
+				shared_ptr<remote_inode> target_remote_i = std::make_shared<remote_inode>(target_dentry_table->get_leader_ip(), target_dentry_table->get_dir_ino(), *target_name);
+				ret = remote_rmdir_top(target_remote_i, target_ino);
+				if (ret == -ENOTLEADER) {
+					continue;
+				} else if (ret == -ENEEDRECOV) {
+					throw std::runtime_error("Need Recovery of remote dentry_table");
+				}
+
+				shared_ptr<remote_inode> parent_remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(), parent_dentry_table->get_dir_ino(), *target_name);
+				ret = remote_rmdir_down(parent_remote_i, target_ino, *target_name);
+				if (ret == -ENOTLEADER) {
+					continue;
+				} else if (ret == -ENEEDRECOV) {
+					throw std::runtime_error("Need Recovery of remote dentry_table");
+				}else {
+					/* TODO : down might fail and restart from rmdir_down */
+					break;
 				}
 			}
 		}
@@ -505,115 +460,115 @@ int fuse_ops::rename(const char *old_path, const char *new_path, unsigned int fl
 	global_logger.log(fuse_op, "Called rename()");
 	global_logger.log(fuse_op, "src : " + std::string(old_path) + " dst : " + std::string(new_path));
 
-	int ret = 0;
-
 	if (std::string(old_path) == std::string(new_path))
 		return -EEXIST;
 
+	int ret = 0;
 	try {
-		unique_ptr<std::string> src_parent_path = get_parent_dir_path(old_path);
-		unique_ptr<std::string> dst_parent_path = get_parent_dir_path(new_path);
+		while(true) {
+			unique_ptr<std::string> src_parent_path = get_parent_dir_path(old_path);
+			unique_ptr<std::string> dst_parent_path = get_parent_dir_path(new_path);
 
-		if (*src_parent_path == *dst_parent_path) {
-			shared_ptr<inode> parent_i = indexing_table->path_traversal(*src_parent_path);
-			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(
-				parent_i->get_ino());
+			if (*src_parent_path == *dst_parent_path) {
+				shared_ptr<inode> parent_i = indexing_table->path_traversal(*src_parent_path);
+				shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-			if (parent_dentry_table->get_loc() == LOCAL) {
-				ret = local_rename_same_parent(parent_i, old_path, new_path, flags);
-			} else if (parent_dentry_table->get_loc() == REMOTE) {
-				shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
-					parent_dentry_table->get_leader_ip(),
-					parent_dentry_table->get_dir_ino(),
-					new_path);
-				while(true) {
-					ret = remote_rename_same_parent(remote_i, old_path, new_path, flags);
-					if(ret == -ENOTLEADER) {
-						indexing_table->find_remote_dentry_table_again(remote_i);
+				if (parent_dentry_table->get_loc() == LOCAL) {
+					ret = local_rename_same_parent(parent_i, old_path, new_path, flags);
+					if (ret == -ERETRAV) {
 						continue;
-					} else if(ret == -ENEEDRECOV) {
-						throw std::runtime_error("Need Recovery of remote dentry_table");
-					} else
+					} else {
 						break;
+					}
+				} else if (parent_dentry_table->get_loc() == REMOTE) {
+					shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(), parent_dentry_table->get_dir_ino(), new_path);
+					while (true) {
+						ret = remote_rename_same_parent(remote_i, old_path, new_path, flags);
+						if (ret == -ENOTLEADER) {
+							continue;
+						} else if (ret == -ENEEDRECOV) {
+							throw std::runtime_error("Need Recovery of remote dentry_table");
+						} else
+							break;
+					}
 				}
-			}
-		} else {
-			shared_ptr<inode> src_parent_i = indexing_table->path_traversal(*src_parent_path);
-			shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
+			} else {
+				shared_ptr<inode> src_parent_i = indexing_table->path_traversal(*src_parent_path);
+				shared_ptr<dentry_table> src_dentry_table = indexing_table->get_dentry_table(src_parent_i->get_ino());
 
-			shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_path);
-			shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
+				shared_ptr<inode> dst_parent_i = indexing_table->path_traversal(*dst_parent_path);
+				shared_ptr<dentry_table> dst_dentry_table = indexing_table->get_dentry_table(dst_parent_i->get_ino());
 
-			uuid check_dst_ino = dst_dentry_table->check_child_inode(*get_filename_from_path(new_path));
-			if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == LOCAL)) {
-				std::shared_ptr<inode> target_inode = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
-				ret = local_rename_not_same_parent_dst(dst_parent_i, target_inode, check_dst_ino, new_path, flags);
-			} else if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == REMOTE)) {
-				/* TODO : TODO : change to use inode pointer */
-				std::shared_ptr<inode> target_inode = local_rename_not_same_parent_src(src_parent_i, old_path, flags);
-				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
-					dst_dentry_table->get_leader_ip(),
-					dst_dentry_table->get_dir_ino(),
-					new_path);
-				while(true) {
-					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_inode, check_dst_ino, new_path, flags);
-					if(ret == -ENOTLEADER) {
-						indexing_table->find_remote_dentry_table_again(dst_remote_i);
-						continue;
-					} else if(ret == -ENEEDRECOV) {
-						throw std::runtime_error("Need Recovery of remote dentry_table");
-					} else
-						break;
-				}
-			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == LOCAL)) {
-				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
-					src_dentry_table->get_leader_ip(),
-					src_dentry_table->get_dir_ino(),
-					old_path);
+				uuid check_dst_ino = dst_dentry_table->check_child_inode(*get_filename_from_path(new_path));
 				std::shared_ptr<inode> target_inode;
-				while(true) {
-					ret = remote_rename_not_same_parent_src(src_remote_i, old_path, flags, target_inode);
-					if(ret == -ENOTLEADER) {
-						indexing_table->find_remote_dentry_table_again(src_remote_i);
-						continue;
-					} else if(ret == -ENEEDRECOV) {
-						throw std::runtime_error("Need Recovery of remote dentry_table");
-					} else
-						break;
-				}
-				ret = local_rename_not_same_parent_dst(dst_parent_i, target_inode, check_dst_ino, new_path, flags);
-			} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
-				shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(
-					src_dentry_table->get_leader_ip(),
-					src_dentry_table->get_dir_ino(),
-					old_path);
-				std::shared_ptr<inode> target_inode;
-				while(true) {
-					ret = remote_rename_not_same_parent_src(src_remote_i, old_path, flags, target_inode);
-					if(ret == -ENOTLEADER) {
-						indexing_table->find_remote_dentry_table_again(src_remote_i);
-						continue;
-					} else if(ret == -ENEEDRECOV) {
-						throw std::runtime_error("Need Recovery of remote dentry_table");
-					} else
-						break;
-				}
-				shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(
-					dst_dentry_table->get_leader_ip(),
-					dst_dentry_table->get_dir_ino(),
-					new_path);
-				while(true) {
-					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_inode, check_dst_ino, new_path, flags);
-					if(ret == -ENOTLEADER) {
-						indexing_table->find_remote_dentry_table_again(dst_remote_i);
-						continue;
-					} else if(ret == -ENEEDRECOV) {
-						throw std::runtime_error("Need Recovery of remote dentry_table");
-					} else
-						break;
-				}
-			}
 
+				if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == LOCAL)) {
+					ret = local_rename_not_same_parent_src(src_parent_i, old_path, flags, target_inode);
+					if (ret == -ERETRAV) {
+						continue;
+					}
+
+					ret = local_rename_not_same_parent_dst(dst_parent_i, target_inode,check_dst_ino, new_path, flags);
+					if (ret == -ERETRAV) {
+						continue;
+					} else {
+						/* TODO : dst might fail and restart from rename_src */
+						break;
+					}
+				} else if ((src_dentry_table->get_loc() == LOCAL) && (dst_dentry_table->get_loc() == REMOTE)) {
+					ret = local_rename_not_same_parent_src(src_parent_i, old_path, flags, target_inode);
+					if (ret == -ERETRAV) {
+						continue;
+					}
+
+					shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(dst_dentry_table->get_leader_ip(), dst_dentry_table->get_dir_ino(), new_path);
+					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_inode,check_dst_ino, new_path, flags);
+					if (ret == -ENOTLEADER) {
+						continue;
+					} else if (ret == -ENEEDRECOV) {
+						throw std::runtime_error("Need Recovery of remote dentry_table");
+					} else {
+						/* dst might fail and restart from rename_src */
+						break;
+					}
+				} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == LOCAL)) {
+					shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(src_dentry_table->get_leader_ip(), src_dentry_table->get_dir_ino(), old_path);
+					ret = remote_rename_not_same_parent_src(src_remote_i, old_path, flags,target_inode);
+					if (ret == -ENOTLEADER) {
+						continue;
+					} else if (ret == -ENEEDRECOV) {
+						throw std::runtime_error("Need Recovery of remote dentry_table");
+					}
+
+					ret = local_rename_not_same_parent_dst(dst_parent_i, target_inode, check_dst_ino, new_path, flags);
+					if (ret == -ERETRAV) {
+						continue;
+					} else {
+						/* dst might fail and restart from rename_src */
+						break;
+					}
+				} else if ((src_dentry_table->get_loc() == REMOTE) && (dst_dentry_table->get_loc() == REMOTE)) {
+					shared_ptr<remote_inode> src_remote_i = std::make_shared<remote_inode>(src_dentry_table->get_leader_ip(), src_dentry_table->get_dir_ino(), old_path);
+					ret = remote_rename_not_same_parent_src(src_remote_i, old_path, flags, target_inode);
+					if (ret == -ENOTLEADER) {
+						continue;
+					} else if (ret == -ENEEDRECOV) {
+						throw std::runtime_error("Need Recovery of remote dentry_table");
+					}
+
+					shared_ptr<remote_inode> dst_remote_i = std::make_shared<remote_inode>(dst_dentry_table->get_leader_ip(), dst_dentry_table->get_dir_ino(), new_path);
+					ret = remote_rename_not_same_parent_dst(dst_remote_i, target_inode, check_dst_ino, new_path, flags);
+					if (ret == -ENOTLEADER) {
+						continue;
+					} else if (ret == -ENEEDRECOV) {
+						throw std::runtime_error("Need Recovery of remote dentry_table");
+					} else {
+						/* dst might fail and restart from rename_src */
+						break;
+					}
+				}
+
+			}
 		}
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
@@ -661,30 +616,25 @@ int fuse_ops::open(const char *path, struct fuse_file_info *file_info) {
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i = indexing_table->path_traversal(path);
+		while(true) {
+			shared_ptr<inode> i = indexing_table->path_traversal(path);
 
-		if (i->get_loc() == LOCAL) {
-			while(true) {
+			if (i->get_loc() == LOCAL) {
 				ret = local_open(i, file_info);
-				if(ret == -ERETRAV){
-					i = indexing_table->path_traversal(path);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true) {
+			} else if (i->get_loc() == REMOTE) {
 				ret = remote_open(std::dynamic_pointer_cast<remote_inode>(i), file_info);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
 			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -724,31 +674,23 @@ int fuse_ops::create(const char *path, mode_t mode, struct fuse_file_info *file_
 		return -EISDIR;
 	int ret = 0;
 	try {
-		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
+		while(true) {
+			std::unique_ptr<std::string> target_name = get_filename_from_path(path);
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		if (parent_dentry_table->get_loc() == LOCAL) {
-			while(true) {
+			if (parent_dentry_table->get_loc() == LOCAL) {
 				ret = local_create(parent_i, *target_name, mode, file_info);
-				if(ret == -ERETRAV){
-					parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (parent_dentry_table->get_loc() == REMOTE) {
-			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
-				parent_dentry_table->get_leader_ip(),
-				parent_dentry_table->get_dir_ino(),
-				*target_name);
-			while(true) {
+			} else if (parent_dentry_table->get_loc() == REMOTE) {
+				shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(), parent_dentry_table->get_dir_ino(), *target_name);
 				ret = remote_create(remote_i, *target_name, mode, file_info);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(remote_i);
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
@@ -769,31 +711,23 @@ int fuse_ops::unlink(const char *path) {
 
 	int ret = 0;
 	try {
-		std::unique_ptr<std::string> target_name = get_filename_from_path(path);
+		while(true) {
+			std::unique_ptr<std::string> target_name = get_filename_from_path(path);
+			shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+			shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
 
-		shared_ptr<inode> parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
-		shared_ptr<dentry_table> parent_dentry_table = indexing_table->get_dentry_table(parent_i->get_ino());
-
-		if (parent_dentry_table->get_loc() == LOCAL) {
-			while(true) {
+			if (parent_dentry_table->get_loc() == LOCAL) {
 				ret = local_unlink(parent_i, *target_name);
-				if(ret == -ERETRAV){
-					parent_i = indexing_table->path_traversal(*(get_parent_dir_path(path).get()));
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (parent_dentry_table->get_loc() == REMOTE) {
-			shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(
-				parent_dentry_table->get_leader_ip(),
-				parent_dentry_table->get_dir_ino(),
-				*target_name);
-			while(true) {
+			} else if (parent_dentry_table->get_loc() == REMOTE) {
+				shared_ptr<remote_inode> remote_i = std::make_shared<remote_inode>(parent_dentry_table->get_leader_ip(), parent_dentry_table->get_dir_ino(), *target_name);
 				ret = remote_unlink(remote_i, *target_name);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(remote_i);
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
@@ -841,30 +775,27 @@ int fuse_ops::write(const char *path, const char *buffer, size_t size, off_t off
 
 	ssize_t written_len = 0;
 	try {
-		shared_ptr<inode> i;
-		if(file_info){
-			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
-			i = handler->get_open_inode_info();
-		} else {
-			i = indexing_table->path_traversal(path);
-		}
+		while(true) {
+			shared_ptr<inode> i;
+			if (file_info) {
+				shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+				i = handler->get_open_inode_info();
+			} else {
+				i = indexing_table->path_traversal(path);
+			}
 
-		if (i->get_loc() == LOCAL) {
-			while(true) {
+			if (i->get_loc() == LOCAL) {
 				written_len = local_write(i, buffer, size, offset, file_info->flags);
-				if(written_len == -ERETRAV){
-					i = indexing_table->path_traversal(path);
+				if (written_len == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true) {
-				written_len = remote_write(std::dynamic_pointer_cast<remote_inode>(i), buffer, size, offset, file_info->flags);
-				if(written_len == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+			} else if (i->get_loc() == REMOTE) {
+				written_len = remote_write(std::dynamic_pointer_cast<remote_inode>(i), buffer, size,
+							   offset, file_info->flags);
+				if (written_len == -ENOTLEADER) {
 					continue;
-				} else if(written_len == -ENEEDRECOV) {
+				} else if (written_len == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
@@ -885,30 +816,26 @@ int fuse_ops::chmod(const char *path, mode_t mode, struct fuse_file_info *file_i
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i;
-		if(file_info){
-			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
-			i = handler->get_open_inode_info();
-		} else {
-			i = indexing_table->path_traversal(path);
-		}
+		while(true) {
+			shared_ptr<inode> i;
+			if (file_info) {
+				shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+				i = handler->get_open_inode_info();
+			} else {
+				i = indexing_table->path_traversal(path);
+			}
 
-		if (i->get_loc() == LOCAL) {
-			while(true) {
+			if (i->get_loc() == LOCAL) {
 				ret = local_chmod(i, mode);
-				if(ret == -ERETRAV){
-					i = indexing_table->path_traversal(path);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true) {
+			} else if (i->get_loc() == REMOTE) {
 				ret = remote_chmod(std::dynamic_pointer_cast<remote_inode>(i), mode);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
@@ -929,36 +856,31 @@ int fuse_ops::chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_inf
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i;
-		if(file_info){
-			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
-			i = handler->get_open_inode_info();
-		} else {
-			i = indexing_table->path_traversal(path);
-		}
+		while(true) {
+			shared_ptr<inode> i;
+			if (file_info) {
+				shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+				i = handler->get_open_inode_info();
+			} else {
+				i = indexing_table->path_traversal(path);
+			}
 
-		if (i->get_loc() == LOCAL) {
-			while(true) {
+			if (i->get_loc() == LOCAL) {
 				ret = local_chown(i, uid, gid);
-				if(ret == -ERETRAV){
-					i = indexing_table->path_traversal(path);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true) {
+			} else if (i->get_loc() == REMOTE) {
 				ret = remote_chown(std::dynamic_pointer_cast<remote_inode>(i), uid, gid);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
 			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -974,36 +896,31 @@ int fuse_ops::utimens(const char *path, const struct timespec tv[2], struct fuse
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i;
-		if(file_info){
-			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
-			i = handler->get_open_inode_info();
-		} else {
-			i = indexing_table->path_traversal(path);
-		}
+		while(true) {
+			shared_ptr<inode> i;
+			if (file_info) {
+				shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+				i = handler->get_open_inode_info();
+			} else {
+				i = indexing_table->path_traversal(path);
+			}
 
-		if (i->get_loc() == LOCAL) {
-			while(true) {
+			if (i->get_loc() == LOCAL) {
 				ret = local_utimens(i, tv);
-				if(ret == -ERETRAV){
-					i = indexing_table->path_traversal(path);
+				if (ret == -ERETRAV) {
 					continue;
 				} else
 					break;
-			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true) {
+			} else if (i->get_loc() == REMOTE) {
 				ret = remote_utimens(std::dynamic_pointer_cast<remote_inode>(i), tv);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
+				if (ret == -ENOTLEADER) {
 					continue;
-				} else if(ret == -ENEEDRECOV) {
+				} else if (ret == -ENEEDRECOV) {
 					throw std::runtime_error("Need Recovery of remote dentry_table");
 				} else
 					break;
 			}
 		}
-
 	} catch (inode::no_entry &e) {
 		return -ENOENT;
 	} catch (inode::permission_denied &e) {
@@ -1019,33 +936,33 @@ int fuse_ops::truncate(const char *path, off_t offset, struct fuse_file_info *fi
 
 	int ret = 0;
 	try {
-		shared_ptr<inode> i;
-		if(file_info){
-			shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
-			i = handler->get_open_inode_info();
-		} else {
-			i = indexing_table->path_traversal(path);
-		}
-
-		if (i->get_loc() == LOCAL) {
-			while(true) {
-				ret = local_truncate(i, offset);
-				if(ret == -ERETRAV){
-					i = indexing_table->path_traversal(path);
-					continue;
-				} else
-					break;
+		while(true) {
+			shared_ptr<inode> i;
+			if (file_info) {
+				shared_ptr<file_handler> handler = open_context->get_file_handler(file_info->fh);
+				i = handler->get_open_inode_info();
+			} else {
+				i = indexing_table->path_traversal(path);
 			}
-		} else if (i->get_loc() == REMOTE) {
-			while(true) {
-				ret = remote_truncate(std::dynamic_pointer_cast<remote_inode>(i), offset);
-				if(ret == -ENOTLEADER) {
-					indexing_table->find_remote_dentry_table_again(std::dynamic_pointer_cast<remote_inode>(i));
-					continue;
-				} else if(ret == -ENEEDRECOV) {
-					throw std::runtime_error("Need Recovery of remote dentry_table");
-				} else
-					break;
+
+			if (i->get_loc() == LOCAL) {
+				while (true) {
+					ret = local_truncate(i, offset);
+					if (ret == -ERETRAV) {
+						continue;
+					} else
+						break;
+				}
+			} else if (i->get_loc() == REMOTE) {
+				while (true) {
+					ret = remote_truncate(std::dynamic_pointer_cast<remote_inode>(i), offset);
+					if (ret == -ENOTLEADER) {
+						continue;
+					} else if (ret == -ENEEDRECOV) {
+						throw std::runtime_error("Need Recovery of remote dentry_table");
+					} else
+						break;
+				}
 			}
 		}
 	} catch (inode::no_entry &e) {
