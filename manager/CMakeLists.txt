@@ -63,6 +63,7 @@ target_link_libraries(
   ${_target}
   log
   rio
+  ${LIBCONFIG++}
   ${REFLECTION}
   ${GRPC_GRPCPP}
   ${PROTOBUF_LIBPROTOBUF}

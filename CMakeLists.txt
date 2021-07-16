@@ -6,6 +6,9 @@ set(CMAKE_BUILD_TYPE Release)
 
 find_package(Threads REQUIRED)
 
+# libconfig++
+set(LIBCONFIG++ config++)
+
 # Import robin-map
 include_directories("robin-map/include/")
 
